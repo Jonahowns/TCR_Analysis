@@ -95,8 +95,7 @@ def htopval(H, N, q):
 def fig_fullJ(subplot, clustid, mat, n, cmap):
     subplot.title.set_text('Jmat Top 90% Values Cluster: ' + str(clustid))
     subplot.title.set_size(fontsize=6)
-    pos = subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
-    jbar = fig.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
+    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
     subplot.set_xticks(np.arange(-.5, (n - 2) * 21, 21))
     subplot.set_yticks(np.arange(-.5, (n - 2) * 21, 21))
     subplot.set_xticklabels(np.arange(2, n, 1))

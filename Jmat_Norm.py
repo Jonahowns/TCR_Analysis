@@ -10,7 +10,8 @@ droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
 fullpath = upath + droppath
-
+clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
+            42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
@@ -71,7 +72,7 @@ def jnormtvalwdist(J, N, q):
     return jdisp, vals, tval
 
 
-def fig_fullJ(subplot, clustid, mat, n, cmap):
+def fig_fullJnorm(subplot, clustid, mat, n, cmap):
     subplot.title.set_text('Jmat Top 80% Norms Cluster: ' + str(clustid))
     subplot.title.set_size(fontsize=6)
     subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=0, vmax=4)
@@ -119,10 +120,6 @@ def seqlogoplot(filepath, subplot, clustid):
     subplot.axis('off')
     subplot.title.set_text('SeqLogo Clust ' + str(clustid))
     subplot.title.set_size(fontsize=6)
-
-
-clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
-            42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
 
 def jmatshow(clust1, clust2, clust3, clust4):
@@ -180,10 +177,10 @@ def jmatshow(clust1, clust2, clust3, clust4):
     fig, ax = plt.subplots(4, 4, figsize=(10, 8), constrained_layout=True)
     cmap = 'YlOrRd'
     # J Matrices
-    fig_fullJ(ax[0,0], clust1, J1d, n1, cmap)
-    fig_fullJ(ax[0,1], clust2, J2d, n2, cmap)
-    fig_fullJ(ax[0,2], clust3, J3d, n3, cmap)
-    fig_fullJ(ax[0,3], clust4, J4d, n4, cmap)
+    fig_fullJnorm(ax[0,0], clust1, J1d, n1, cmap)
+    fig_fullJnorm(ax[0,1], clust2, J2d, n2, cmap)
+    fig_fullJnorm(ax[0,2], clust3, J3d, n3, cmap)
+    fig_fullJnorm(ax[0,3], clust4, J4d, n4, cmap)
 
     # H Matrices
     fig_fullH(ax[1,0], clust1, H1d, n1, cmap)
@@ -206,6 +203,9 @@ def jmatshow(clust1, clust2, clust3, clust4):
     figname = str(clust1) + '-' + str(clust2) + '-' + str(clust3) + '-' + str(clust4) + 'top80norms.png'
     plt.savefig(analysispath + figname, dpi=600)
 
+clusters.append(1)
+it = iter(clusters)
+show = list(zip(it, it, it, it))
+for x in show:
+    jmatshow(x[0], x[1], x[2], x[3])
 
-jmatshow(clusters[0], clusters[1], clusters[2], clusters[3])
-print(len(clusters))
