@@ -1,0 +1,6 @@
+Revelations
+
+- To compare Seq of different length,
+    Assume that there are Gaps at the end of the shorter Seq. and that they are aligned b/t clusters
+
+- Look at Jij Norms! -Full Jij is a little Overkill
