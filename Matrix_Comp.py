@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import sys
 
-macpath = "/Users/Amber/Dropbox (ASU)/"
+#macpath = "/Users/Amber/Dropbox (ASU)/"
 droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
-fullpath = macpath+droppath
+#fullpath = macpath+droppath
+upath = "/home/jonah/Dropbox (ASU)/"
+fullpath = upath + droppath
 
 
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
@@ -53,6 +55,20 @@ def jdisplay(J, N, q):
     return Jdisp
 
 
+def jnormtval(J, N, q):
+    jnorm = np.full((N-2, N-2), 0.0)
+    jdisp = np.full((N - 2, N - 2), 0.0)
+    for i in range(0, N-2):
+        for j in range(0, N-2):
+            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+    tval = np.percentile(jnorm, 80)
+    for i in range(0, N-2):
+        for j in range(0, N-2):
+            if jnorm[i, j] >= tval:
+                jdisp[i, j] = jnorm[i, j]
+    return jdisp
+
+
 def jtopval(J, N, q):
     Jdisp = np.full(((N - 2) * q, (N - 2) * q), 0.0)
     val_80 = np.percentile(J, 99.9)
@@ -77,10 +93,38 @@ def htopval(H, N, q):
     return Hdisp
 
 
+def fig_fullJ(subplot, clustid, mat, n, cmap):
+    subplot.title.set_text('Jmat Top 90% Values Cluster: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    pos = subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
+    jbar = fig.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
+    subplot.set_xticks(np.arange(-.5, (n - 2) * 21, 21))
+    subplot.set_yticks(np.arange(-.5, (n - 2) * 21, 21))
+    subplot.set_xticklabels(np.arange(2, n, 1))
+    subplot.set_yticklabels(np.arange(1, n - 1, 1))
+    subplot.grid(True, color='g', lw=0.1)
+    subplot.set_ylabel('i')
+    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+
+
+def fig_fullH(subplot, clustid, mat, n, cmap):
+    # H1
+    subplot.imshow(mat, cmap=cmap, aspect='equal')
+    subplot.title.set_text('Hmat Cluster: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    subplot.set_xticks(np.arange(0, 21, 1))
+    subplot.set_yticks(np.arange(0, n, 1))
+    subplot.set_xticklabels(aa)
+    subplot.set_yticklabels(np.arange(1, n+1, 1))
+    subplot.set_xlabel('Amino Acid')
+    subplot.set_ylabel('i')
+
+
 def comp_mats_full_J(clustid1, clustid2):
-    clustpath1 = macpath + droppath + 'FullSeq/Clust' + str(clustid1) + '/'
-    analysispath = macpath + droppath + 'FullSeq/Analysis/'
-    clustpath2 = macpath + droppath + 'FullSeq/Clust' + str(clustid2) + '/'
+    clustpath1 = fullpath + 'FullSeq/Clust' + str(clustid1) + '/'
+    analysispath = fullpath + 'FullSeq/Analysis/'
+    clustpath2 = fullpath + 'FullSeq/Clust' + str(clustid2) + '/'
     afasta1 = clustpath1 + 'afam.fasta'
     afasta2 = clustpath2 + 'afam.fasta'
     # SeqLogos
@@ -104,12 +148,12 @@ def comp_mats_full_J(clustid1, clustid2):
 
     J1 = sortjmat(J1p, n1, 21)
     H1 = sorthmat(H1p, n1, 21)
-    J1d = jtopval(J1, n1, 21)
+    J1d = jnormtval(J1, n1, 21)
     H1d = htopval(H1, n1, 21)
 
     J2 = sortjmat(J2p, n2, 21)
     H2 = sorthmat(H2p, n2, 21)
-    J2d = jtopval(J2, n2, 21)
+    J2d = jnormtval(J2, n2, 21)
     H2d = htopval(H2, n2, 21)
 
     JDIFF = np.subtract(J1d, J2d)
@@ -142,13 +186,13 @@ def comp_mats_full_J(clustid1, clustid2):
     # J1
     ax[0, 0].title.set_text('Jmat Top 90% Values Cluster: ' + str(clustid1))
     ax[0, 0].title.set_size(fontsize=6)
-    pos = ax[0, 0].imshow(J1d, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
-    #j1bar = fig.colorbar(pos, ax=ax[0, 0], fraction=0.046, pad=0.04)
-    ax[0, 0].set_xticks(np.arange(-.5, (n1 - 2) * 21, 21))
-    ax[0, 0].set_yticks(np.arange(-.5, (n1 - 2) * 21, 21))
+    pos = ax[0, 0].imshow(J1d, cmap='YlOrRd', aspect='equal', vmin=0, vmax=4.0)
+    j1bar = fig.colorbar(pos, ax=ax[0, 0], fraction=0.046, pad=0.04)
+    ax[0, 0].set_xticks(np.arange(-.5, (n1 - 2), 1))
+    ax[0, 0].set_yticks(np.arange(-.5, (n1 - 2), 1))
     ax[0, 0].set_xticklabels(np.arange(2, n1, 1))
     ax[0, 0].set_yticklabels(np.arange(1, n1 - 1, 1))
-    ax[0, 0].grid(True, color='g', lw=0.1)
+    ax[0, 0].grid(True, color='g', lw=1.0)
     ax[0, 0].set_ylabel('i')
     # H1
     ax[1, 0].imshow(H1d, cmap=cmap, aspect='equal')
@@ -156,7 +200,7 @@ def comp_mats_full_J(clustid1, clustid2):
     ax[1, 0].title.set_size(fontsize=6)
     ax[1, 0].set_xticks(np.arange(0, 21, 1))
     ax[1, 0].set_yticks(np.arange(0, n1, 1))
-    ax[1, 0].set_xticklabels(np.arange(1, 22, 1))
+    ax[1, 0].set_xticklabels(aa)
     ax[1, 0].set_yticklabels(np.arange(1, n1+1, 1))
     ax[1, 0].set_xlabel('Amino Acid')
     ax[1, 0].set_ylabel('i')
@@ -165,11 +209,11 @@ def comp_mats_full_J(clustid1, clustid2):
     ax[0, 1].title.set_size(fontsize=6)
     pos = ax[0, 1].imshow(J2d, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
     #j2bar = fig.colorbar(pos, ax=ax[0, 1], fraction=0.046, pad=0.04)
-    ax[0, 1].set_xticks(np.arange(-.5, (n2 - 2) * 21, 21))
-    ax[0, 1].set_yticks(np.arange(-.5, (n2 - 2) * 21, 21))
+    ax[0, 1].set_xticks(np.arange(-.5, (n2 - 2), 1))
+    ax[0, 1].set_yticks(np.arange(-.5, (n2 - 2), 1))
     ax[0, 1].set_xticklabels(np.arange(2, n2, 1))
     ax[0, 1].set_yticklabels(np.arange(1, n2 - 1, 1))
-    ax[0, 1].grid(True, color='g', lw=0.1)
+    ax[0, 1].grid(True, color='g', lw=0.5)
     ax[0, 1].set_ylabel('i')
     # H2
     ax[1, 1].imshow(H2d, cmap=cmap, aspect='equal')
@@ -177,7 +221,7 @@ def comp_mats_full_J(clustid1, clustid2):
     ax[1, 1].title.set_size(fontsize=6)
     ax[1, 1].set_xticks(np.arange(0, 21, 1))
     ax[1, 1].set_yticks(np.arange(0, n2, 1))
-    ax[1, 1].set_xticklabels(np.arange(1, 22, 1))
+    ax[1, 1].set_xticklabels(aa)
     ax[1, 1].set_yticklabels(np.arange(1, n2 + 1, 1))
     ax[1, 1].set_xlabel('Amino Acid')
     ax[1, 1].set_ylabel('i')
@@ -188,11 +232,11 @@ def comp_mats_full_J(clustid1, clustid2):
     jdbar = fig.colorbar(pos, ax=ax[0, 2], fraction=0.046, pad=0.04)
     jdbar.set_ticks([-1, 0, 1])
     jdbar.set_ticklabels([str(clustid1), 'Neither', str(clustid2)])
-    ax[0, 2].set_xticks(np.arange(-.5, (n2 - 2) * 21, 21))
-    ax[0, 2].set_yticks(np.arange(-.5, (n2 - 2) * 21, 21))
+    ax[0, 2].set_xticks(np.arange(-.5,  n2-2, 1))
+    ax[0, 2].set_yticks(np.arange(-.5, (n2 - 2), 1))
     ax[0, 2].set_xticklabels(np.arange(2, n2, 1))
     ax[0, 2].set_yticklabels(np.arange(1, n2 - 1, 1))
-    ax[0, 2].grid(True, color='g', lw=0.1)
+    ax[0, 2].grid(True, color='g', lw=0.5)
     ax[0, 2].set_ylabel('i')
     # HDiff
     pos = ax[1, 2].imshow(HDIFF, cmap=cmap, aspect='equal')
@@ -203,12 +247,12 @@ def comp_mats_full_J(clustid1, clustid2):
     ax[1, 2].title.set_size(fontsize=6)
     ax[1, 2].set_xticks(np.arange(0, 21, 1))
     ax[1, 2].set_yticks(np.arange(0, n2, 1))
-    ax[1, 2].set_xticklabels(np.arange(1, 22, 1))
+    ax[1, 2].set_xticklabels(aa)
     ax[1, 2].set_yticklabels(np.arange(1, n2 + 1, 1))
     ax[1, 2].set_xlabel('Amino Acid')
     ax[1, 2].set_ylabel('i')
     # ColorBar Params
-    #j1bar.ax.tick_params(labelsize=2)
+    j1bar.ax.tick_params(labelsize=8)
     #j2bar.ax.tick_params(labelsize=2)
     jdbar.ax.tick_params(labelsize=10)
     # IMAGE SEQUENCE LOGOS
@@ -219,8 +263,9 @@ def comp_mats_full_J(clustid1, clustid2):
     plt.savefig(analysispath + 'difftrial.png', dpi=600)
     # plt.savefig(analysispath + 'Clust' + str(clustid) + 'analysis.png', dpi=800)
 
-
 clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
             42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+
 
 comp_mats_full_J(1,4)
