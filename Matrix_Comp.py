@@ -24,13 +24,12 @@ def getn(fastafile):
 
 def sortjmat(file, N, q):
     o = open(file, 'r')
-    fullmatrix=np.full((N-1,N,q,q),0.0)
+    fullmatrix = np.full((N-1, N-1, q, q), 0.0)
     for line in o:
-        data=line.split(',')
+        data = line.split(',')
         fullmatrix[int(data[0])-1, int(data[1])-2, int(data[2])-1, int(data[3])-1] = float(data[4].rstrip())
     o.close()
     return fullmatrix
-
 
 def sorthmat(file, N, q):
     o = open(file, 'r')
@@ -43,9 +42,9 @@ def sorthmat(file, N, q):
 
 
 def jdisplay(J, N, q):
-    Jdisp = np.full(((N-2)*q, (N-2)*q), 0.0)
-    for i in range(0, N-2):
-        for j in range(0, N-2):
+    Jdisp = np.full(((N-1)*q, (N-1)*q), 0.0)
+    for i in range(N-1):
+        for j in range(N-1):
             for k in range(q):
                 for l in range(q):
                     if J[i, j, k, l] != 0.0:
