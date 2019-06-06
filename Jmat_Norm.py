@@ -17,6 +17,7 @@ clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 rna = ['-', 'A', 'C', 'G', 'U']
 
+
 def htopval(H, N, q):
     Hdisp = np.full((N, q), 0.0)
     val = np.percentile(H, 90)
@@ -54,6 +55,32 @@ def sorthmat(file, N, q):
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
     o.close()
     return fullmatrix
+
+
+def jnorm(J, N):
+    jnorm = np.full((N-1, N-1), 0.0)
+    jdisp = np.full((N-1, N-1), 0.0)
+    for i in range(N-1):
+        for j in range(N-1):
+            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+    tval = np.percentile(jnorm, 80)
+    for i in range(N-1):
+        for j in range(N-1):
+            if jnorm[i, j] >= tval:
+                jdisp[i, j] = jnorm[i, j]
+    return jdisp
+
+
+def top10jnorms(J, N):
+    jnorm = np.full((N-1, N-1), 0.0)
+    vals=[]
+    for i in range(N-1):
+        for j in range(N-1):
+            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+            vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+    vals.sort(key=lambda tup: tup[2])
+    top10 = vals[-12:-1]
+    return top10
 
 
 def jnormtvalwdist(J, N, q):
@@ -324,3 +351,40 @@ def jmatshow_genseqs():
     figname = 'RNAFAMs.png'
     plt.savefig(analysispath + figname, dpi=600)
 
+
+def IndJij(subplot, J, x, y, famid):
+    subplot.imshow(J[x, y, :, :], cmap='YlOrRd', vmin=0, vmax=0.5)
+    subplot.set_xticks(np.arange(-.5, 4.5, 1))
+    subplot.set_yticks(np.arange(-.5, 4.5, 1))
+    subplot.set_xticklabels(['-', 'A', 'C', 'G', 'U'])
+    subplot.set_yticklabels(['-', 'A', 'C', 'G', 'U'])
+    # subplot.tick_params(axis='both', which='major', labelsize=4)
+    # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
+    subplot.grid(True, color='r', lw=0.1)
+    subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
+    subplot.title.set_size(fontsize=6)
+
+
+def top10norms_figure(famid):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    # Get Indices of top 10 norms
+    jx = top10jnorms(J, N)
+
+    fig, ax = plt.subplots(2, 5, constrained_layout=True)
+    for i in range(10):
+        x, y, z = jx[i]
+        j = i % 5
+        k = 0
+        if i>4:
+            k=1
+        IndJij(ax[k, j], J, x, y, famid)
+    fig.suptitle('Highest Jij Norms')
+    plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
+
+top10norms_figure(8)
