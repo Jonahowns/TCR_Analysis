@@ -6,7 +6,8 @@ import seaborn as sns
 import sys
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
-droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
+# droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
+droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
 fullpath = upath + droppath
@@ -14,7 +15,7 @@ clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29
             42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-
+rna = ['-', 'A', 'C', 'G', 'U']
 
 def htopval(H, N, q):
     Hdisp = np.full((N, q), 0.0)
@@ -87,6 +88,21 @@ def fig_fullJnorm(subplot, clustid, mat, n, cmap):
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
 
 
+def fig_fullJnorm_RNA(subplot, clustid, mat, n, cmap):
+    subplot.title.set_text('Jmat Top 80% Family: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=0, vmax=1)
+    subplot.set_xticks(np.arange(-.5, (n - 1), 1))
+    subplot.set_yticks(np.arange(-.5, (n - 1), 1))
+    subplot.set_xticklabels(np.arange(2, n+1, 1))
+    subplot.set_yticklabels(np.arange(1, n, 1))
+    subplot.grid(True, color='g', lw=0.5)
+    subplot.set_ylabel('i')
+    subplot.set_xlabel('j')
+    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+
+
 def fig_fullH(subplot, clustid, mat, n, cmap):
     # H1
     subplot.imshow(mat, cmap=cmap, aspect='equal')
@@ -101,15 +117,40 @@ def fig_fullH(subplot, clustid, mat, n, cmap):
     subplot.set_xlabel('Amino Acid')
     subplot.set_ylabel('i')
 
+def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
+    # H1
+    subplot.imshow(mat.T, cmap=cmap, aspect='equal')
+    subplot.title.set_text('Hmat Family: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+    subplot.set_yticks(np.arange(0, 5, 1))
+    subplot.set_xticks(np.arange(0, n, 1))
+    subplot.set_yticklabels(rna)
+    subplot.set_xticklabels(np.arange(1, n+1, 1))
+    subplot.set_ylabel('Base ID')
+    subplot.set_xlabel('i')
 
 def distofnorms(subplot, clustid, vals, tval):
-    den1 = gaussian_kde(vals)
+    deN = gaussian_kde(vals)
     xd1 = np.linspace(0, 2, 100)
-    subplot.plot(xd1, den1(xd1), color='r')
+    subplot.plot(xd1, deN(xd1), color='r')
     subplot.plot(vals, [0.01] * len(vals), '|', color='k')
     subplot.set_xlabel('Norm Value')
     subplot.grid(True)
     subplot.title.set_text('Distribution of Norms Clust ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    subplot.axvline(x=tval)
+
+
+def distofnorms_RNA(subplot, clustid, vals, tval):
+    deN = gaussian_kde(vals)
+    xd1 = np.linspace(0, 2, 100)
+    subplot.plot(xd1, deN(xd1), color='r')
+    subplot.plot(vals, [0.01] * len(vals), '|', color='k')
+    subplot.set_xlabel('Norm Value')
+    subplot.grid(True)
+    subplot.title.set_text('Distribution of Norms Family ' + str(clustid))
     subplot.title.set_size(fontsize=6)
     subplot.axvline(x=tval)
 
@@ -122,7 +163,16 @@ def seqlogoplot(filepath, subplot, clustid):
     subplot.title.set_size(fontsize=6)
 
 
-def jmatshow(clust1, clust2, clust3, clust4):
+def seqlogoplot_RNA(filepath, subplot, clustid):
+    fsl1 = mpimg.imread(filepath)
+    subplot.imshow(fsl1)
+    subplot.axis('off')
+    subplot.title.set_text('SeqLogo Family: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+
+
+
+def jmatshow_clust(clust1, clust2, clust3, clust4):
     # File Paths
     clustpath1 = fullpath + 'FullSeq/Clust' + str(clust1) + '/'
     clustpath2 = fullpath + 'FullSeq/Clust' + str(clust2) + '/'
@@ -148,45 +198,45 @@ def jmatshow(clust1, clust2, clust3, clust4):
     J4p = clustpath4 + str(clust4) + 'full.j'
     H4p = clustpath4 + str(clust4) + 'full.h'
     # Get N
-    n1 = getn(afasta1)
-    n2 = getn(afasta2)
-    n3 = getn(afasta3)
-    n4 = getn(afasta4)
+    N = getn(afasta1)
+    N = getn(afasta2)
+    N = getn(afasta3)
+    N = getn(afasta4)
     # Get Matrices Ready
-    J1 = sortjmat(J1p, n1, 21)
-    H1 = sorthmat(H1p, n1, 21)
-    J1d, vals1, rc1 = jnormtvalwdist(J1, n1, 21)
-    H1d = htopval(H1, n1, 21)
+    J1 = sortjmat(J1p, N, 21)
+    H1 = sorthmat(H1p, N, 21)
+    J1d, vals1, rc1 = jnormtvalwdist(J1, N, 21)
+    H1d = htopval(H1, N, 21)
 
-    J2 = sortjmat(J2p, n2, 21)
-    H2 = sorthmat(H2p, n2, 21)
-    J2d, vals2, rc2 = jnormtvalwdist(J2, n2, 21)
-    H2d = htopval(H2, n2, 21)
+    J2 = sortjmat(J2p, N, 21)
+    H2 = sorthmat(H2p, N, 21)
+    J2d, vals2, rc2 = jnormtvalwdist(J2, N, 21)
+    H2d = htopval(H2, N, 21)
 
-    J3 = sortjmat(J3p, n3, 21)
-    H3 = sorthmat(H3p, n3, 21)
-    J3d, vals3, rc3 = jnormtvalwdist(J3, n3, 21)
-    H3d = htopval(H3, n3, 21)
+    J3 = sortjmat(J3p, N, 21)
+    H3 = sorthmat(H3p, N, 21)
+    J3d, vals3, rc3 = jnormtvalwdist(J3, N, 21)
+    H3d = htopval(H3, N, 21)
 
-    J4 = sortjmat(J4p, n4, 21)
-    H4 = sorthmat(H4p, n4, 21)
-    J4d, vals4, rc4 = jnormtvalwdist(J4, n4, 21)
-    H4d = htopval(H4, n4, 21)
+    J4 = sortjmat(J4p, N, 21)
+    H4 = sorthmat(H4p, N, 21)
+    J4d, vals4, rc4 = jnormtvalwdist(J4, N, 21)
+    H4d = htopval(H4, N, 21)
 
     #Create Figure
     fig, ax = plt.subplots(4, 4, figsize=(10, 8), constrained_layout=True)
     cmap = 'YlOrRd'
     # J Matrices
-    fig_fullJnorm(ax[0,0], clust1, J1d, n1, cmap)
-    fig_fullJnorm(ax[0,1], clust2, J2d, n2, cmap)
-    fig_fullJnorm(ax[0,2], clust3, J3d, n3, cmap)
-    fig_fullJnorm(ax[0,3], clust4, J4d, n4, cmap)
+    fig_fullJnorm(ax[0,0], clust1, J1d, N, cmap)
+    fig_fullJnorm(ax[0,1], clust2, J2d, N, cmap)
+    fig_fullJnorm(ax[0,2], clust3, J3d, N, cmap)
+    fig_fullJnorm(ax[0,3], clust4, J4d, N, cmap)
 
     # H Matrices
-    fig_fullH(ax[1,0], clust1, H1d, n1, cmap)
-    fig_fullH(ax[1,1], clust2, H2d, n2, cmap)
-    fig_fullH(ax[1,2], clust3, H3d, n3, cmap)
-    fig_fullH(ax[1,3], clust4, H4d, n4, cmap)
+    fig_fullH(ax[1,0], clust1, H1d, N, cmap)
+    fig_fullH(ax[1,1], clust2, H2d, N, cmap)
+    fig_fullH(ax[1,2], clust3, H3d, N, cmap)
+    fig_fullH(ax[1,3], clust4, H4d, N, cmap)
 
     # Seq Logos
     seqlogoplot(logo1, ax[2, 0], clust1)
@@ -203,9 +253,73 @@ def jmatshow(clust1, clust2, clust3, clust4):
     figname = str(clust1) + '-' + str(clust2) + '-' + str(clust3) + '-' + str(clust4) + 'top80norms.png'
     plt.savefig(analysispath + figname, dpi=600)
 
-clusters.append(1)
-it = iter(clusters)
-show = list(zip(it, it, it, it))
-for x in show:
-    jmatshow(x[0], x[1], x[2], x[3])
+
+def jmatshow_genseqs():
+    analysispath = fullpath
+    # SeqLogos
+    logo1 = fullpath + '5sl.png'
+    logo2 = fullpath + '6sl.png'
+    logo3 = fullpath + '7sl.png'
+    logo4 = fullpath + '8sl.png'
+    # Matrix Paths
+    J1p = fullpath + '5j'
+    H1p = fullpath + '5h'
+    J2p = fullpath + '6j'
+    H2p = fullpath + '6h'
+    J3p = fullpath + '7j'
+    H3p = fullpath + '7h'
+    J4p = fullpath + '8j'
+    H4p = fullpath + '8h'
+    # N
+    N = 40
+    # Get Matrices Ready
+    J1 = sortjmat(J1p, N, 5)
+    H1 = sorthmat(H1p, N, 5)
+    J1d, vals1, rc1 = jnormtvalwdist(J1, N, 5)
+    H1d = htopval(H1, N, 5)
+
+    J2 = sortjmat(J2p, N, 5)
+    H2 = sorthmat(H2p, N, 5)
+    J2d, vals2, rc2 = jnormtvalwdist(J2, N, 5)
+    H2d = htopval(H2, N, 5)
+
+    J3 = sortjmat(J3p, N, 5)
+    H3 = sorthmat(H3p, N, 5)
+    J3d, vals3, rc3 = jnormtvalwdist(J3, N, 5)
+    H3d = htopval(H3, N, 5)
+
+    J4 = sortjmat(J4p, N, 5)
+    H4 = sorthmat(H4p, N, 5)
+    J4d, vals4, rc4 = jnormtvalwdist(J4, N, 5)
+    H4d = htopval(H4, N, 5)
+
+    #Create Figure
+    fig, ax = plt.subplots(4, 4, figsize=(10, 8), constrained_layout=True, gridspec_kw={'height_ratios': [1, 0.5, 0.5, 0.5]})
+    cmap = 'YlOrRd'
+    # J Matrices
+    fig_fullJnorm_RNA(ax[0,0], 5, J1d, N, cmap)
+    fig_fullJnorm_RNA(ax[0,1], 6, J2d, N, cmap)
+    fig_fullJnorm_RNA(ax[0,2], 7, J3d, N, cmap)
+    fig_fullJnorm_RNA(ax[0,3], 8, J4d, N, cmap)
+
+    # H Matrices
+    fig_fullH_RNA(ax[1,0], 5, H1d, N, cmap)
+    fig_fullH_RNA(ax[1,1], 6, H2d, N, cmap)
+    fig_fullH_RNA(ax[1,2], 7, H3d, N, cmap)
+    fig_fullH_RNA(ax[1,3], 8, H4d, N, cmap)
+
+    # Seq Logos
+    seqlogoplot_RNA(logo1, ax[2, 0], 5)
+    seqlogoplot_RNA(logo2, ax[2, 1], 6)
+    seqlogoplot_RNA(logo3, ax[2, 2], 7)
+    seqlogoplot_RNA(logo4, ax[2, 3], 8)
+
+    # Distribution of Norms
+    distofnorms_RNA(ax[3, 0], 5, vals1, rc1)
+    distofnorms_RNA(ax[3, 1], 6, vals2, rc2)
+    distofnorms_RNA(ax[3, 2], 7, vals3, rc3)
+    distofnorms_RNA(ax[3, 3], 8, vals4, rc4)
+
+    figname = 'RNAFAMs.png'
+    plt.savefig(analysispath + figname, dpi=600)
 
