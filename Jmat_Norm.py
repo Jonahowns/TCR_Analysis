@@ -117,6 +117,7 @@ def fig_fullH(subplot, clustid, mat, n, cmap):
     subplot.set_xlabel('Amino Acid')
     subplot.set_ylabel('i')
 
+
 def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
     # H1
     subplot.imshow(mat.T, cmap=cmap, aspect='equal')
@@ -130,6 +131,7 @@ def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
     subplot.set_xticklabels(np.arange(1, n+1, 1))
     subplot.set_ylabel('Base ID')
     subplot.set_xlabel('i')
+
 
 def distofnorms(subplot, clustid, vals, tval):
     deN = gaussian_kde(vals)
@@ -169,7 +171,6 @@ def seqlogoplot_RNA(filepath, subplot, clustid):
     subplot.axis('off')
     subplot.title.set_text('SeqLogo Family: ' + str(clustid))
     subplot.title.set_size(fontsize=6)
-
 
 
 def jmatshow_clust(clust1, clust2, clust3, clust4):
