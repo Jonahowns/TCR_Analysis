@@ -31,6 +31,7 @@ def sortjmat(file, N, q):
     o.close()
     return fullmatrix
 
+
 def sorthmat(file, N, q):
     o = open(file, 'r')
     fullmatrix = np.full((N, q), 0.0)
