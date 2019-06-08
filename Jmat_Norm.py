@@ -409,128 +409,203 @@ def top10norms_figure(famid):
     plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
 
 
-def checkprevVals_goodseq(J, pvals, x, y, gseq):
+# def checkprevVals_goodseq(J, pvals, x, y, gseq):
+#     for idd, pack in enumerate(pvals):
+#         xp, yp, rx, ry, pval = pack
+#         val = np.amax(J[x, y, :, :])  # Highest in N w/ no constraints
+#         gpx, gpy = list(np.where(J[x, y, :, :] == val))  # Indices of highest in N
+#         if xp == x: # If base x is the same as base x in another Top 10 Jij Interaction
+#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, rx, :]) # Highest of P + Highest in N w x in state from P
+#             tchoice = np.max(J[xp, yp, gpx, :]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
+#             if pchoice > tchoice:
+#                 xN = rx    # Chose Previous x state as x state for both N and P
+#                 gseq[x] = rna[xN]
+#                 gseq[yp] = rna[ry]
+#                 val = np.amax(J[x, y, xN, :])
+#                 gpy = int(np.where(J[x, y, xN, :] == val)[0])
+#                 yN = int(gpy)
+#                 gseq[y] = rna[int(gpy)]
+#                 # Already have indices and value for P just need to Add N
+#                 pvals.append((x, y, xN, yN, val))
+#             else:
+#                 gseq[y] = rna[int(gpy)]
+#                 gseq[x] = rna[int(gpx)]
+#                 xP, xN = int(gpx), int(gpx)
+#                 yN = int(gpy)
+#                 val = np.amax(J[x, yp, gpx, :])
+#                 gpy = int(np.where(J[x, yp, gpx, :] == val)[0])
+#                 gseq[yp] = rna[int(gpy)]
+#                 yP = int(gpy)
+#                 # Remove P pval arguments
+#                 del pvals[idd]
+#                 # Append new P arguments
+#                 pvals.append((xp, yp, xP, yP, val))
+#                 # Append new N arguments
+#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
+#         if yp == y: # If base y is the same as base y in another Top 10 Jij Interaction
+#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, ry]) # Highest of P + Highest in N w x in state from P
+#             tchoice = np.max(J[xp, yp, :, gpy]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
+#             if pchoice > tchoice:
+#                 gseq[xp] = rna[rx]
+#                 gseq[yp] = rna[ry]
+#                 xP, yP = rx, ry
+#                 yN = yP
+#                 val = np.amax(J[x, y, :, yN])
+#                 gpx = int(np.where(J[x, y, :, yN] == val)[0])
+#                 xN = int(gpx)
+#                 gseq[x] = rna[int(gpx)]
+#                 # Already have indices and value for P just need to Add N
+#                 pvals.append((x, y, xN, yN, val))
+#             else:
+#                 gseq[y] = rna[int(gpy)]
+#                 gseq[x] = rna[int(gpx)]
+#                 xN, yN = int(gpx), int(gpy)
+#                 yP = yN
+#                 val = np.amax(J[xp, yp, :, yP])
+#                 gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
+#                 xP = int(gpx)
+#                 gseq[xp] = rna[xP]
+#                 # Remove P pval arguments
+#                 del pvals[idd]
+#                 # Append new P arguments
+#                 pvals.append((xp, yp, xP, yP, val))
+#                 # Append new N arguments
+#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
+#         if xp==y or yp==x:
+#             if xp == y:
+#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, rx])  # Highest of P + Highest in N w y in highest x state from P
+#                 tchoice = np.max(J[xp, yp, gpy, :]) + J[x, y, gpx, gpy]  # Highest of P w x in highest y state + highest in N
+#                 if pchoice > tchoice:
+#                     gseq[xp] = rna(int(rx))
+#                     gseq[yp] = rna(int(ry))
+#                     xP, yP = rx, ry
+#                     xP = yN
+#                     val = np.amax(J[x, y, :, yN])
+#                     gpx = int(np.where(J[x, y, :, yN] == val)[0])
+#                     xN = int(gpx)
+#                     gseq[x] = rna[int(gpy)]
+#                     # Already have indices and value for P just need to Add N
+#                     pvals.append((x, y, xN, yN, val))
+#                 else:
+#                     gseq[y] = rna[int(gpy)]
+#                     gseq[x] = rna[int(gpx)]
+#                     xN, yN = int(gpx), int(gpy)
+#                     xP = yN    # xp == y
+#                     val = np.amax(J[xp, yp, xP, :])
+#                     gpy = int(np.where(J[x, y, :, gpx] == val)[0])
+#                     yP = int(gpy)
+#                     gseq[yp] = rna[yP]
+#                     # Remove P pval arguments
+#                     del pvals[idd]
+#                     # Append new P arguments
+#                     pvals.append((xp, yp, xP, yP, val))
+#                     # Append new N arguments
+#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
+#             if yp == x:
+#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, ry, :])  # Highest of P + Highest in N w x in state from P
+#                 tchoice = np.max(J[xp, yp, :, gpx]) + J[x, y, gpx, gpy]  # Highest of P w x in state from N + highest in N
+#                 if pchoice > tchoice:
+#                     gseq[xp] = rna[int(rx)]
+#                     gseq[yp] = rna[int(ry)]
+#                     xP, yP = rx, ry
+#                     xN = yP
+#                     val = np.amax(J[x, y, :, yP])
+#                     gpy = int(np.where(J[x, y, :, yP] == val)[0])
+#                     yN = int(gpy)
+#                     gseq[x] = rna[yN]
+#                     # Already have indices and value for P just need to Add N
+#                     pvals.append((x, y, xN, yN, val))
+#                 else:
+#                     gseq[y] = rna[int(gpy)]
+#                     gseq[x] = rna[int(gpx)]
+#                     xN, yN = int(gpx), int(gpy)
+#                     yP = xN
+#                     val = np.amax(J[xp, yp, :, yP])
+#                     gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
+#                     xP = int(gpx)
+#                     gseq[yp] = rna[xP]
+#                     # Remove P pval arguments
+#                     del pvals[idd]
+#                     # Append new P arguments
+#                     pvals.append((xp, yp, xP, yP, val))
+#                     # Append new N arguments
+#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
+#     return pvals
+
+
+def check_vals(x, y, pvals):
     for idd, pack in enumerate(pvals):
         xp, yp, rx, ry, pval = pack
-        val = np.amax(J[x, y, :, :])  # Highest in N w/ no constraints
-        gpx, gpy = list(np.where(J[x, y, :, :] == val))  # Indices of highest in N
-        if xp == x: # If base x is the same as base x in another Top 10 Jij Interaction
-            pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, rx, :]) # Highest of P + Highest in N w x in state from P
-            tchoice = np.max(J[xp, yp, gpx, :]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-            if pchoice > tchoice:
-                xN = rx    # Chose Previous x state as x state for both N and P
-                gseq[x] = rna[xN]
-                gseq[yp] = rna[ry]
-                val = np.amax(J[x, y, xN, :])
-                gpy = int(np.where(J[x, y, xN, :] == val)[0])
-                yN = int(gpy)
-                gseq[y] = rna[int(gpy)]
-                # Already have indices and value for P just need to Add N
-                pvals.append((x, y, xN, yN, val))
-            else:
-                gseq[y] = rna[int(gpy)]
-                gseq[x] = rna[int(gpx)]
-                xP, xN = int(gpx), int(gpx)
-                yN = int(gpy)
-                val = np.amax(J[x, yp, gpx, :])
-                gpy = int(np.where(J[x, yp, gpx, :] == val)[0])
-                gseq[yp] = rna[int(gpy)]
-                yP = int(gpy)
-                # Remove P pval arguments
-                del pvals[idd]
-                # Append new P arguments
-                pvals.append((xp, yp, xP, yP, val))
-                # Append new N arguments
-                pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-        if yp == y: # If base y is the same as base y in another Top 10 Jij Interaction
-            pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, ry]) # Highest of P + Highest in N w x in state from P
-            tchoice = np.max(J[xp, yp, :, gpy]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-            if pchoice > tchoice:
-                gseq[xp] = rna[rx]
-                gseq[yp] = rna[ry]
-                xP, yP = rx, ry
-                yN = yP
-                val = np.amax(J[x, y, :, yN])
-                gpx = int(np.where(J[x, y, :, yN] == val)[0])
-                xN = int(gpx)
-                gseq[x] = rna[int(gpx)]
-                # Already have indices and value for P just need to Add N
-                pvals.append((x, y, xN, yN, val))
-            else:
-                gseq[y] = rna[int(gpy)]
-                gseq[x] = rna[int(gpx)]
-                xN, yN = int(gpx), int(gpy)
-                yP = yN
-                val = np.amax(J[xp, yp, :, yP])
-                gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-                xP = int(gpx)
-                gseq[xp] = rna[xP]
-                # Remove P pval arguments
-                del pvals[idd]
-                # Append new P arguments
-                pvals.append((xp, yp, xP, yP, val))
-                # Append new N arguments
-                pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-        if xp==y or yp==x:
-            if xp == y:
-                pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, rx])  # Highest of P + Highest in N w y in highest x state from P
-                tchoice = np.max(J[xp, yp, gpy, :]) + J[x, y, gpx, gpy]  # Highest of P w x in highest y state + highest in N
-                if pchoice > tchoice:
-                    gseq[xp] = rna(int(rx))
-                    gseq[yp] = rna(int(ry))
-                    xP, yP = rx, ry
-                    xP = yN
-                    val = np.amax(J[x, y, :, yN])
-                    gpx = int(np.where(J[x, y, :, yN] == val)[0])
-                    xN = int(gpx)
-                    gseq[x] = rna[int(gpy)]
-                    # Already have indices and value for P just need to Add N
-                    pvals.append((x, y, xN, yN, val))
-                else:
-                    gseq[y] = rna[int(gpy)]
-                    gseq[x] = rna[int(gpx)]
-                    xN, yN = int(gpx), int(gpy)
-                    xP = yN    # xp == y
-                    val = np.amax(J[xp, yp, xP, :])
-                    gpy = int(np.where(J[x, y, :, gpx] == val)[0])
-                    yP = int(gpy)
-                    gseq[yp] = rna[yP]
-                    # Remove P pval arguments
-                    del pvals[idd]
-                    # Append new P arguments
-                    pvals.append((xp, yp, xP, yP, val))
-                    # Append new N arguments
-                    pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-            if yp == x:
-                pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, ry, :])  # Highest of P + Highest in N w x in state from P
-                tchoice = np.max(J[xp, yp, :, gpx]) + J[x, y, gpx, gpy]  # Highest of P w x in state from N + highest in N
-                if pchoice > tchoice:
-                    gseq[xp] = rna[int(rx)]
-                    gseq[yp] = rna[int(ry)]
-                    xP, yP = rx, ry
-                    xN = yP
-                    val = np.amax(J[x, y, :, yP])
-                    gpy = int(np.where(J[x, y, :, yP] == val)[0])
-                    yN = int(gpy)
-                    gseq[x] = rna[yN]
-                    # Already have indices and value for P just need to Add N
-                    pvals.append((x, y, xN, yN, val))
-                else:
-                    gseq[y] = rna[int(gpy)]
-                    gseq[x] = rna[int(gpx)]
-                    xN, yN = int(gpx), int(gpy)
-                    yP = xN
-                    val = np.amax(J[xp, yp, :, yP])
-                    gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-                    xP = int(gpx)
-                    gseq[yp] = rna[xP]
-                    # Remove P pval arguments
-                    del pvals[idd]
-                    # Append new P arguments
-                    pvals.append((xp, yp, xP, yP, val))
-                    # Append new N arguments
-                    pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-    return pvals
+        if x == xp:
+            return 1, idd, 'xs'
+        elif y == yp:
+            return 1, idd, 'ys'
+        elif x == yp:
+            return 1, idd, 'xnyp'
+        elif y == xp:
+            return 1, idd, 'ynxp'
+        else:
+            return 0, idd, 'none'
+
+
+def past_entry_comp(J, pvals, xn, yn):
+    ind, xid, stype = check_vals(xn, yn, pvals)
+    if ind == 0:
+        return 0
+    if ind == 1:
+        xp, yp, rxp, ryp, val = pvals[xid]
+        val = np.amax(J[xn, yn, :, :])  # Highest in N w/ no constraints
+        rxn, ryn = list(np.where(J[xn, yn, :, :] == val))  # Indices of highest in N
+        if stype == 'xs':
+            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, rxp, :])
+            tchoice = np.max(J[xp, yp, rxn, :]) + J[xn, yn, rxn, ryn]
+        elif stype == 'ys':
+            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, ryp])
+            tchoice = np.max(J[xp, yp, :, ryn]) + J[xn, yn, rxn, ryn]
+        elif stype == 'xnyp':
+            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, ryp, :])
+            tchoice = np.max(J[xp, yp, ryn, :]) + J[xn, yn, rxn, ryn]
+        elif stype == 'ynxp':
+            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, rxp])
+            tchoice = np.max(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
+        if pchoice > tchoice:
+            if stype == 'xs':
+                rxn = rxp
+                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :])))
+            if stype == 'ys':
+                ryn = ryp
+                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn])))
+            if stype == 'xnyp':
+                rxn = ryp
+                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :])))
+            if stype == 'ynxp':
+                ryn = rxp
+                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn])))
+            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        if tchoice > pchoice:
+            if stype == 'xs':
+                rxp = rxn
+                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :])))
+            if stype == 'ys':
+                ryp = ryn
+                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp])))
+            if stype == 'xnyp':
+                ryp = rxn
+                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp])))
+            if stype == 'ynxp':
+                rxp = ryn
+                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :])))
+            pvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
+            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        return [xp, yp, rxp, ryp, xn, yn, rxn, ryn], pvals
+
+
+def Seq_edit_past_entry_comp(array, gseq):
+    gseq[array[0]] = gseq[array[2]]
+    gseq[array[1]] = gseq[array[3]]
+    gseq[array[4]] = gseq[array[6]]
+    gseq[array[5]] = gseq[array[7]]
+    return gseq
 
 
 def gen_goodseq(famid):
@@ -550,18 +625,9 @@ def gen_goodseq(famid):
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
-        if gseq[x] == 'X' and gseq[y] == 'X':
-            gpairval = np.amax(J[x, y, :, :])
-            gpx, gpy = list(np.where(J[x, y, :, :] == gpairval))
-            gseq[x] = rna[int(gpx)]
-            gseq[y] = rna[int(gpy)]
-            pvals.append((x, y, int(gpx), int(gpy), gpairval))
-        elif gseq[x] != 'X' and gseq[y] == 'X':
-            pvals = checkprevVals_goodseq(J, pvals, x, y, gseq)
-        elif gseq[x] == 'X' and gseq[y] != 'X':
-            pvals = checkprevVals_goodseq(J, pvals, x, y, gseq)
-        elif gseq[x] != 'X' and gseq[y] != 'X':
-            pvals = checkprevVals_goodseq(J, pvals, x, y, gseq)
+        vals, pvals = past_entry_comp(J, pvals, x, y)
+        if len(vals) == 8:
+            gseq = Seq_edit_past_entry_comp(vals, gseq)
     for xid, x in enumerate(gseq):
         if x == 'X':
             gpx = int(np.where(H[xid, :] == np.amax(H[xid, :]))[0])
