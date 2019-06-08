@@ -5,23 +5,26 @@ import numpy as np
 
 
 def check_vals(x, y, pvals):
-    for idd, pack in enumerate(pvals):
-        xp, yp, rx, ry, pval = pack
-        if x == xp:
-            return 1, idd, 'xs'
-        elif y == yp:
-            return 1, idd, 'ys'
-        elif x == yp:
-            return 1, idd, 'xnyp'
-        elif y == xp:
-            return 1, idd, 'ynxp'
-        else:
-            return 0, idd, 'none'
+    if len(pvals) == 0:
+        return 0, 0, 'none'
+    else:
+        for idd, pack in enumerate(pvals):
+            xp, yp, rx, ry, pval = pack
+            if x == xp:
+                return 1, idd, 'xs'
+            elif y == yp:
+                return 1, idd, 'ys'
+            elif x == yp:
+                return 1, idd, 'xnyp'
+            elif y == xp:
+                return 1, idd, 'ynxp'
 
 
 def past_entry_comp(J, pvals, xn, yn):
     ind, xid, stype = check_vals(xn, yn, pvals)
     if ind == 0:
+        rxn, ryn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
+        pvals.append(xn, yn, rxn, ryn, J[xn, yn, rxn, ryn])
         return [0], pvals
     if ind == 1:
         xp, yp, rxp, ryp, val = pvals[xid]
@@ -39,6 +42,7 @@ def past_entry_comp(J, pvals, xn, yn):
         elif stype == 'ynxp':
             pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, rxp])
             tchoice = np.max(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
+
         if pchoice > tchoice:
             if stype == 'xs':
                 rxn = rxp
@@ -53,6 +57,7 @@ def past_entry_comp(J, pvals, xn, yn):
                 ryn = rxp
                 rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn])))
             pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
         if tchoice > pchoice:
             if stype == 'xs':
                 rxp = rxn
@@ -68,7 +73,8 @@ def past_entry_comp(J, pvals, xn, yn):
                 ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :])))
             pvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
             pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        return [xp, yp, rxp, ryp, xn, yn, rxn, ryn], pvals
+        vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
+        return vals, pvals
 
 
 def Seq_edit_past_entry_comp(array, gseq):
