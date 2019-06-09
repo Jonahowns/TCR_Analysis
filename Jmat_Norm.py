@@ -559,7 +559,7 @@ def past_entry_comp(J, pvals, xn, yn):
         rxn = int(tmpxn)
         ryn = int(tmpyn)
         pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        return [0], pvals
+        return [xn, yn, rxn, ryn], pvals
     if ind == 1:
         xp, yp, rxp, ryp, val = pvals[xid]
         val = np.amax(J[xn, yn, :, :])  # Highest in N w/ no constraints
@@ -616,10 +616,12 @@ def past_entry_comp(J, pvals, xn, yn):
 
 
 def Seq_edit_past_entry_comp(array, gseq):
-    gseq[array[0]] = rna[int(array[2])]
-    gseq[array[1]] = rna[int(array[3])]
-    gseq[array[4]] = rna[int(array[6])]
-    gseq[array[5]] = rna[int(array[7])]
+    if len(array) >= 4:
+        gseq[array[0]] = rna[int(array[2])]
+        gseq[array[1]] = rna[int(array[3])]
+    if len(array) ==8:
+        gseq[array[4]] = rna[int(array[6])]
+        gseq[array[5]] = rna[int(array[7])]
     return gseq
 
 
@@ -636,13 +638,12 @@ def gen_goodseq(famid):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
     # bseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, 1)
+    tval = topxjnorms(J, N, 5)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
         vals, pvals = past_entry_comp(J, pvals, x, y)
-        if len(vals) == 8:
-            gseq = Seq_edit_past_entry_comp(vals, gseq)
+        gseq = Seq_edit_past_entry_comp(vals, gseq)
     for xid, x in enumerate(gseq):
         if x == 'X':
             gpx = int(np.where(H[xid, :] == np.amax(H[xid, :]))[0])
