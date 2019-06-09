@@ -638,7 +638,7 @@ def gen_goodseq(famid):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
     # bseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, 5)
+    tval = topxjnorms(J, N, 10)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -669,15 +669,15 @@ def Calc_Energy(seq, J, H):
 
 
 
-famid = 5
+famid = 8
 Jp = fullpath + str(famid) + 'j'
 Hp = fullpath + str(famid) + 'h'
 # N
 N = 40
-# Get Matrix Ready
+# Get Matrix ReadyVHV
 J = sortjmat(Jp, N, 5)
 H = sorthmat(Hp, N, 5)
 
-best5 = gen_goodseq(5)
+best5 = gen_goodseq(8)
 b5en = Calc_Energy(best5, J, H)
 print(b5en)
