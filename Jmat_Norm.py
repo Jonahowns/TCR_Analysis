@@ -696,7 +696,6 @@ def gen_badseq(famid, norms):
     return ''.join(bseq)
 
 
-
 def gen_badseq_mutt(famid, norms):
     analysispath = fullpath
     # Matrix Paths
@@ -723,7 +722,6 @@ def gen_badseq_mutt(famid, norms):
     print(pvals)
     print(''.join(bseq))
     return ''.join(bseq)
-
 
 
 def gen_goodseq_mutt(famid, J, H, N, norms):
@@ -783,7 +781,9 @@ print(ten)
 '''
 # bseq5 = gen_badseq(5, 250)
 # bsen = Calc_Energy(bseq5, J, H)
+tbseq = 'ACCAAUAUCACUCCCCGUUUUAAAUUUUAUACUAUAACAU'
+tbben = Calc_Energy(tbseq, J, H)
 bs5 = gen_badseq_mutt(5, 300)
 b5bad = Calc_Energy(bs5, J, H)
 print(b5bad)
-# print(bsen)
+print(tbben)
