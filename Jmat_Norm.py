@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from scipy.stats import gaussian_kde
 import sys
+import copy
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
@@ -75,16 +76,32 @@ def jnorm(J, N):
     return jdisp
 
 
+def full_jdisplay(J, N, q):
+    Jdisp = np.full(((N-1)*q, (N-1)*q), 0.0)
+    for i in range(N-1):
+        for j in range(N-1):
+            for k in range(q):
+                for l in range(q):
+                    if J[i, j, k, l] != 0.0:
+                        Jdisp[i*q+k, j*q+l] = J[i, j, k, l]
+                    else:
+                        Jdisp[i*q+k, j*q+l] = 0.0
+    return Jdisp
+
+
 def topxjnorms(J, N, x):
     jnorm = np.full((N-1, N-1), 0.0)
-    vals=[]
+    vals = []
     for i in range(N-1):
         for j in range(N-1):
             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
             vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
     vals.sort(key=lambda tup: tup[2])
-    ind = -2 - x
+    ind = int(-2 - x)
     top10 = vals[ind:-1]
+    print(ind, -1)
+    print(vals)
+    print(vals[ind:-1])
     return top10
 
 
@@ -103,7 +120,36 @@ def jnormtvalwdist(J, N, q):
             if jnorm[i, j] >= tval:
                 jdisp[i, j] = jnorm[i, j]
     return jdisp, vals, tval
-61
+
+
+def fig_fullJ(subplot, clustid, mat, n, cmap):
+    subplot.title.set_text('Jmat Top 90% Values Cluster: ' + str(clustid))
+    subplot.title.set_size(fontsize=6)
+    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
+    subplot.set_xticks(np.arange(-.5, (n - 2) * 21, 21))
+    subplot.set_yticks(np.arange(-.5, (n - 2) * 21, 21))
+    subplot.set_xticklabels(np.arange(2, n, 1))
+    subplot.set_yticklabels(np.arange(1, n - 1, 1))
+    subplot.grid(True, color='g', lw=0.1)
+    subplot.set_ylabel('i')
+    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+
+
+def fig_fullJ_RNA(subplot, famid, mat, n, cmap):
+    subplot.title.set_text('Jmat Full RNA Fam: ' + str(famid))
+    subplot.title.set_size(fontsize=6)
+    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
+    subplot.set_xticks(np.arange(-.5, (n - 2) * 5, 5))
+    subplot.set_yticks(np.arange(-.5, (n - 2) * 5, 5))
+    subplot.set_xticklabels(np.arange(2, n, 1))
+    subplot.set_yticklabels(np.arange(1, n - 1, 1))
+    subplot.grid(True, color='g', lw=0.1)
+    subplot.set_ylabel('i')
+    subplot.set_xlabel('j')
+    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+
 
 def fig_fullJnorm(subplot, clustid, mat, n, cmap):
     subplot.title.set_text('Jmat Top 80% Norms Cluster: ' + str(clustid))
@@ -165,7 +211,7 @@ def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
     subplot.set_xlabel('i')
 
 
-def distofnorms(subplot, clustid, vals, tval):
+def fig_distofnorms(subplot, clustid, vals, tval):
     deN = gaussian_kde(vals)
     xd1 = np.linspace(0, 2, 100)
     subplot.plot(xd1, deN(xd1), color='r')
@@ -177,7 +223,7 @@ def distofnorms(subplot, clustid, vals, tval):
     subplot.axvline(x=tval)
 
 
-def distofnorms_RNA(subplot, clustid, vals, tval):
+def fig_distofnorms_RNA(subplot, clustid, vals, tval):
     deN = gaussian_kde(vals)
     xd1 = np.linspace(0, 2, 100)
     subplot.plot(xd1, deN(xd1), color='r')
@@ -189,7 +235,7 @@ def distofnorms_RNA(subplot, clustid, vals, tval):
     subplot.axvline(x=tval)
 
 
-def seqlogoplot(filepath, subplot, clustid):
+def fig_seqlogoplot(filepath, subplot, clustid):
     fsl1 = mpimg.imread(filepath)
     subplot.imshow(fsl1)
     subplot.axis('off')
@@ -197,7 +243,7 @@ def seqlogoplot(filepath, subplot, clustid):
     subplot.title.set_size(fontsize=6)
 
 
-def seqlogoplot_RNA(filepath, subplot, clustid):
+def fig_seqlogoplot_RNA(filepath, subplot, clustid):
     fsl1 = mpimg.imread(filepath)
     subplot.imshow(fsl1)
     subplot.axis('off')
@@ -357,7 +403,7 @@ def jmatshow_genseqs():
     plt.savefig(analysispath + figname, dpi=600)
 
 
-def IndJij(subplot, J, x, y, famid):
+def IndJij_RNA(subplot, J, x, y, famid):
     subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
     subplot.set_xticks(np.arange(-.5, 4.5, 1))
     subplot.set_yticks(np.arange(-.5, 4.5, 1))
@@ -370,7 +416,7 @@ def IndJij(subplot, J, x, y, famid):
     subplot.title.set_size(fontsize=6)
 
 
-def IndJij_wColorBar(subplot, J, x, y, famid):
+def IndJij_RNA_wColorBar(subplot, J, x, y, famid):
     pos = subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
     plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
     subplot.set_xticks(np.arange(-.5, 4.5, 1))
@@ -384,7 +430,7 @@ def IndJij_wColorBar(subplot, J, x, y, famid):
     subplot.title.set_size(fontsize=6)
 
 
-def top10norms_figure(famid):
+def top10norms_figure_RNA(famid):
     analysispath = fullpath
     # Matrix Paths
     Jp = fullpath + str(famid) + 'j'
@@ -411,128 +457,26 @@ def top10norms_figure(famid):
     plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
 
 
-# def checkprevVals_goodseq(J, pvals, x, y, gseq):
-#     for idd, pack in enumerate(pvals):
-#         xp, yp, rx, ry, pval = pack
-#         val = np.amax(J[x, y, :, :])  # Highest in N w/ no constraints
-#         gpx, gpy = list(np.where(J[x, y, :, :] == val))  # Indices of highest in N
-#         if xp == x: # If base x is the same as base x in another Top 10 Jij Interaction
-#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, rx, :]) # Highest of P + Highest in N w x in state from P
-#             tchoice = np.max(J[xp, yp, gpx, :]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-#             if pchoice > tchoice:
-#                 xN = rx    # Chose Previous x state as x state for both N and P
-#                 gseq[x] = rna[xN]
-#                 gseq[yp] = rna[ry]
-#                 val = np.amax(J[x, y, xN, :])
-#                 gpy = int(np.where(J[x, y, xN, :] == val)[0])
-#                 yN = int(gpy)
-#                 gseq[y] = rna[int(gpy)]
-#                 # Already have indices and value for P just need to Add N
-#                 pvals.append((x, y, xN, yN, val))
-#             else:
-#                 gseq[y] = rna[int(gpy)]
-#                 gseq[x] = rna[int(gpx)]
-#                 xP, xN = int(gpx), int(gpx)
-#                 yN = int(gpy)
-#                 val = np.amax(J[x, yp, gpx, :])
-#                 gpy = int(np.where(J[x, yp, gpx, :] == val)[0])
-#                 gseq[yp] = rna[int(gpy)]
-#                 yP = int(gpy)
-#                 # Remove P pval arguments
-#                 del pvals[idd]
-#                 # Append new P arguments
-#                 pvals.append((xp, yp, xP, yP, val))
-#                 # Append new N arguments
-#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#         if yp == y: # If base y is the same as base y in another Top 10 Jij Interaction
-#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, ry]) # Highest of P + Highest in N w x in state from P
-#             tchoice = np.max(J[xp, yp, :, gpy]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-#             if pchoice > tchoice:
-#                 gseq[xp] = rna[rx]
-#                 gseq[yp] = rna[ry]
-#                 xP, yP = rx, ry
-#                 yN = yP
-#                 val = np.amax(J[x, y, :, yN])
-#                 gpx = int(np.where(J[x, y, :, yN] == val)[0])
-#                 xN = int(gpx)
-#                 gseq[x] = rna[int(gpx)]
-#                 # Already have indices and value for P just need to Add N
-#                 pvals.append((x, y, xN, yN, val))
-#             else:
-#                 gseq[y] = rna[int(gpy)]
-#                 gseq[x] = rna[int(gpx)]
-#                 xN, yN = int(gpx), int(gpy)
-#                 yP = yN
-#                 val = np.amax(J[xp, yp, :, yP])
-#                 gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-#                 xP = int(gpx)
-#                 gseq[xp] = rna[xP]
-#                 # Remove P pval arguments
-#                 del pvals[idd]
-#                 # Append new P arguments
-#                 pvals.append((xp, yp, xP, yP, val))
-#                 # Append new N arguments
-#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#         if xp==y or yp==x:
-#             if xp == y:
-#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, rx])  # Highest of P + Highest in N w y in highest x state from P
-#                 tchoice = np.max(J[xp, yp, gpy, :]) + J[x, y, gpx, gpy]  # Highest of P w x in highest y state + highest in N
-#                 if pchoice > tchoice:
-#                     gseq[xp] = rna(int(rx))
-#                     gseq[yp] = rna(int(ry))
-#                     xP, yP = rx, ry
-#                     xP = yN
-#                     val = np.amax(J[x, y, :, yN])
-#                     gpx = int(np.where(J[x, y, :, yN] == val)[0])
-#                     xN = int(gpx)
-#                     gseq[x] = rna[int(gpy)]
-#                     # Already have indices and value for P just need to Add N
-#                     pvals.append((x, y, xN, yN, val))
-#                 else:
-#                     gseq[y] = rna[int(gpy)]
-#                     gseq[x] = rna[int(gpx)]
-#                     xN, yN = int(gpx), int(gpy)
-#                     xP = yN    # xp == y
-#                     val = np.amax(J[xp, yp, xP, :])
-#                     gpy = int(np.where(J[x, y, :, gpx] == val)[0])
-#                     yP = int(gpy)
-#                     gseq[yp] = rna[yP]
-#                     # Remove P pval arguments
-#                     del pvals[idd]
-#                     # Append new P arguments
-#                     pvals.append((xp, yp, xP, yP, val))
-#                     # Append new N arguments
-#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#             if yp == x:
-#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, ry, :])  # Highest of P + Highest in N w x in state from P
-#                 tchoice = np.max(J[xp, yp, :, gpx]) + J[x, y, gpx, gpy]  # Highest of P w x in state from N + highest in N
-#                 if pchoice > tchoice:
-#                     gseq[xp] = rna[int(rx)]
-#                     gseq[yp] = rna[int(ry)]
-#                     xP, yP = rx, ry
-#                     xN = yP
-#                     val = np.amax(J[x, y, :, yP])
-#                     gpy = int(np.where(J[x, y, :, yP] == val)[0])
-#                     yN = int(gpy)
-#                     gseq[x] = rna[yN]
-#                     # Already have indices and value for P just need to Add N
-#                     pvals.append((x, y, xN, yN, val))
-#                 else:
-#                     gseq[y] = rna[int(gpy)]
-#                     gseq[x] = rna[int(gpx)]
-#                     xN, yN = int(gpx), int(gpy)
-#                     yP = xN
-#                     val = np.amax(J[xp, yp, :, yP])
-#                     gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-#                     xP = int(gpx)
-#                     gseq[yp] = rna[xP]
-#                     # Remove P pval arguments
-#                     del pvals[idd]
-#                     # Append new P arguments
-#                     pvals.append((xp, yp, xP, yP, val))
-#                     # Append new N arguments
-#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#     return pvals
+def HJ_mutant_RNA(J, H, N):
+    mutt = copy.deepcopy(J)
+    for x in range(N - 1):
+        for k in range(5):  # J Indices
+            mutt[x, x:N, k, :] += H[x, k]
+    for y in range(N - 1):
+        for l in range(5):  # y states
+            mutt[0:y + 1, y, :, l] += H[y + 1, l]
+    return mutt
+
+
+def HJ_mutant_Pep(J,H,N):
+    mutt = copy.deepcopy(J)
+    for x in range(N - 1):
+        for k in range(21):  # J Indices
+            mutt[x, x:N, k, :] += H[x, k]
+    for y in range(N - 1):
+        for l in range(21):  # y states
+            mutt[0:y + 1, y, :, l] += H[y + 1, l]
+    return mutt
 
 
 def check_vals(x, y, pvals):
@@ -552,38 +496,39 @@ def check_vals(x, y, pvals):
         return 0, 0, 'none'
 
 
-def past_entry_comp(J, pvals, xn, yn):
+def past_entry_comp_goodseq(J, pvals, xn, yn):
+    tmppvals = copy.deepcopy(pvals)
     ind, xid, stype = check_vals(xn, yn, pvals)
     if ind == 0:
         tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
         rxn = int(tmpxn)
         ryn = int(tmpyn)
-        pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        return [xn, yn, rxn, ryn], pvals
-    if ind == 1:
-        xp, yp, rxp, ryp, val = pvals[xid]
-        val = np.amax(J[xn, yn, :, :])  # Highest in N w/ no constraints
-        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == val))  # Indices of highest in N
+        tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        return [xn, yn, rxn, ryn], tmppvals
+    elif ind == 1:
+        xp, yp, rxp, ryp, val = tmppvals[xid]
+        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))  # Indices of highest in N
         rxn = int(tmpxn)
         ryn = int(tmpyn)
         if stype == 'xs':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, rxp, :])
-            tchoice = np.max(J[xp, yp, rxn, :]) + J[xn, yn, rxn, ryn]
-        elif stype == 'ys':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, ryp])
-            tchoice = np.max(J[xp, yp, :, ryn]) + J[xn, yn, rxn, ryn]
-        elif stype == 'xnyp':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, ryp, :])
-            tchoice = np.max(J[xp, yp, ryn, :]) + J[xn, yn, rxn, ryn]
-        elif stype == 'ynxp':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, rxp])
-            tchoice = np.max(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, rxp, :])
+            tchoice = np.amax(J[xp, yp, rxn, :]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ys':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, :, ryp])
+            tchoice = np.amax(J[xp, yp, :, ryn]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'xnyp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, ryp, :])
+            tchoice = np.amax(J[xp, yp, ryn, :]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ynxp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, :, rxp])
+            tchoice = np.amax(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
 
         if pchoice > tchoice:
             if stype == 'xs':
                 rxn = rxp
-                # print(rxn)
-                # print(rxp)
                 ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :]))[0])
             if stype == 'ys':
                 ryn = ryp
@@ -594,7 +539,7 @@ def past_entry_comp(J, pvals, xn, yn):
             if stype == 'ynxp':
                 ryn = rxp
                 rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn]))[0])
-            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
 
         if tchoice > pchoice:
             if stype == 'xs':
@@ -609,19 +554,91 @@ def past_entry_comp(J, pvals, xn, yn):
             if stype == 'ynxp':
                 rxp = ryn
                 ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :]))[0])
-            pvals[xid] = ((xp, yp, rxp, ryp, J[xp, yp, rxp, ryp]))
-            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+            tmppvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice == pchoice:
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
         vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
-        return vals, pvals
+        return vals, tmppvals
+
+
+def past_entry_comp_badseq(J, pvals, xn, yn):
+    tmppvals = copy.deepcopy(pvals)
+    ind, xid, stype = check_vals(xn, yn, pvals)
+    if ind == 0:
+        tmpxn, tmpyn = list(np.where(J[xn, yn, 1:5, 1:5] == np.amin(J[xn, yn, 1:5, 1:5])))
+        rxn = int(tmpxn) + 1
+        ryn = int(tmpyn) + 1
+        tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        return [xn, yn, rxn, ryn], tmppvals
+    elif ind == 1:
+        xp, yp, rxp, ryp, val = tmppvals[xid]
+        tmpxn, tmpyn = list(np.where(J[xn, yn, 1:5, 1:5] == np.amin(J[xn, yn, 1:5, 1:5])))  # Indices of highest in N
+        rxn = int(tmpxn)+1
+        ryn = int(tmpyn)+1
+        if stype == 'xs':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, rxp, 1:5])
+            tchoice = np.amin(J[xp, yp, rxn, 1:5]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ys':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, 1:5, ryp])
+            tchoice = np.amin(J[xp, yp, 1:5, ryn]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'xnyp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, ryp, 1:5])
+            tchoice = np.amin(J[xp, yp, ryn, 1:5]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ynxp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, 1:5, rxp])
+            tchoice = np.amin(J[xp, yp, 1:5, rxn]) + J[xn, yn, rxn, ryn]
+
+        if pchoice < tchoice:
+            if stype == 'xs':
+                rxn = rxp
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+            if stype == 'ys':
+                ryn = ryp
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+            if stype == 'xnyp':
+                rxn = ryp
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+            if stype == 'ynxp':
+                ryn = rxp
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice < pchoice:
+            if stype == 'xs':
+                rxp = rxn
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+            if stype == 'ys':
+                ryp = ryn
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+            if stype == 'xnyp':
+                ryp = rxn
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+            if stype == 'ynxp':
+                rxp = ryn
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+            tmppvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice == pchoice:
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
+        return vals, tmppvals
 
 
 def Seq_edit_past_entry_comp(array, gseq):
     if len(array) >= 4:
-        gseq[array[0]] = rna[int(array[2])]
-        gseq[array[1]] = rna[int(array[3])]
-    if len(array) ==8:
-        gseq[array[4]] = rna[int(array[6])]
-        gseq[array[5]] = rna[int(array[7])]
+        gseq[array[0]+0] = rna[int(array[2])]
+        gseq[array[1]+1] = rna[int(array[3])]
+        if len(array) == 8:
+            gseq[array[4]+0] = rna[int(array[6])]
+            gseq[array[5]+1] = rna[int(array[7])]
     return gseq
 
 
@@ -642,7 +659,85 @@ def gen_goodseq(famid):
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
-        vals, pvals = past_entry_comp(J, pvals, x, y)
+        vals, pvals = past_entry_comp_goodseq(J, pvals, x, y)
+        gseq = Seq_edit_past_entry_comp(vals, gseq)
+    for xid, x in enumerate(gseq):
+        if x == 'X':
+            gpx = int(np.where(H[xid, :] == np.amax(H[xid, :]))[0])
+            gseq[xid] = rna[int(gpx)]
+    print(''.join(gseq))
+    return ''.join(gseq)
+
+
+def gen_badseq(famid, norms):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    # Get Indices of top 10 norms
+    bseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_badseq(J, pvals, x, y)
+        bseq = Seq_edit_past_entry_comp(vals, bseq)
+    for xid, x in enumerate(bseq):
+        if x == 'X':
+            gpx = int(np.where(H[xid, 1:5] == np.amin(H[xid, 1:5]))[0])
+            bseq[xid] = rna[int(gpx)+1]
+    print(pvals)
+    print(''.join(bseq))
+    return ''.join(bseq)
+
+
+
+def gen_badseq_mutt(famid, norms):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    jhmutt = HJ_mutant_RNA(J, H, N)
+    # Get Indices of top 10 norms
+    bseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_badseq(jhmutt, pvals, x, y)
+        bseq = Seq_edit_past_entry_comp(vals, bseq)
+    for xid, x in enumerate(bseq):
+        if x == 'X':
+            gpx = int(np.where(H[xid, 1:5] == np.amin(H[xid, 1:5]))[0])
+            bseq[xid] = rna[int(gpx)+1]
+    print(pvals)
+    print(''.join(bseq))
+    return ''.join(bseq)
+
+
+
+def gen_goodseq_mutt(famid, J, H, N, norms):
+    analysispath = fullpath
+    # Get Matrix Ready
+    jhmutt = HJ_mutant_RNA(J, H, N)
+    # Get Indices of top 10 norms
+    gseq = np.full(40, ['X'], dtype=str)
+    # bseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_goodseq(jhmutt, pvals, x, y)
         gseq = Seq_edit_past_entry_comp(vals, gseq)
     for xid, x in enumerate(gseq):
         if x == 'X':
@@ -658,15 +753,14 @@ def Calc_Energy(seq, J, H):
     dist = len(full)
     Jenergy = 0
     Henergy = 0
-    for x in range(dist-1):
+    for x in range(1, dist):
         ibase = rnad[seq[x]]
         Henergy += H[x, ibase]
-        for y in range(dist-1):
+        for y in range(x+1, dist):
             jbase = rnad[seq[y]]
-            Jenergy += J[x, y, ibase, jbase]
+            Jenergy += J[x-1, y-2, ibase, jbase]
     energy = Jenergy + Henergy
     return energy
-
 
 
 famid = 5
@@ -674,10 +768,22 @@ Jp = fullpath + str(famid) + 'j'
 Hp = fullpath + str(famid) + 'h'
 # N
 N = 40
+
 # Get Matrix Ready
 J = sortjmat(Jp, N, 5)
 H = sorthmat(Hp, N, 5)
-
-best5 = gen_goodseq(5)
+'''
+tseq ='AGGGGUUGGUGGGGUUGGAAAGGUGCUGGUUGGGACGGGG'
+print(tseq)
+best5 = gen_goodseq_mutt(famid, J, H, N, 10)
 b5en = Calc_Energy(best5, J, H)
+ten = Calc_Energy(tseq, J, H)
 print(b5en)
+print(ten)
+'''
+# bseq5 = gen_badseq(5, 250)
+# bsen = Calc_Energy(bseq5, J, H)
+bs5 = gen_badseq_mutt(5, 300)
+b5bad = Calc_Energy(bs5, J, H)
+print(b5bad)
+# print(bsen)
