@@ -417,6 +417,33 @@ def IndJij_RNA(subplot, J, x, y, famid):
     subplot.title.set_size(fontsize=6)
 
 
+def IndJij_DNA_mutt(subplot, J, x, y, famid):
+    subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-1, vmax=1)
+    subplot.set_xticks(np.arange(-.5, 4.5, 1))
+    subplot.set_yticks(np.arange(-.5, 4.5, 1))
+    subplot.set_xticklabels(['-', 'A', 'C', 'G', 'T'])
+    subplot.set_yticklabels(['-', 'A', 'C', 'G', 'T'])
+    # subplot.tick_params(axis='both', which='major', labelsize=4)
+    # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
+    subplot.grid(True, color='r', lw=0.1)
+    subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
+    subplot.title.set_size(fontsize=6)
+
+
+def IndJij_DNA_mutt_wColorBar(subplot, Jmutt, x, y, famid):
+    pos = subplot.imshow(Jmutt[x, y, :, :], cmap='seismic', vmin=-2, vmax=2)
+    plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
+    subplot.set_xticks(np.arange(-.5, 4.5, 1))
+    subplot.set_yticks(np.arange(-.5, 4.5, 1))
+    subplot.set_xticklabels(['-', 'A', 'C', 'G', 'T'])
+    subplot.set_yticklabels(['-', 'A', 'C', 'G', 'T'])
+    # subplot.tick_params(axis='both', which='major', labelsize=4)
+    # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
+    subplot.grid(True, color='r', lw=0.1)
+    subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
+    subplot.title.set_size(fontsize=6)
+
+
 def IndJij_RNA_wColorBar(subplot, J, x, y, famid):
     pos = subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
     plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
@@ -458,3 +485,56 @@ def top10norms_figure_RNA(famid):
     plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
 
 
+def HJ_mutant_RNA(J, H, N):
+    mutt = copy.deepcopy(J)
+    for x in range(N - 1):
+        for k in range(5):  # J Indices
+            mutt[x, x:N, k, :] += H[x, k]
+    for y in range(N - 1):
+        for l in range(5):  # y states
+            mutt[0:y + 1, y, :, l] += H[y + 1, l]
+    return mutt
+
+
+def HJ_mutant_Pep(J,H,N):
+    mutt = copy.deepcopy(J)
+    for x in range(N - 1):
+        for k in range(21):  # J Indices
+            mutt[x, x:N, k, :] += H[x, k]
+    for y in range(N - 1):
+        for l in range(21):  # y states
+            mutt[0:y + 1, y, :, l] += H[y + 1, l]
+    return mutt
+
+
+def top10norms_figure_DNA_mutt(famid):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    # Get Indices of top 10 norms
+    jmutt = HJ_mutant_RNA(J, H, N)
+    jx = topxjnorms(J, N, 10)
+
+    fig, ax = plt.subplots(2, 5, constrained_layout=True)
+    for i in range(10):
+        x, y, z = jx[i]
+        j = i % 5
+        k = 0
+        if i == 0:
+            IndJij_DNA_mutt_wColorBar(ax[k, j], jmutt, x, y, famid)
+        else:
+            if i > 4:
+                k = 1
+            IndJij_DNA_mutt(ax[k, j], jmutt, x, y, famid)
+
+    fig.suptitle('Highest Jij Mutt Norms')
+    plt.savefig(analysispath + str(famid) + 'famTop10muttdisp.png', dpi=600)
+
+
+top10norms_figure_DNA_mutt(5)

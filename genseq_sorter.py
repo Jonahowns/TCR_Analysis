@@ -15,7 +15,6 @@ sevbb = fullpath + '7thbadbinders'
 eitgb = fullpath + '8thgoodbinders'
 eitbb = fullpath + '8thbadbinders'
 
-
 def prune_alignment(names, seqs, simt=0.99):
     final_choice_names = []
     final_choice_seqs = []
@@ -77,21 +76,7 @@ sevbad = val_sort(sevbb, 'b')[-4:-1]
 sevgood = val_sort(sevgb, 'g')[-4:-1]
 eitbad = val_sort(eitbb, 'b')[-4:-1]
 eitgood = val_sort(eitgb, 'g')[-4:-1]
-header5 = ['5g','5g','5b','5b']
-header6 = ['6g','6g','6b','6b']
-header7 = ['7g','7g','7b','7b']
-header8 = ['8g','8g','8b','8b']
-table=np.full((16,4), 'x',dtype=str)
-table[0]=header5
-table[1:4,0:2]= fivegood
-table[1:4,2:5]= fivebad
-table[4]=header6
-table[5:8,0:2]= sixgood
-table[5:8,2:5]= sixbad
-table[8]=header7
-table[9:12,0:2]= sevgood
-table[9:12,2:5]= sevbad
-table[12]=header8
-table[13:17,0:2]= eitgood
-table[13:17,2:5]= eitbad
-print(table)
+for item in bad:
+    for xid, x in enumerate(list(item)):
+        for yid, y in enumerate(list(x)):
+            print(yid+1, y)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import copy
-
+import numpy.linalg
 
 droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
@@ -359,7 +359,119 @@ def Calc_Energy(seq, J, H):
     return energy
 
 
-famid = 5
+def pot_energy(J, H, N):
+    pEH = np.full((N, 5), 0.0)
+    pEJ = np.full((N, 5), 0.0)
+    for i in range(N):  # Fill H Values
+        '''
+        pEH[i, 0] += abs(H[i, 1])  # A
+        pEH[i, 1] += abs(H[i, 2])  # C
+        pEH[i, 2] += abs(H[i, 3])  # G
+        pEH[i, 3] += abs(H[i, 4])  # T
+        pEH[i, 4] += np.sum(pEH[i, 0:4])
+        '''
+        pEH[i, 0] += H[i, 1]  # A
+        pEH[i, 1] += H[i, 2]  # C
+        pEH[i, 2] += H[i, 3]  # G
+        pEH[i, 3] += H[i, 4]  # T
+        pEH[i, 4] += np.sum(pEH[i, 0:4])
+    for i in range(N-1):  # Fill J Values
+        for j in range(N-1):
+            '''
+            # X Contrib
+            pEJ[i, 0] += np.sum(np.absolute(J[i, j, 1, :]))
+            pEJ[i, 1] += np.sum(np.absolute(J[i, j, 2, :]))
+            pEJ[i, 2] += np.sum(np.absolute(J[i, j, 3, :]))
+            pEJ[i, 3] += np.sum(np.absolute(J[i, j, 4, :]))
+            # Y Contrib
+            pEJ[i+1, 0] += np.sum(np.absolute(J[j, i, :, 1]))
+            pEJ[i+1, 1] += np.sum(np.absolute(J[j, i, :, 2]))
+            pEJ[i+1, 2] += np.sum(np.absolute(J[j, i, :, 3]))
+            pEJ[i+1, 3] += np.sum(np.absolute(J[j, i, :, 4]))
+            '''
+            pEJ[i, 0] += np.sum(J[i, j, 1, :])
+            pEJ[i, 1] += np.sum(J[i, j, 2, :])
+            pEJ[i, 2] += np.sum(J[i, j, 3, :])
+            pEJ[i, 3] += np.sum(J[i, j, 4, :])
+            # Y Contrib
+            pEJ[i + 1, 0] += np.sum(J[j, i, :, 1])
+            pEJ[i + 1, 1] += np.sum(J[j, i, :, 2])
+            pEJ[i + 1, 2] += np.sum(J[j, i, :, 3])
+            pEJ[i + 1, 3] += np.sum(J[j, i, :, 4])
+
+        pEJ[i, 4] += np.sum(pEJ[i, 0:4])
+    pEJ[39, 4] += np.sum(pEJ[39, 0:4])
+    TPE = np.add(pEH, pEJ)
+    t80 = np.percentile(TPE, 60, axis=0)
+    seq = np.full(40, 'x', dtype=str)
+    print(t80)
+    for xid, row in enumerate(TPE):
+        a, c, g, t, tot = row
+        if a > t80[0] and c < t80[1] and g < t80[2] and t < t80[3]:
+            print(xid+1, 'A')
+        if a > t80[0] and c > t80[1] and g < t80[2] and t < t80[3]:
+            print(xid+1, 'C')
+        if a < t80[0] and c < t80[1] and g > t80[2] and t < t80[3]:
+            print(xid+1, 'G')
+        if a < t80[0] and c < t80[1] and g < t80[2] and t > t80[3]:
+            print(xid+1, 'T')
+        if a > t80[0] and c > t80[1] and g < t80[2] and t < t80[3]:
+            print(xid+1, 'A or C')
+        if a > t80[0] and c < t80[1] and g > t80[2] and t < t80[3]:
+            print(xid+1, 'A or G')
+        if a > t80[0] and c < t80[1] and g < t80[2] and t > t80[3]:
+            print(xid+1, 'A or T')
+        if a < t80[0] and c > t80[1] and g < t80[2] and t < t80[3]:
+            print(xid+1, 'C or G')
+        if a < t80[0] and c > t80[1] and g < t80[2] and t > t80[3]:
+            print(xid+1, 'C or T')
+        if a < t80[0] and c < t80[1] and g > t80[2] and t > t80[3]:
+            print(xid+1, 'G or T')
+        if a < t80[0] and c > t80[1] and g > t80[2] and t > t80[3]:
+            print(xid+1, 'C G or T')
+        if a > t80[0] and c < t80[1] and g > t80[2] and t > t80[3]:
+            print(xid+1, 'A G or T')
+        if a > t80[0] and c > t80[1] and g > t80[2] and t < t80[3]:
+            print(xid+1, 'A C or G')
+        if a > t80[0] and c > t80[1] and g < t80[2] and t > t80[3]:
+            print(xid+1, 'A C or T')
+
+    '''
+    TPEn = np.divide(TPE[:, 4], nc)
+    seqxvals = np.arange(1, 41, 1)
+    viz = np.concatenate((seqxvals, TPEn))
+    vizuL = np.reshape(viz, (2, 40))
+    print(vizuL)
+    '''
+
+
+def Rank_Test_seq(famid, outfile):
+    o=open(fullpath + str(famid) + 'thgs.txt')
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    energies = []
+    for x in seqs:
+        nrg = Calc_Energy(x, J, H)
+        energies.append(nrg)
+    fnp = list(zip(energies, titles, seqs))
+    op = open(fullpath + outfile, 'w')
+    for line in fnp:
+        print(line, file=op)
+    op.close()
+    return fnp
+
+
+famid = 8
 Jp = fullpath + str(famid) + 'j'
 Hp = fullpath + str(famid) + 'h'
 # N
@@ -376,7 +488,7 @@ b5en = Calc_Energy(best5, J, H)
 ten = Calc_Energy(tseq, J, H)
 print(b5en)
 print(ten)
-'''
+
 # bseq5 = gen_badseq(5, 250)
 # bsen = Calc_Energy(bseq5, J, H)
 tbseq = 'ACCAAUAUCACUCCCCGUUUUAAAUUUUAUACUAUAACAU'
@@ -385,4 +497,6 @@ bs5 = gen_badseq_mutt(5, 50)
 b5bad = Calc_Energy(bs5, J, H)
 print(b5bad)
 print(tbben)
-
+'''
+ex = Rank_Test_seq(5, '5test.rank')
+print(ex)
