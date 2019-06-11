@@ -233,7 +233,7 @@ def Seq_edit_past_entry_comp(array, gseq):
     return gseq
 
 
-def gen_goodseq(famid):
+def gen_goodseq(famid, norms):
     analysispath = fullpath
     # Matrix Paths
     Jp = fullpath + str(famid) + 'j'
@@ -246,7 +246,7 @@ def gen_goodseq(famid):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
     # bseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, 5)
+    tval = topxjnorms(J, N, norms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -315,8 +315,15 @@ def gen_badseq_mutt(famid, norms):
     return ''.join(bseq)
 
 
-def gen_goodseq_mutt(famid, J, H, N, norms):
+def gen_goodseq_mutt(famid, norms):
     analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
     # Get Matrix Ready
     jhmutt = HJ_mutant_RNA(J, H, N)
     # Get Indices of top 10 norms
