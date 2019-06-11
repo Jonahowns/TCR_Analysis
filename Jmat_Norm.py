@@ -98,7 +98,7 @@ def topxjnorms(J, N, x):
             if jnorm[i, j] != 0.0:
                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
     vals.sort(key=lambda tup: tup[2])
-    ind = int(-2 - x)
+    ind = int(-x)
     top10 = vals[ind:-1]
     print(ind, -1)
     print(vals)
@@ -106,7 +106,24 @@ def topxjnorms(J, N, x):
     return top10
 
 
-def jnormtvalwdist(J, N, q):
+def topxjnorms_w_dist(J, N, x):
+    jnorm = np.full((N-1, N-1), 0.0)
+    vals = []
+    for i in range(N-1):
+        for j in range(N-1):
+            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+            if jnorm[i, j] != 0.0:
+                vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+    vals.sort(key=lambda tup: tup[2])
+    ind = int(-x)
+    top10 = vals[ind:-1]
+    print(ind, -1)
+    print(vals)
+    print(vals[ind:-1])
+    return top10, vals
+
+
+def jnormtval(J, N, q):
     jnorm = np.full((N-1, N-1), 0.0)
     jdisp = np.full((N-1, N-1), 0.0)
     for i in range(N-1):
@@ -537,4 +554,133 @@ def top10norms_figure_DNA_mutt(famid):
     plt.savefig(analysispath + str(famid) + 'famTop10muttdisp.png', dpi=600)
 
 
-top10norms_figure_DNA_mutt(5)
+def mixed_HJ(famid):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    bJp = fullpath + str(famid) + 'bj'
+    bHp = fullpath + str(famid) + 'bh'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    bJ = sortjmat(bJp, N, 5)
+    bH = sorthmat(bHp, N, 5)
+    topJ = topxjnorms(J, N, 80)
+    topBJ = topxjnorms(bJ, N, 80)
+    for xj, yj, val in topJ:
+        for xb, yb, valb in topBJ:
+            if xj == xb and yj == yb:
+                J[xj, yj, :, :] = 0.0
+    # J += 1
+    # bJ += 1
+    # J *= np.divide(1, np.sum(J))
+    # bJ *= np.divide(1, np.sum(bJ))
+    # J /= np.divide(J, bJ)
+    # bJ /= np.divide(bJ, J)
+    # print(np.sum(J))
+    # print(np.sum(bJ))
+    H += 1
+    bH += 1
+    H /= np.divide(H, bH)
+    H *= np.divide(1, np.sum(H))
+    bH *= np.divide(1, np.sum(bH))
+    H /= np.divide(H, bH)
+    bH /= np.divide(bH, H)
+    print(np.sum(H))
+    print(np.sum(bH))
+    truH = H - bH
+    return truH, J
+
+
+def mixed_HJ_w_dist(famid):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    bJp = fullpath + str(famid) + 'bj'
+    bHp = fullpath + str(famid) + 'bh'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    bJ = sortjmat(bJp, N, 5)
+    bH = sorthmat(bHp, N, 5)
+    topJ, valsJ = topxjnorms_w_dist(J, N, 80)
+    topBJ, valsBJ = topxjnorms_w_dist(bJ, N, 80)
+    for xj, yj, val in topJ:
+        for xb, yb, valb in topBJ:
+            if xj == xb and yj == yb:
+                J[xj, yj, :, :] = 0.0
+    # J += 1
+    # bJ += 1
+    # J *= np.divide(1, np.sum(J))
+    # bJ *= np.divide(1, np.sum(bJ))
+    # J /= np.divide(J, bJ)
+    # bJ /= np.divide(bJ, J)
+    # print(np.sum(J))
+    # print(np.sum(bJ))
+    H += 1
+    bH += 1
+    H /= np.divide(H, bH)
+    H *= np.divide(1, np.sum(H))
+    bH *= np.divide(1, np.sum(bH))
+    H /= np.divide(H, bH)
+    bH /= np.divide(bH, H)
+    print(np.sum(H))
+    print(np.sum(bH))
+    truH = H - bH
+    return truH, J, valsJ, valsBJ
+
+
+def subplot_seq_aff_v_E(subplot, famid, J, H):
+    o=open(fullpath + str(famid) + 'thfull.txt')
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    energies = []
+    for x in seqs:
+        nrg = Calc_Energy(x, J, H)
+        energies.append(nrg)
+    api = list(zip(titles, energies))
+    x = list(set([x for (x,y) in api]))
+    x.sort()
+    avg = []
+    err = []
+    for aff in x:
+        yvals = np.array([y for (x, y) in api if x==aff])
+        yavg = yvals.mean()
+        yerr = np.std(yvals)
+        avg.append(yavg)
+        err.append(yerr)
+    subplot.errorbar(x, avg, err, linestyle='None', marker='^')
+    subplot.set_xlabel('affinity')
+    subplot.set_ylabel('Energy')
+    subplot.set_title('Family: ' + str(famid) + ' Affinity vs Energy')
+
+
+
+
+
+def mix_score_dist(famid):
+    H, J, valsJ, valsBJ = mixed_HJ(famid)
+    fig, ax = plt.subplots(2,3)
+    subplot_seq_aff_v_E(ax[0, 0], famid, J, H)
+    Jp = fullpath + str(famid) + 'j'
+    Jg = sortjmat(Jp, N, 5)
+    jgnorm = jnormtval(J, N, 5)
+    fig_fullJnorm(ax[0, 1], famid, jgnorm, N, 'seismic')
+    fig_fullH_RNA(ax[1, 0], famid, H, N, 'seismic')
+    slpath = fullpath + str(famid) + 'fullsl.png'
+    fig_seqlogoplot_RNA(slpath, ax[1, 1], famid)
+
+
+

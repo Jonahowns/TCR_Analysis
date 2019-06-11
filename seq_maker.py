@@ -2,6 +2,7 @@
 import numpy as np
 import copy
 import numpy.linalg
+import matplotlib.pyplot as plt
 
 droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
@@ -359,7 +360,7 @@ def Calc_Energy(seq, J, H):
     return energy
 
 
-def pot_energy(J, H, N):
+def pot_energy(J, H, N): # This is Pretty Useless
     pEH = np.full((N, 5), 0.0)
     pEJ = np.full((N, 5), 0.0)
     for i in range(N):  # Fill H Values
@@ -442,15 +443,11 @@ def pot_energy(J, H, N):
     viz = np.concatenate((seqxvals, TPEn))
     vizuL = np.reshape(viz, (2, 40))
     print(vizuL)
-    '''
+    '''   # T    #
 
 
-def Rank_Test_seq(famid, outfile):
+def Rank_Test_seq(famid, outfile, J, H):
     o=open(fullpath + str(famid) + 'thgs.txt')
-    Jp = fullpath + str(famid) + 'j'
-    Hp = fullpath + str(famid) + 'h'
-    J = sortjmat(Jp, N, 5)
-    H = sorthmat(Hp, N, 5)
     titles = []
     seqs = []
     for line in o:
@@ -471,6 +468,79 @@ def Rank_Test_seq(famid, outfile):
     return fnp
 
 
+def Plot_seq_aff_v_E(famid, J, H):
+    o=open(fullpath + str(famid) + 'thfull.txt')
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    energies = []
+    for x in seqs:
+        nrg = Calc_Energy(x, J, H)
+        energies.append(nrg)
+    api = list(zip(titles, energies))
+    x = list(set([x for (x,y) in api]))
+    x.sort()
+    avg = []
+    err = []
+    for aff in x:
+        yvals = np.array([y for (x, y) in api if x==aff])
+        yavg = yvals.mean()
+        yerr = np.std(yvals)
+        avg.append(yavg)
+        err.append(yerr)
+    plt.errorbar(x, avg, err, linestyle='None', marker='^')
+    plt.xlabel('affinity')
+    plt.ylabel('Energy')
+    plt.suptitle('Family: ' + str(famid) + ' Affinity vs Energy')
+    plt.savefig(fullpath + str(famid) + 'affvsEnormscore.png', dpi=600)
+
+
+def mixed_HJ(famid):
+    analysispath = fullpath
+    # Matrix Paths
+    Jp = fullpath + str(famid) + 'j'
+    Hp = fullpath + str(famid) + 'h'
+    bJp = fullpath + str(famid) + 'bj'
+    bHp = fullpath + str(famid) + 'bh'
+    # N
+    N = 40
+    # Get Matrix Ready
+    J = sortjmat(Jp, N, 5)
+    H = sorthmat(Hp, N, 5)
+    bJ = sortjmat(bJp, N, 5)
+    bH = sorthmat(bHp, N, 5)
+    topJ = topxjnorms(J, N, 80)
+    topBJ = topxjnorms(bJ, N, 80)
+    for xj, yj, val in topJ:
+        for xb, yb, valb in topBJ:
+            if xj == xb and yj == yb:
+                J[xj, yj, :, :] = 0.0
+    # J += 1
+    # bJ += 1
+    # J *= np.divide(1, np.sum(J))
+    # bJ *= np.divide(1, np.sum(bJ))
+    # J /= np.divide(J, bJ)
+    # bJ /= np.divide(bJ, J)
+    # print(np.sum(J))
+    # print(np.sum(bJ))
+    H += 1
+    bH += 1
+    H /= np.divide(H, bH)
+    H *= np.divide(1, np.sum(H))
+    bH *= np.divide(1, np.sum(bH))
+    H /= np.divide(H, bH)
+    bH /= np.divide(bH, H)
+    print(np.sum(H))
+    print(np.sum(bH))
+    truH = H - bH
+    return truH, J
+
+
 famid = 8
 Jp = fullpath + str(famid) + 'j'
 Hp = fullpath + str(famid) + 'h'
@@ -480,6 +550,8 @@ N = 40
 # Get Matrix Ready
 J = sortjmat(Jp, N, 5)
 H = sorthmat(Hp, N, 5)
+
+
 '''
 tseq ='AGGGGUUGGUGGGGUUGGAAAGGUGCUGGUUGGGACGGGG'
 print(tseq)
@@ -498,5 +570,7 @@ b5bad = Calc_Energy(bs5, J, H)
 print(b5bad)
 print(tbben)
 '''
-ex = Rank_Test_seq(5, '5test.rank')
-print(ex)
+
+
+
+
