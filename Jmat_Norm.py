@@ -135,7 +135,7 @@ def topxhnorms_w_dist(H, N, x, **kwargs):
         if key == 'pct':
             pct = value
         if key == 'htype':
-            htype == value
+            htype = value
     if htype == 'norm':
         hnorm = np.full((N - 1), 0.0)
         vals = []
@@ -143,7 +143,7 @@ def topxhnorms_w_dist(H, N, x, **kwargs):
         for i in range(N-1):
             hnorm[i] = np.linalg.norm(H[i, :])
             if hnorm[i] != 0.0:
-                vals.append((i, hnorm[i]))  # 0, 0 -> 1, 2
+                vals.append((i, hnorm[i]))
                 hvals.append(hnorm[i])
         tval = np.percentile(hvals, pct)
         vals.sort(key=lambda tup: tup[1])
@@ -152,7 +152,7 @@ def topxhnorms_w_dist(H, N, x, **kwargs):
         hvals = []
         for i in range(N - 1):
             for j in range(1, 5):
-                vals.append((i, j, abs(H[i, j])))  # 0, 0 -> 1, 2
+                vals.append((i, j, abs(H[i, j])))
                 hvals.append(H[i, j])
         tval = np.percentile(hvals, pct)
         vals.sort(key=lambda tup: tup[2])
@@ -709,19 +709,22 @@ def mixed_HJ_w_dist(famid, **kwargs):
         for xb, yb, valb in topBJ:
             if xj == xb and yj == yb:
                 J[xj, yj, :, :] = 0.0
-    topH, valsH, tvalH = topxhnorms_w_dist(H, N, hnorms, pct=hpct, htype=htype)
-    topBH, valsBH, tvalBH = topxhnorms_w_dist(bH, N, hnorms, pct=hpct, htype=htype)
-    if htype == 'norm':
-        for xi, val in topH:
-            for yb, valb in topBH:
-                if xi == yb:
-                    H[xi, :] = 0.0
-    elif htype == 'ind':
-        for xi, yi, val in topH:
-            for xb, yb, valb in topBH:
-                if xi == xb and yi == yb:
-                    H[xi, yi] = 0.0
-    Hvals = [H, valsH, tvalH, valsBH, tvalBH]
+    if htype == 'good':
+        Hvals = [H]
+    else:
+        topH, valsH, tvalH = topxhnorms_w_dist(H, N, hnorms, pct=hpct, htype=htype)
+        topBH, valsBH, tvalBH = topxhnorms_w_dist(bH, N, hnorms, pct=hpct, htype=htype)
+        if htype == 'norm':
+            for xi, val in topH:
+                for yb, valb in topBH:
+                    if xi == yb:
+                        H[xi, :] = 0.0
+        elif htype == 'ind':
+            for xi, yi, val in topH:
+                for xb, yb, valb in topBH:
+                    if xi == xb and yi == yb:
+                        H[xi, yi] = 0.0
+        Hvals = [H, valsH, tvalH, valsBH, tvalBH]
     Jvals = [J, valsJ, tvalJ, valsBJ, tvalBJ]
     return Hvals, Jvals
 
@@ -783,8 +786,6 @@ def pct_comp_fig(famid):
     plt.savefig("/home/jonah/Downloads/pctcompNORMH" + str(famid) + ".png", dpi=600)
 
 
-
-
 def mix_score_dist(famid):
     N=40
     H, J, valsJ, valsBJ, tvalJ, tvalBJ = mixed_HJ_w_dist(famid, pctnorms=20)
@@ -801,8 +802,83 @@ def mix_score_dist(famid):
     plt.savefig("/home/jonah/Downloads/scoring.png")
 
 
+def get_energy_seqs(famid):
+    o=open(fullpath + str(famid) + 'thfull.txt')
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    return titles, seqs
+
+
+def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
+    title = 'Family: ' + str(famid) + ' Affinity vs Energy including Other Family Seqs'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+    pfams = [5, 7, 8]
+    titles = []
+    seqs = []
+    for x in pfams:
+        titlesub, seqsub = get_energy_seqs(x)
+        titles.append(titlesub)
+        seqs.append(seqsub)
+    energies = []
+    for x in seqs:
+        tmp = []
+        for s in x:
+            nrg = Calc_Energy(s, J, H)
+            tmp.append(nrg)
+        energies.append(tmp)
+    api5 = list(zip(titles[0], energies[0]))
+    api7 = list(zip(titles[1], energies[1]))
+    api8 = list(zip(titles[2], energies[2]))
+    x5 = list(set([x for (x, y) in api5]))
+    x7 = list(set([x for (x, y) in api7]))
+    x8 = list(set([x for (x, y) in api8]))
+    x5.sort()
+    x7.sort()
+    x8.sort()
+    y5A, y5E, y7A, y7E, y8A, y8E = ([] for i in range(6))
+    for aff in x5:
+        yvals5 = np.array([y for (x, y) in api5 if x==aff])
+        yavg5 = yvals5.mean()
+        yerr5 = np.std(yvals5)
+        y5A.append(yavg5)
+        y5E.append(yerr5)
+    for aff in x7:
+        yvals7 = np.array([y for (x, y) in api7 if x==aff])
+        yavg7 = yvals7.mean()
+        yerr7 = np.std(yvals7)
+        y7A.append(yavg7)
+        y7E.append(yerr7)
+    for aff in x8:
+        yvals8 = np.array([y for (x, y) in api8 if x==aff])
+        yavg8 = yvals8.mean()
+        yerr8 = np.std(yvals8)
+        y8A.append(yavg8)
+        y8E.append(yerr8)
+    subplot.errorbar(x5, y5A, y5E, linestyle='None', marker='o', ecolor='r', alpha=0.5)
+    subplot.errorbar(x7, y7A, y7E, linestyle='None', marker='P', ecolor='b', alpha=0.5)
+    subplot.errorbar(x8, y8A, y8E, linestyle='None', marker='^', ecolor='y', alpha=0.5)
+    subplot.set_xlabel('affinity')
+    subplot.set_ylabel('Energy')
+    subplot.set_title(title)
+
+
+
+Hval, Jval = mixed_HJ_w_dist(7, htype='ind', hnorms=40, pctnorms=40)
+H = np.array(Hval[0])
+J = np.array(Jval[0])
+fig, ax = plt.subplots(1, 1)
+subplot_seq_aff_v_E_w_OtherFamSeqs(ax, 7, J, H, title='Good H Other Energies Trial')
+plt.savefig("/home/jonah/Downloads/OtherETrialHIND40pct.png", dpi=400)
+
+
 
 # mix_score_dist(7)
-pct_comp_fig(7)
-pct_comp_fig(8)
 # pct_comp_fig(7)
