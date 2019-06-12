@@ -7,6 +7,7 @@ import matplotlib.image as mpimg
 from scipy.stats import gaussian_kde
 import sys
 import copy
+import math
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
@@ -106,21 +107,58 @@ def topxjnorms(J, N, x):
     return top10
 
 
-def topxjnorms_w_dist(J, N, x):
+def topxjnorms_w_dist(J, N, x, **kwargs):
+    pct = 80
+    for key, value in kwargs.items():
+        if key == 'pct':
+            pct = value
     jnorm = np.full((N-1, N-1), 0.0)
     vals = []
+    jvals =[]
     for i in range(N-1):
         for j in range(N-1):
             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
             if jnorm[i, j] != 0.0:
                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+                jvals.append(jnorm[i, j])
+    tval = np.percentile(jnorm, pct)
     vals.sort(key=lambda tup: tup[2])
     ind = int(-x)
     top10 = vals[ind:-1]
-    print(ind, -1)
-    print(vals)
-    print(vals[ind:-1])
-    return top10, vals
+    return top10, jvals, tval
+
+
+def topxhnorms_w_dist(H, N, x, **kwargs):
+    pct = 75
+    htype = 'ind'
+    for key, value in kwargs.items():
+        if key == 'pct':
+            pct = value
+        if key == 'htype':
+            htype == value
+    if htype == 'norm':
+        hnorm = np.full((N - 1), 0.0)
+        vals = []
+        hvals = []
+        for i in range(N-1):
+            hnorm[i] = np.linalg.norm(H[i, :])
+            if hnorm[i] != 0.0:
+                vals.append((i, hnorm[i]))  # 0, 0 -> 1, 2
+                hvals.append(hnorm[i])
+        tval = np.percentile(hvals, pct)
+        vals.sort(key=lambda tup: tup[1])
+    elif htype == 'ind':
+        vals = []
+        hvals = []
+        for i in range(N - 1):
+            for j in range(1, 5):
+                vals.append((i, j, abs(H[i, j])))  # 0, 0 -> 1, 2
+                hvals.append(H[i, j])
+        tval = np.percentile(hvals, pct)
+        vals.sort(key=lambda tup: tup[2])
+    ind = int(-x)
+    top10 = vals[ind:-1]
+    return top10, hvals, tval
 
 
 def jnormtval(J, N, q):
@@ -184,15 +222,31 @@ def fig_fullJnorm(subplot, clustid, mat, n, cmap):
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
 
 
-def fig_fullJnorm_RNA(subplot, clustid, mat, n, cmap):
-    subplot.title.set_text('Jmat Top 80% Family: ' + str(clustid))
+def fig_fullJnorm_RNA(subplot, famid, mat, n, **kwargs):
+    title = 'Jmat Top 80% Family: ' + str(famid)
+    cmap = 'seismic'
+    vml = 0
+    vmg = 2
+    lw = 0.5
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+        if key == 'cmap':
+            cmap = value
+        if key == 'vmin':
+            vml = value
+        if key == 'vmax':
+            vmg = value
+        if key == 'lw':
+            lw = value
+    subplot.title.set_text(title)
     subplot.title.set_size(fontsize=6)
-    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=0, vmax=1)
+    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
     subplot.set_xticks(np.arange(-.5, (n - 1), 1))
     subplot.set_yticks(np.arange(-.5, (n - 1), 1))
     subplot.set_xticklabels(np.arange(2, n+1, 1))
     subplot.set_yticklabels(np.arange(1, n, 1))
-    subplot.grid(True, color='g', lw=0.5)
+    subplot.grid(True, color='g', lw=lw)
     subplot.set_ylabel('i')
     subplot.set_xlabel('j')
     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
@@ -214,10 +268,25 @@ def fig_fullH(subplot, clustid, mat, n, cmap):
     subplot.set_ylabel('i')
 
 
-def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
-    # H1
-    subplot.imshow(mat.T, cmap=cmap, aspect='equal')
-    subplot.title.set_text('Hmat Family: ' + str(clustid))
+def fig_fullH_RNA(subplot, famid, mat, n, **kwargs):
+    title = 'Hmat Family: ' + str(famid)
+    cmap = 'seismic'
+    vml = 0
+    vmg = 2
+    lw = 0.5
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+        if key == 'cmap':
+            cmap = value
+        if key == 'vmin':
+            vml = value
+        if key == 'vmax':
+            vmg = value
+        if key == 'lw':
+            lw = value
+    subplot.imshow(mat.T, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+    subplot.title.set_text(title)
     subplot.title.set_size(fontsize=6)
     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
@@ -241,14 +310,18 @@ def fig_distofnorms(subplot, clustid, vals, tval):
     subplot.axvline(x=tval)
 
 
-def fig_distofnorms_RNA(subplot, clustid, vals, tval):
+def fig_distofnorms_RNA(subplot, clustid, vals, tval, **kwargs):
+    title = 'Distribution of Norms Family ' + str(clustid)
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
     deN = gaussian_kde(vals)
     xd1 = np.linspace(0, 2, 100)
     subplot.plot(xd1, deN(xd1), color='r')
     subplot.plot(vals, [0.01] * len(vals), '|', color='k')
     subplot.set_xlabel('Norm Value')
     subplot.grid(True)
-    subplot.title.set_text('Distribution of Norms Family ' + str(clustid))
+    subplot.title.set_text(title)
     subplot.title.set_size(fontsize=6)
     subplot.axvline(x=tval)
 
@@ -574,28 +647,49 @@ def mixed_HJ(famid):
         for xb, yb, valb in topBJ:
             if xj == xb and yj == yb:
                 J[xj, yj, :, :] = 0.0
-    # J += 1
-    # bJ += 1
-    # J *= np.divide(1, np.sum(J))
-    # bJ *= np.divide(1, np.sum(bJ))
-    # J /= np.divide(J, bJ)
-    # bJ /= np.divide(bJ, J)
-    # print(np.sum(J))
-    # print(np.sum(bJ))
-    H += 1
-    bH += 1
-    H /= np.divide(H, bH)
+
     H *= np.divide(1, np.sum(H))
     bH *= np.divide(1, np.sum(bH))
-    H /= np.divide(H, bH)
-    bH /= np.divide(bH, H)
+
     print(np.sum(H))
     print(np.sum(bH))
     truH = H - bH
     return truH, J
 
 
-def mixed_HJ_w_dist(famid):
+def Calc_Energy(seq, J, H):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    for x in range(1, dist):
+        ibase = rnad[seq[x]]
+        Henergy += H[x, ibase]
+        for y in range(x+1, dist):
+            jbase = rnad[seq[y]]
+            Jenergy += J[x-1, y-2, ibase, jbase]
+    energy = Jenergy + Henergy
+    return energy
+
+
+def mixed_HJ_w_dist(famid, **kwargs):
+    norms = 10
+    pct = 7.8
+    hnorms = 10
+    hpct = 80
+    htype = 'ind'
+    for key, value in kwargs.items():
+        if key == 'pctnorms':
+            norms = math.ceil(value*7.8)
+            pct = 100 - value
+        if key == 'htype':
+            htype = value
+        if key == 'hnorms':
+            hnorms = value
+            if htype == 'norm':
+                hpct = 100 - value/40*100
+            if htype == 'ind':
+                hpct = 100 - value/160*100
     analysispath = fullpath
     # Matrix Paths
     Jp = fullpath + str(famid) + 'j'
@@ -609,34 +703,34 @@ def mixed_HJ_w_dist(famid):
     H = sorthmat(Hp, N, 5)
     bJ = sortjmat(bJp, N, 5)
     bH = sorthmat(bHp, N, 5)
-    topJ, valsJ = topxjnorms_w_dist(J, N, 80)
-    topBJ, valsBJ = topxjnorms_w_dist(bJ, N, 80)
+    topJ, valsJ, tvalJ = topxjnorms_w_dist(J, N, norms, pct=pct)
+    topBJ, valsBJ, tvalBJ = topxjnorms_w_dist(bJ, N, norms, pct=pct)
     for xj, yj, val in topJ:
         for xb, yb, valb in topBJ:
             if xj == xb and yj == yb:
                 J[xj, yj, :, :] = 0.0
-    # J += 1
-    # bJ += 1
-    # J *= np.divide(1, np.sum(J))
-    # bJ *= np.divide(1, np.sum(bJ))
-    # J /= np.divide(J, bJ)
-    # bJ /= np.divide(bJ, J)
-    # print(np.sum(J))
-    # print(np.sum(bJ))
-    H += 1
-    bH += 1
-    H /= np.divide(H, bH)
-    H *= np.divide(1, np.sum(H))
-    bH *= np.divide(1, np.sum(bH))
-    H /= np.divide(H, bH)
-    bH /= np.divide(bH, H)
-    print(np.sum(H))
-    print(np.sum(bH))
-    truH = H - bH
-    return truH, J, valsJ, valsBJ
+    topH, valsH, tvalH = topxhnorms_w_dist(H, N, hnorms, pct=hpct, htype=htype)
+    topBH, valsBH, tvalBH = topxhnorms_w_dist(bH, N, hnorms, pct=hpct, htype=htype)
+    if htype == 'norm':
+        for xi, val in topH:
+            for yb, valb in topBH:
+                if xi == yb:
+                    H[xi, :] = 0.0
+    elif htype == 'ind':
+        for xi, yi, val in topH:
+            for xb, yb, valb in topBH:
+                if xi == xb and yi == yb:
+                    H[xi, yi] = 0.0
+    Hvals = [H, valsH, tvalH, valsBH, tvalBH]
+    Jvals = [J, valsJ, tvalJ, valsBJ, tvalBJ]
+    return Hvals, Jvals
 
 
-def subplot_seq_aff_v_E(subplot, famid, J, H):
+def subplot_seq_aff_v_E(subplot, famid, J, H, **kwargs):
+    title = 'Family: ' + str(famid) + ' Affinity vs Energy'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
     o=open(fullpath + str(famid) + 'thfull.txt')
     titles = []
     seqs = []
@@ -664,23 +758,51 @@ def subplot_seq_aff_v_E(subplot, famid, J, H):
     subplot.errorbar(x, avg, err, linestyle='None', marker='^')
     subplot.set_xlabel('affinity')
     subplot.set_ylabel('Energy')
-    subplot.set_title('Family: ' + str(famid) + ' Affinity vs Energy')
+    subplot.set_title(title)
 
+
+def pct_comp_fig(famid):
+    N = 40
+    H10, J10 = mixed_HJ_w_dist(famid, pctnorms=10, hnorms=4, htype='norm')
+    H20, J20 = mixed_HJ_w_dist(famid, pctnorms=20, hnorms=8, htype='norm')
+    H30, J30 = mixed_HJ_w_dist(famid, pctnorms=30, hnorms=12, htype='norm')
+    H40, J40 = mixed_HJ_w_dist(famid, pctnorms=40, hnorms=16, htype='norm')
+    Harr = np.array([H10, H20, H30, H40])
+    Jarr = np.array([J10, J20, J30, J40])
+    pctarr = np.arange(10, 50, 10)
+    fig, ax = plt.subplots(7, 4, figsize=(16, 24))
+    for x in range(4):
+        subplot_seq_aff_v_E(ax[0, x], famid, Jarr[x, 0], Harr[x, 0], title=('Mixed Scoring pct ' + str(pctarr[x])))
+        fig_fullJnorm_RNA(ax[1, x], famid, jnorm(Jarr[x, 0], N), N, lw=0.1, vmin=0, vmax=1.5, title=('J Norm pct ' + str(pctarr[x])), htype='norm')
+        fig_fullH_RNA(ax[2, x], famid, Harr[x, 0], N, vmin=-0.5, vmax=0.5, title=('H Matt pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[3, x], famid, Jarr[x, 1], Jarr[x, 2], title=('Good Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[4, x], famid, Jarr[x, 3], Jarr[x, 4], title=('Bad Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[5, x], famid, Harr[x, 1], Harr[x, 2], title=('Good Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[6, x], famid, Harr[x, 3], Harr[x, 4], title=('Bad Binders pct ' + str(pctarr[x])))
+    plt.suptitle('Family ' + str(famid) + 'using Editied H Norms')
+    plt.savefig("/home/jonah/Downloads/pctcompNORMH" + str(famid) + ".png", dpi=600)
 
 
 
 
 def mix_score_dist(famid):
-    H, J, valsJ, valsBJ = mixed_HJ(famid)
-    fig, ax = plt.subplots(2,3)
-    subplot_seq_aff_v_E(ax[0, 0], famid, J, H)
-    Jp = fullpath + str(famid) + 'j'
-    Jg = sortjmat(Jp, N, 5)
-    jgnorm = jnormtval(J, N, 5)
-    fig_fullJnorm(ax[0, 1], famid, jgnorm, N, 'seismic')
-    fig_fullH_RNA(ax[1, 0], famid, H, N, 'seismic')
+    N=40
+    H, J, valsJ, valsBJ, tvalJ, tvalBJ = mixed_HJ_w_dist(famid, pctnorms=20)
+    fig, ax = plt.subplots(3, 2)
+    subplot_seq_aff_v_E(ax[0, 0], famid, J, H, title=('Mixed Scoring Family ' + str(famid)))
+    # Jg = sortjmat(J, N, 5)
+    jgnorm = jnorm(J, N)
+    fig_fullJnorm_RNA(ax[0, 1], famid, jgnorm, N, title='Mixed J Norm', lw=0.1, vmin=0, vmax=2)
+    fig_fullH_RNA(ax[1, 0], famid, H, N, vmin=-0.005, vmax=0.005, title='Good Binders H - Bad Binders H')
     slpath = fullpath + str(famid) + 'fullsl.png'
     fig_seqlogoplot_RNA(slpath, ax[1, 1], famid)
+    fig_distofnorms_RNA(ax[2, 0], famid, valsJ, tvalJ, title='Good Binders J Norm Dist')
+    fig_distofnorms_RNA(ax[2, 1], famid, valsBJ, tvalBJ, title='Bad Binders J Norm Dist')
+    plt.savefig("/home/jonah/Downloads/scoring.png")
 
 
 
+# mix_score_dist(7)
+pct_comp_fig(7)
+pct_comp_fig(8)
+# pct_comp_fig(7)
