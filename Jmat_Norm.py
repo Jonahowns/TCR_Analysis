@@ -8,6 +8,7 @@ from scipy.stats import gaussian_kde
 import sys
 import copy
 import math
+from seq_maker import gen_goodseq_custom_HJ
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
@@ -874,9 +875,8 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
 Hval, Jval = mixed_HJ_w_dist(7, htype='ind', hnorms=40, pctnorms=40)
 H = np.array(Hval[0])
 J = np.array(Jval[0])
-fig, ax = plt.subplots(1, 1)
-subplot_seq_aff_v_E_w_OtherFamSeqs(ax, 7, J, H, title='Good H Other Energies Trial')
-plt.savefig("/home/jonah/Downloads/OtherETrialHIND40pct.png", dpi=400)
+
+gen_goodseq_custom_HJ(7, 10, H, J)
 
 
 

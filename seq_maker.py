@@ -261,6 +261,28 @@ def gen_goodseq(famid, norms):
     return ''.join(gseq)
 
 
+def gen_goodseq_custom_HJ(famid, norms, H, J):
+    # N
+    N = 40
+    # Get Indices of top 10 norms
+    gseq = np.full(40, ['X'], dtype=str)
+    # bseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_goodseq(J, pvals, x, y)
+        gseq = Seq_edit_past_entry_comp(vals, gseq)
+    for xid, x in enumerate(gseq):
+        if x == 'X':
+            gpx = np.argmin(H[xid, 1:5])
+            print(gpx)
+            gseq[xid] = rna[int(gpx)+1]
+    print(Calc_Energy(gseq, J, H))
+    print(''.join(gseq))
+    return ''.join(gseq)
+
+
 def gen_badseq(famid, norms):
     analysispath = fullpath
     # Matrix Paths
