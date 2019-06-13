@@ -3,6 +3,9 @@ import numpy as np
 import copy
 import numpy.linalg
 import matplotlib.pyplot as plt
+import dcamethods as dca
+import math
+import random
 
 droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
@@ -10,65 +13,9 @@ upath = "/home/jonah/Dropbox (ASU)/"
 fullpath = upath + droppath
 rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U':4}
 rna = ['-', 'A', 'C', 'G', 'U']
+nucs = ['A', 'C', 'G', 'U']
+nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
 
-
-def sortjmat(file, N, q):
-    o = open(file, 'r')
-    fullmatrix = np.full((N-1, N-1, q, q), 0.0)
-    for line in o:
-        data = line.split(',')
-        fullmatrix[int(data[0])-1, int(data[1])-2, int(data[2])-1, int(data[3])-1] = float(data[4].rstrip())
-    o.close()
-    return fullmatrix
-
-
-def sorthmat(file, N, q):
-    o = open(file, 'r')
-    fullmatrix = np.full((N, q), 0.0)
-    for line in o:
-        data = line.split(',')
-        fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
-    o.close()
-    return fullmatrix
-
-
-def topxjnorms(J, N, x):
-    jnorm = np.full((N-1, N-1), 0.0)
-    vals = []
-    for i in range(N-1):
-        for j in range(N-1):
-            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
-            if jnorm[i, j] != 0.0:
-                vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
-    vals.sort(key=lambda tup: tup[2])
-    ind = int(-x)
-    top10 = vals[ind:-1]
-    print(ind, -1)
-    print(vals)
-    print(vals[ind:-1])
-    return top10
-
-
-def HJ_mutant_RNA(J, H, N):
-    mutt = copy.deepcopy(J)
-    for x in range(N - 1):
-        for k in range(5):  # J Indices
-            mutt[x, x:N, k, :] += H[x, k]
-    for y in range(N - 1):
-        for l in range(5):  # y states
-            mutt[0:y + 1, y, :, l] += H[y + 1, l]
-    return mutt
-
-
-def HJ_mutant_Pep(J,H,N):
-    mutt = copy.deepcopy(J)
-    for x in range(N - 1):
-        for k in range(21):  # J Indices
-            mutt[x, x:N, k, :] += H[x, k]
-    for y in range(N - 1):
-        for l in range(21):  # y states
-            mutt[0:y + 1, y, :, l] += H[y + 1, l]
-    return mutt
 
 
 def check_vals(x, y, pvals):
@@ -275,7 +222,7 @@ def gen_goodseq_custom_HJ(famid, norms, H, J):
         gseq = Seq_edit_past_entry_comp(vals, gseq)
     for xid, x in enumerate(gseq):
         if x == 'X':
-            gpx = np.argmin(H[xid, 1:5])
+            gpx = np.argmax(H[xid, 1:5])
             print(gpx)
             gseq[xid] = rna[int(gpx)+1]
     print(Calc_Energy(gseq, J, H))
@@ -563,35 +510,99 @@ def mixed_HJ(famid):
     return truH, J
 
 
-famid = 8
+class GenerSeq:
+    def __init__(self, N, T, mut_steps=5, out_after=100, steps=10000):
+        self._history = []
+        self._T = T
+        self._beta = 1. / T
+        self._mut_steps = mut_steps
+        self._out_after = out_after
+        self._steps = steps
+        self._seq = np.random.choice(nucs, N)
+
+    def calculate_energy(self, J, h):
+        J_energy = 0.
+        h_energy = 0.
+        for i in range(1, len(self._seq)):
+            t1 = nuc_to_id[self._seq[i]]
+            h_energy += h[i, t1]
+            for j in range(i + 1, len(self._seq)):
+                t2 = nuc_to_id[self._seq[j]]
+                J_energy += J[i - 1, j - 2, t1, t2]
+        return J_energy + h_energy
+
+    def mutate_seq(self):
+        for m in range(self._mut_steps):
+            pos = np.random.choice(range(len(self._seq)))
+            self._seq[pos] = np.random.choice(nucs)
+        return self._seq
+
+    def run_sampling(self, J, h, outpath):
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if random.random() < p:
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file = out)
+                        print(''.join(self._seq), file = out)
+                    print(str((i / self._steps) * 100) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        out.close()
+
+    def run_bad_sampling(self, J, h, outpath):
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if random.random() > p:
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file=out)
+                        print(''.join(self._seq), file=out)
+                    print((str((i / self._steps) * 100)) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        out.close()
+
+
+famid = 7
 Jp = fullpath + str(famid) + 'j'
 Hp = fullpath + str(famid) + 'h'
+BJp = fullpath + str(famid) + 'bj'
+BHp = fullpath + str(famid) + 'bh'
+out = fullpath + str(famid) + 'hybridgenbinders.txt'
 # N
 N = 40
-
 # Get Matrix Ready
-J = sortjmat(Jp, N, 5)
-H = sorthmat(Hp, N, 5)
+J = dca.sortjmat_plmDCA(Jp, N, 5)
+H = dca.sorthmat_plmDCA(Hp, N, 5)
+bJ = dca.sortjmat_plmDCA(BJp, N, 5)
+bH = dca.sorthmat_plmDCA(BHp, N, 5)
+
+hybridH, hybridJ = dca.Binder_Comp_JH(J, bJ, H, bH, N, 5, htype='good', jnormpct=40)
 
 
-'''
-tseq ='AGGGGUUGGUGGGGUUGGAAAGGUGCUGGUUGGGACGGGG'
-print(tseq)
-best5 = gen_goodseq_mutt(famid, J, H, N, 10)
-b5en = Calc_Energy(best5, J, H)
-ten = Calc_Energy(tseq, J, H)
-print(b5en)
-print(ten)
+T = 0.1
+gen = GenerSeq(N, T, mut_steps=5, out_after=10000, steps=100000000)
+gen.run_sampling(hybridJ, hybridH, out)
 
-# bseq5 = gen_badseq(5, 250)
-# bsen = Calc_Energy(bseq5, J, H)
-tbseq = 'ACCAAUAUCACUCCCCGUUUUAAAUUUUAUACUAUAACAU'
-tbben = Calc_Energy(tbseq, J, H)
-bs5 = gen_badseq_mutt(5, 50)
-b5bad = Calc_Energy(bs5, J, H)
-print(b5bad)
-print(tbben)
-'''
 
 
 
