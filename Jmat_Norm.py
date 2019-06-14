@@ -1005,6 +1005,12 @@ bH = dca.sorthmat_blDCA(bHp, N, q)
 bJ = dca.sortjmat_blDCA(bJp, N, q)
 H, J = dca.Binder_Comp_JH(gJ, bJ, gH, bH, N, q, htype='good', hnormpct=40, jnormpct=40)
 
+### Last Left off just trying to see if I could get any sort of results with the bl-DCA
+### Changed the Binder_Comp_JH method to only set the J to 0 if the subtracting the Bad from the good resulted in a norm
+### Below a certain percentile
+
+
+
 testseqpath = fullpath + '7thfull.txt'
 dca.Plot_Seq_Aff_v_E(J, H, (blpath + '7bindcompenergy.png'), testseqpath)
 
