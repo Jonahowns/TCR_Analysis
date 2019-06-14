@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from scipy.stats import gaussian_kde
 import sys
+import copy
+import math
+from seq_maker import gen_goodseq_custom_HJ
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
@@ -18,194 +21,437 @@ clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29
 
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 rna = ['-', 'A', 'C', 'G', 'U']
+dna = ['-', 'A', 'C', 'G', 'T']
 rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U':4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 
 
-def htopval(H, N, q):
-    Hdisp = np.full((N, q), 0.0)
-    val = np.percentile(H, 90)
-    for i in range(0, N):
-        for j in range(0, q):
-            if H[i, j] > val:
-                Hdisp[i, j] = H[i, j]
-    return Hdisp
+
+# def htopval(H, N, q):
+#     Hdisp = np.full((N, q), 0.0)
+#     val = np.percentile(H, 90)
+#     for i in range(0, N):
+#         for j in range(0, q):
+#             if H[i, j] > val:
+#                 Hdisp[i, j] = H[i, j]
+#     return Hdisp
 
 
-def getn(fastafile):
-    o =open(fastafile,'r')
-    o.readline()
-    seq = o.readline().rstrip()
-    n = len(list(seq))
-    o.close()
-    return n
+# def getn(fastafile):
+#     o =open(fastafile,'r')
+#     o.readline()
+#     seq = o.readline().rstrip()
+#     n = len(list(seq))
+#     o.close()
+#     return n
 
 
-def sortjmat(file, N, q):
-    o = open(file, 'r')
-    fullmatrix = np.full((N-1, N-1, q, q), 0.0)
-    for line in o:
-        data = line.split(',')
-        fullmatrix[int(data[0])-1, int(data[1])-2, int(data[2])-1, int(data[3])-1] = float(data[4].rstrip())
-    o.close()
-    return fullmatrix
+# def sortjmat(file, N, q):
+#     o = open(file, 'r')
+#     fullmatrix = np.full((N-1, N-1, q, q), 0.0)
+#     for line in o:
+#         data = line.split(',')
+#         fullmatrix[int(data[0])-1, int(data[1])-2, int(data[2])-1, int(data[3])-1] = float(data[4].rstrip())
+#     o.close()
+#     return fullmatrix
+#
+#
+# def sorthmat(file, N, q):
+#     o = open(file, 'r')
+#     fullmatrix = np.full((N, q), 0.0)
+#     for line in o:
+#         data = line.split(',')
+#         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
+#     o.close()
+#     return fullmatrix
 
 
-def sorthmat(file, N, q):
-    o = open(file, 'r')
-    fullmatrix = np.full((N, q), 0.0)
-    for line in o:
-        data = line.split(',')
-        fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
-    o.close()
-    return fullmatrix
+# def jnorm(J, N):
+#     jnorm = np.full((N-1, N-1), 0.0)
+#     jdisp = np.full((N-1, N-1), 0.0)
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+#     tval = np.percentile(jnorm, 80)
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             if jnorm[i, j] >= tval:
+#                 jdisp[i, j] = jnorm[i, j]
+#     return jdisp
 
 
-def jnorm(J, N):
-    jnorm = np.full((N-1, N-1), 0.0)
-    jdisp = np.full((N-1, N-1), 0.0)
-    for i in range(N-1):
-        for j in range(N-1):
-            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
-    tval = np.percentile(jnorm, 80)
-    for i in range(N-1):
-        for j in range(N-1):
-            if jnorm[i, j] >= tval:
-                jdisp[i, j] = jnorm[i, j]
-    return jdisp
+# def full_jdisplay(J, N, q):
+#     Jdisp = np.full(((N-1)*q, (N-1)*q), 0.0)
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             for k in range(q):
+#                 for l in range(q):
+#                     if J[i, j, k, l] != 0.0:
+#                         Jdisp[i*q+k, j*q+l] = J[i, j, k, l]
+#                     else:
+#                         Jdisp[i*q+k, j*q+l] = 0.0
+#     return Jdisp
 
 
-def topxjnorms(J, N, x):
-    jnorm = np.full((N-1, N-1), 0.0)
-    vals=[]
-    for i in range(N-1):
-        for j in range(N-1):
-            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
-            vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
-    vals.sort(key=lambda tup: tup[2])
-    ind = -2 - x
-    top10 = vals[ind:-1]
-    return top10
+# def topxjnorms(J, N, x):
+#     jnorm = np.full((N-1, N-1), 0.0)
+#     vals = []
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+#             if jnorm[i, j] != 0.0:
+#                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+#     vals.sort(key=lambda tup: tup[2])
+#     ind = int(-x)
+#     top10 = vals[ind:-1]
+#     print(ind, -1)
+#     print(vals)
+#     print(vals[ind:-1])
+#     return top10
 
 
-def jnormtvalwdist(J, N, q):
-    jnorm = np.full((N-1, N-1), 0.0)
-    jdisp = np.full((N-1, N-1), 0.0)
-    for i in range(N-1):
-        for j in range(N-1):
-            jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
-    tval = np.percentile(jnorm, 80)
-    vals=[]
-    for i in range(N-1):
-        for j in range(N-1):
-            if i < j:
-                vals.append(jnorm[i, j])
-            if jnorm[i, j] >= tval:
-                jdisp[i, j] = jnorm[i, j]
-    return jdisp, vals, tval
-61
-
-def fig_fullJnorm(subplot, clustid, mat, n, cmap):
-    subplot.title.set_text('Jmat Top 80% Norms Cluster: ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=0, vmax=4)
-    subplot.set_xticks(np.arange(-.5, (n - 1), 1))
-    subplot.set_yticks(np.arange(-.5, (n - 1), 1))
-    subplot.set_xticklabels(np.arange(2, n+1, 1))
-    subplot.set_yticklabels(np.arange(1, n, 1))
-    subplot.grid(True, color='g', lw=1.0)
-    subplot.set_ylabel('i')
-    subplot.set_xlabel('j')
-    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
-    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
-
-
-def fig_fullJnorm_RNA(subplot, clustid, mat, n, cmap):
-    subplot.title.set_text('Jmat Top 80% Family: ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=0, vmax=1)
-    subplot.set_xticks(np.arange(-.5, (n - 1), 1))
-    subplot.set_yticks(np.arange(-.5, (n - 1), 1))
-    subplot.set_xticklabels(np.arange(2, n+1, 1))
-    subplot.set_yticklabels(np.arange(1, n, 1))
-    subplot.grid(True, color='g', lw=0.5)
-    subplot.set_ylabel('i')
-    subplot.set_xlabel('j')
-    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
-    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+# # Returns the highest x amount of J Norms
+# # Keyword argument dist determines wheter the cutoff and values are returned for use in distribution figures
+# # norm values returned as tuple list (i, j, val) and cutoff returned as single value
+# # Keyword argument percentile determines the percentile used as a cutoff
+# def topxjnorms_w_dist(J, N, x, **kwargs):
+#     dist=False
+#     pct = 80
+#     for key, value in kwargs.items():
+#         if key == 'percentile':
+#             pct = value
+#         if key == 'dist':
+#             dist = True
+#     jnorm = np.full((N-1, N-1), 0.0)
+#     vals = []
+#     jvals =[]
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+#             if jnorm[i, j] != 0.0:
+#                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+#                 jvals.append(jnorm[i, j])
+#     tval = np.percentile(jnorm, pct)
+#     vals.sort(key=lambda tup: tup[2])
+#     ind = int(-x)
+#     top10 = vals[ind:-1]
+#     if dist:
+#         return top10, jvals, tval
+#     else:
+#         return top10
 
 
-def fig_fullH(subplot, clustid, mat, n, cmap):
-    # H1
-    subplot.imshow(mat, cmap=cmap, aspect='equal')
-    subplot.title.set_text('Hmat Cluster: ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
-    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
-    subplot.set_xticks(np.arange(0, 21, 1))
-    subplot.set_yticks(np.arange(0, n, 1))
-    subplot.set_xticklabels(aa)
-    subplot.set_yticklabels(np.arange(1, n+1, 1))
-    subplot.set_xlabel('Amino Acid')
-    subplot.set_ylabel('i')
+# def topxhnorms_w_dist(H, N, x, **kwargs):
+#     pct = 75
+#     htype = 'ind'
+#     for key, value in kwargs.items():
+#         if key == 'pct':
+#             pct = value
+#         if key == 'htype':
+#             htype = value
+#     if htype == 'norm':
+#         hnorm = np.full((N - 1), 0.0)
+#         vals = []
+#         hvals = []
+#         for i in range(N-1):
+#             hnorm[i] = np.linalg.norm(H[i, :])
+#             if hnorm[i] != 0.0:
+#                 vals.append((i, hnorm[i]))
+#                 hvals.append(hnorm[i])
+#         tval = np.percentile(hvals, pct)
+#         vals.sort(key=lambda tup: tup[1])
+#     elif htype == 'ind':
+#         vals = []
+#         hvals = []
+#         for i in range(N - 1):
+#             for j in range(1, 5):
+#                 vals.append((i, j, abs(H[i, j])))
+#                 hvals.append(H[i, j])
+#         tval = np.percentile(hvals, pct)
+#         vals.sort(key=lambda tup: tup[2])
+#     ind = int(-x)
+#     top10 = vals[ind:-1]
+#     return top10, hvals, tval
 
 
-def fig_fullH_RNA(subplot, clustid, mat, n, cmap):
-    # H1
-    subplot.imshow(mat.T, cmap=cmap, aspect='equal')
-    subplot.title.set_text('Hmat Family: ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
-    plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
-    subplot.set_yticks(np.arange(0, 5, 1))
-    subplot.set_xticks(np.arange(0, n, 1))
-    subplot.set_yticklabels(rna)
-    subplot.set_xticklabels(np.arange(1, n+1, 1))
-    subplot.set_ylabel('Base ID')
-    subplot.set_xlabel('i')
+# def jnormtval(J, N, q):
+#     jnorm = np.full((N-1, N-1), 0.0)
+#     jdisp = np.full((N-1, N-1), 0.0)
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
+#     tval = np.percentile(jnorm, 80)
+#     vals=[]
+#     for i in range(N-1):
+#         for j in range(N-1):
+#             if i < j:
+#                 vals.append(jnorm[i, j])
+#             if jnorm[i, j] >= tval:
+#                 jdisp[i, j] = jnorm[i, j]
+#     return jdisp, vals, tval
 
 
-def distofnorms(subplot, clustid, vals, tval):
-    deN = gaussian_kde(vals)
-    xd1 = np.linspace(0, 2, 100)
-    subplot.plot(xd1, deN(xd1), color='r')
-    subplot.plot(vals, [0.01] * len(vals), '|', color='k')
-    subplot.set_xlabel('Norm Value')
-    subplot.grid(True)
-    subplot.title.set_text('Distribution of Norms Clust ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    subplot.axvline(x=tval)
+# def Fig_FullJ(subplot, id, J, n, q, **kwargs):
+#     cmap = 'seismic'
+#     vml = -1
+#     vmg = 1
+#     lw = 0.1
+#     xlabel = 'j'
+#     ylabel = 'i'
+#     fontsize = 6
+#     title = 'Jmat Top 90% Values ID: ' + str(id)
+#     for key, value in kwargs.items():
+#         if key == 'cmap':
+#             cmap = value
+#         elif key == 'lw':
+#             lw = value
+#         elif key == 'xlabel':
+#             xlabel = value
+#         elif key == 'ylabel':
+#             ylabel = value
+#         elif key == 'ticksize':
+#             fontsize = value
+#         elif key == 'vml':
+#             vml = value
+#         elif key == 'vmg':
+#             vmg = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=6)
+#     subplot.imshow(J, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+#     subplot.set_xticks(np.arange(-.5, (n - 2) * q, q))
+#     subplot.set_yticks(np.arange(-.5, (n - 2) * q, q))
+#     subplot.set_xticklabels(np.arange(2, n, 1))
+#     subplot.set_yticklabels(np.arange(1, n - 1, 1))
+#     subplot.grid(True, color='g', lw=lw)
+#     subplot.set_ylabel(ylabel)
+#     supplot.set_xlabel(xlabel)
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
 
 
-def distofnorms_RNA(subplot, clustid, vals, tval):
-    deN = gaussian_kde(vals)
-    xd1 = np.linspace(0, 2, 100)
-    subplot.plot(xd1, deN(xd1), color='r')
-    subplot.plot(vals, [0.01] * len(vals), '|', color='k')
-    subplot.set_xlabel('Norm Value')
-    subplot.grid(True)
-    subplot.title.set_text('Distribution of Norms Family ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
-    subplot.axvline(x=tval)
+# def fig_fullJ_RNA(subplot, famid, mat, n, cmap):
+#     subplot.title.set_text('Jmat Full RNA Fam: ' + str(famid))
+#     subplot.title.set_size(fontsize=6)
+#     subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=-1, vmax=1)
+#     subplot.set_xticks(np.arange(-.5, (n - 2) * 5, 5))
+#     subplot.set_yticks(np.arange(-.5, (n - 2) * 5, 5))
+#     subplot.set_xticklabels(np.arange(2, n, 1))
+#     subplot.set_yticklabels(np.arange(1, n - 1, 1))
+#     subplot.grid(True, color='g', lw=0.1)
+#     subplot.set_ylabel('i')
+#     subplot.set_xlabel('j')
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+
+#
+# def Fig_Jnorm(subplot, id, J, n, **kwargs):
+#     cmap = 'seismic'
+#     vml = 0
+#     vmg = 4
+#     lw = 1.0
+#     xlabel = 'j'
+#     ylabel = 'i'
+#     fontsize = 6
+#     title = 'Jmat Norms ID: ' + str(id)
+#     for key, value in kwargs.items():
+#         if key == 'cmap':
+#             cmap = value
+#         elif key == 'lw':
+#             lw = value
+#         elif key == 'xlabel':
+#             xlabel = value
+#         elif key == 'ylabel':
+#             ylabel = value
+#         elif key == 'ticksize':
+#             fontsize = value
+#         elif key == 'vml':
+#             vml = value
+#         elif key == 'vmg':
+#             vmg = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=6)
+#     subplot.imshow(J, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+#     subplot.set_xticks(np.arange(-.5, (n - 1), 1))
+#     subplot.set_yticks(np.arange(-.5, (n - 1), 1))
+#     subplot.set_xticklabels(np.arange(2, n+1, 1))
+#     subplot.set_yticklabels(np.arange(1, n, 1))
+#     subplot.grid(True, color='g', lw=lw)
+#     subplot.set_ylabel(ylabel)
+#     subplot.set_xlabel(xlabel)
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
 
 
-def seqlogoplot(filepath, subplot, clustid):
-    fsl1 = mpimg.imread(filepath)
-    subplot.imshow(fsl1)
-    subplot.axis('off')
-    subplot.title.set_text('SeqLogo Clust ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
+# def fig_fullJnorm_RNA(subplot, famid, mat, n, **kwargs):
+#     title = 'Jmat Top 80% Family: ' + str(famid)
+#     cmap = 'seismic'
+#     vml = 0
+#     vmg = 2
+#     lw = 0.5
+#     for key, value in kwargs.items():
+#         if key == 'title':
+#             title = value
+#         if key == 'cmap':
+#             cmap = value
+#         if key == 'vmin':
+#             vml = value
+#         if key == 'vmax':
+#             vmg = value
+#         if key == 'lw':
+#             lw = value
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=6)
+#     subplot.imshow(mat, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+#     subplot.set_xticks(np.arange(-.5, (n - 1), 1))
+#     subplot.set_yticks(np.arange(-.5, (n - 1), 1))
+#     subplot.set_xticklabels(np.arange(2, n+1, 1))
+#     subplot.set_yticklabels(np.arange(1, n, 1))
+#     subplot.grid(True, color='g', lw=lw)
+#     subplot.set_ylabel('i')
+#     subplot.set_xlabel('j')
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
 
 
-def seqlogoplot_RNA(filepath, subplot, clustid):
-    fsl1 = mpimg.imread(filepath)
-    subplot.imshow(fsl1)
-    subplot.axis('off')
-    subplot.title.set_text('SeqLogo Family: ' + str(clustid))
-    subplot.title.set_size(fontsize=6)
+# def fig_fullH(subplot, id, H, n, q,  **kwargs):
+#     cmap = 'seismic'
+#     vml = 0
+#     vmg = 4
+#     xl = False
+#     xlabel = 'hello'
+#     ylabel = 'i'
+#     fontsize = 6
+#     title = 'Hmat ID: ' + str(id)
+#     for key, value in kwargs.items():
+#         if key == 'cmap':
+#             cmap = value
+#         elif key == 'xlabel':
+#             xl = True
+#             xlabel = value
+#         elif key == 'ylabel':
+#             ylabel = value
+#         elif key == 'ticksize':
+#             fontsize = value
+#         elif key == 'vml':
+#             vml = value
+#         elif key == 'vmg':
+#             vmg = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     subplot.imshow(H, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=fontsize)
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
+#     subplot.set_xticks(np.arange(0, q+1, 1))
+#     subplot.set_yticks(np.arange(0, n+1, 1))
+#     if q == 21 and xl is False:
+#         subplot.set_xticklabels(aa)
+#         subplot.set_xlabel('Amino Acid')
+#     elif q == 5 and xl is False:
+#         subplot.set_xticklabels(rna)
+#         subplot.set_xlabel('Base')
+#     else:
+#         subplot.set_xlabel(xlabel)
+#     subplot.set_yticklabels(np.arange(1, n+1, 1))
+#     subplot.set_ylabel(ylabel)
 
 
-def jmatshow_clust(clust1, clust2, clust3, clust4):
+# def fig_fullH_RNA(subplot, famid, mat, n, **kwargs):
+#     title = 'Hmat Family: ' + str(famid)
+#     cmap = 'seismic'
+#     vml = 0
+#     vmg = 2
+#     lw = 0.5
+#     for key, value in kwargs.items():
+#         if key == 'title':
+#             title = value
+#         if key == 'cmap':
+#             cmap = value
+#         if key == 'vmin':
+#             vml = value
+#         if key == 'vmax':
+#             vmg = value
+#         if key == 'lw':
+#             lw = value
+#     subplot.imshow(mat.T, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=6)
+#     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=6)
+#     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=6)
+#     subplot.set_yticks(np.arange(0, 5, 1))
+#     subplot.set_xticks(np.arange(0, n, 1))
+#     subplot.set_yticklabels(rna)
+#     subplot.set_xticklabels(np.arange(1, n+1, 1))
+#     subplot.set_ylabel('Base ID')
+#     subplot.set_xlabel('i')
+
+#
+# def Fig_Distribution_w_Cutoff(subplot, id, vals, tval):
+#     deN = gaussian_kde(vals)
+#     xd1 = np.linspace(0, 2, 100)
+#     subplot.plot(xd1, deN(xd1), color='r')
+#     subplot.plot(vals, [0.01] * len(vals), '|', color='k')
+#     subplot.set_xlabel('Norm Value')
+#     subplot.grid(True)
+#     subplot.title.set_text('Distribution of Norms Clust ' + str(id))
+#     subplot.title.set_size(fontsize=6)
+#     subplot.axvline(x=tval)
+
+
+# def Fig_Distribution_w_Cutoff(subplot, id, Values, Cutoff, **kwargs):
+#     title = 'Distribution ID: ' + str(id)
+#     plotcolor = 'r'
+#     xml = 0
+#     xmg = 2
+#     xlabel = 'Value'
+#     fontsize = 6
+#     for key, value in kwargs.items():
+#         if key == 'xlabel':
+#             xlabel = value
+#         elif key == 'pcolor':
+#             plotcolor = value
+#         elif key == 'fontsize':
+#             fontsize = value
+#         elif key == 'xmin':
+#             xml = value
+#         elif key == 'xmax':
+#             xmg = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     deN = gaussian_kde(Values)
+#     xd1 = np.linspace(xml, xmg, 100)
+#     subplot.plot(xd1, deN(xd1), color=plotcolor)
+#     subplot.plot(Values, [0.01] * len(Values), '|', color='k')
+#     subplot.set_xlabel(xlabel)
+#     subplot.grid(True)
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=fontsize)
+#     subplot.axvline(x=Cutoff)
+
+
+# def Fig_SeqLogo(Filepath, Subplot, id):
+#     title = 'SeqLogo ID: ' + str(id)
+#     fontsize = 6
+#     for key, value in kwargs.items():
+#         if key == 'title':
+#             title = value
+#         elif key == 'fontsize':
+#             fontsize = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     fsl1 = mpimg.imread(Filepath)
+#     Subplot.imshow(fsl1)
+#     Subplot.axis('off')
+#     Subplot.title.set_text(title)
+#     Subplot.title.set_size(fontsize=fontsize)
+
+# Specific To Cluster Analysis
+def JNorm_Clust(clust1, clust2, clust3, clust4):
     # File Paths
     clustpath1 = fullpath + 'FullSeq/Clust' + str(clust1) + '/'
     clustpath2 = fullpath + 'FullSeq/Clust' + str(clust2) + '/'
@@ -287,6 +533,9 @@ def jmatshow_clust(clust1, clust2, clust3, clust4):
     plt.savefig(analysispath + figname, dpi=600)
 
 
+
+
+# Specific to RNA
 def jmatshow_genseqs():
     analysispath = fullpath
     # SeqLogos
@@ -356,328 +605,401 @@ def jmatshow_genseqs():
     figname = 'RNAFAMs.png'
     plt.savefig(analysispath + figname, dpi=600)
 
-
-def IndJij(subplot, J, x, y, famid):
-    subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
-    subplot.set_xticks(np.arange(-.5, 4.5, 1))
-    subplot.set_yticks(np.arange(-.5, 4.5, 1))
-    subplot.set_xticklabels(['-', 'A', 'C', 'G', 'U'])
-    subplot.set_yticklabels(['-', 'A', 'C', 'G', 'U'])
-    # subplot.tick_params(axis='both', which='major', labelsize=4)
-    # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
-    subplot.grid(True, color='r', lw=0.1)
-    subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
-    subplot.title.set_size(fontsize=6)
-
-
-def IndJij_wColorBar(subplot, J, x, y, famid):
-    pos = subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
-    plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
-    subplot.set_xticks(np.arange(-.5, 4.5, 1))
-    subplot.set_yticks(np.arange(-.5, 4.5, 1))
-    subplot.set_xticklabels(['-', 'A', 'C', 'G', 'U'])
-    subplot.set_yticklabels(['-', 'A', 'C', 'G', 'U'])
-    # subplot.tick_params(axis='both', which='major', labelsize=4)
-    # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
-    subplot.grid(True, color='r', lw=0.1)
-    subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
-    subplot.title.set_size(fontsize=6)
-
-
-def top10norms_figure(famid):
-    analysispath = fullpath
-    # Matrix Paths
-    Jp = fullpath + str(famid) + 'j'
-    # N
-    N = 40
-    # Get Matrix Ready
-    J = sortjmat(Jp, N, 5)
-    # Get Indices of top 10 norms
-    jx = topxjnorms(J, N, 10)
-
-    fig, ax = plt.subplots(2, 5, constrained_layout=True)
-    for i in range(10):
-        x, y, z = jx[i]
-        j = i % 5
-        k = 0
-        if i == 0:
-            IndJij_wColorBar(ax[k, j], J, x, y, famid)
-        else:
-            if i > 4:
-                k = 1
-            IndJij(ax[k, j], J, x, y, famid)
-
-    fig.suptitle('Highest Jij Norms')
-    plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
+# Three Types are available: 'dna', 'rna' and 'pep'
+# def IndJij_RNA(subplot, J, x, y, id, **kwargs):
+#     vml = -0.5
+#     vmg = 0.5
+#     cmap = 'seismic'
+#     fontsize = 4
+#     type = 'rna'
+#     lw = 0.1
+#     title = 'Jij ID: ' + str(id) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2)
+#     for key, value in kwargs.items():
+#         if key == 'vmax':
+#             vmg = value
+#         elif key == 'vmin':
+#             vml = value
+#         elif key == 'cmap':
+#             cmap = value
+#         elif key == 'fontsize':
+#             fontsize = value
+#         elif key == 'type':
+#             type = value
+#         elif key == 'lw':
+#             lw = value
+#         elif key == 'title':
+#             title = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     subplot.imshow(J[x, y, :, :], cmap=cmap, vmin=vml, vmax=vmg)
+#     if type == 'rna' or type == 'dna'
+#         subplot.set_xticks(np.arange(-.5, 4.5, 1))
+#         subplot.set_yticks(np.arange(-.5, 4.5, 1))
+#         if type == 'rna':
+#             subplot.set_xticklabels(rna)
+#             subplot.set_yticklabels(rna)
+#         else:
+#             subplot.set_xticklabels(dna)
+#             subplot.set_yticklabels(dna)
+#     elif type == 'pep':
+#         subplot.set_xticks(np.arange(-.5, 20.5, 1))
+#         subplot.set_yticks(np.arange(-.5, 20.5, 1))
+#         subplot.set_xticklabels(aa)
+#         subplot.set_yticklabels(aa)
+#     subplot.tick_params(axis='both', which='major', labelsize=fontsize)
+#     subplot.tick_params(axis='both', which='minor', labelsize=fontsize)
+#     subplot.grid(True, color='r', lw=lw)
+#     subplot.title.set_text(title)
+#     subplot.title.set_size(fontsize=(fontsize+2))
 
 
-# def checkprevVals_goodseq(J, pvals, x, y, gseq):
-#     for idd, pack in enumerate(pvals):
-#         xp, yp, rx, ry, pval = pack
-#         val = np.amax(J[x, y, :, :])  # Highest in N w/ no constraints
-#         gpx, gpy = list(np.where(J[x, y, :, :] == val))  # Indices of highest in N
-#         if xp == x: # If base x is the same as base x in another Top 10 Jij Interaction
-#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, rx, :]) # Highest of P + Highest in N w x in state from P
-#             tchoice = np.max(J[xp, yp, gpx, :]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-#             if pchoice > tchoice:
-#                 xN = rx    # Chose Previous x state as x state for both N and P
-#                 gseq[x] = rna[xN]
-#                 gseq[yp] = rna[ry]
-#                 val = np.amax(J[x, y, xN, :])
-#                 gpy = int(np.where(J[x, y, xN, :] == val)[0])
-#                 yN = int(gpy)
-#                 gseq[y] = rna[int(gpy)]
-#                 # Already have indices and value for P just need to Add N
-#                 pvals.append((x, y, xN, yN, val))
-#             else:
-#                 gseq[y] = rna[int(gpy)]
-#                 gseq[x] = rna[int(gpx)]
-#                 xP, xN = int(gpx), int(gpx)
-#                 yN = int(gpy)
-#                 val = np.amax(J[x, yp, gpx, :])
-#                 gpy = int(np.where(J[x, yp, gpx, :] == val)[0])
-#                 gseq[yp] = rna[int(gpy)]
-#                 yP = int(gpy)
-#                 # Remove P pval arguments
-#                 del pvals[idd]
-#                 # Append new P arguments
-#                 pvals.append((xp, yp, xP, yP, val))
-#                 # Append new N arguments
-#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#         if yp == y: # If base y is the same as base y in another Top 10 Jij Interaction
-#             pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, ry]) # Highest of P + Highest in N w x in state from P
-#             tchoice = np.max(J[xp, yp, :, gpy]) + J[x, y, gpx, gpy] # Highest of P w x in state from N + highest in N
-#             if pchoice > tchoice:
-#                 gseq[xp] = rna[rx]
-#                 gseq[yp] = rna[ry]
-#                 xP, yP = rx, ry
-#                 yN = yP
-#                 val = np.amax(J[x, y, :, yN])
-#                 gpx = int(np.where(J[x, y, :, yN] == val)[0])
-#                 xN = int(gpx)
-#                 gseq[x] = rna[int(gpx)]
-#                 # Already have indices and value for P just need to Add N
-#                 pvals.append((x, y, xN, yN, val))
-#             else:
-#                 gseq[y] = rna[int(gpy)]
-#                 gseq[x] = rna[int(gpx)]
-#                 xN, yN = int(gpx), int(gpy)
-#                 yP = yN
-#                 val = np.amax(J[xp, yp, :, yP])
-#                 gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-#                 xP = int(gpx)
-#                 gseq[xp] = rna[xP]
-#                 # Remove P pval arguments
-#                 del pvals[idd]
-#                 # Append new P arguments
-#                 pvals.append((xp, yp, xP, yP, val))
-#                 # Append new N arguments
-#                 pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#         if xp==y or yp==x:
-#             if xp == y:
-#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, :, rx])  # Highest of P + Highest in N w y in highest x state from P
-#                 tchoice = np.max(J[xp, yp, gpy, :]) + J[x, y, gpx, gpy]  # Highest of P w x in highest y state + highest in N
-#                 if pchoice > tchoice:
-#                     gseq[xp] = rna(int(rx))
-#                     gseq[yp] = rna(int(ry))
-#                     xP, yP = rx, ry
-#                     xP = yN
-#                     val = np.amax(J[x, y, :, yN])
-#                     gpx = int(np.where(J[x, y, :, yN] == val)[0])
-#                     xN = int(gpx)
-#                     gseq[x] = rna[int(gpy)]
-#                     # Already have indices and value for P just need to Add N
-#                     pvals.append((x, y, xN, yN, val))
-#                 else:
-#                     gseq[y] = rna[int(gpy)]
-#                     gseq[x] = rna[int(gpx)]
-#                     xN, yN = int(gpx), int(gpy)
-#                     xP = yN    # xp == y
-#                     val = np.amax(J[xp, yp, xP, :])
-#                     gpy = int(np.where(J[x, y, :, gpx] == val)[0])
-#                     yP = int(gpy)
-#                     gseq[yp] = rna[yP]
-#                     # Remove P pval arguments
-#                     del pvals[idd]
-#                     # Append new P arguments
-#                     pvals.append((xp, yp, xP, yP, val))
-#                     # Append new N arguments
-#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#             if yp == x:
-#                 pchoice = J[xp, yp, rx, ry] + np.max(J[x, y, ry, :])  # Highest of P + Highest in N w x in state from P
-#                 tchoice = np.max(J[xp, yp, :, gpx]) + J[x, y, gpx, gpy]  # Highest of P w x in state from N + highest in N
-#                 if pchoice > tchoice:
-#                     gseq[xp] = rna[int(rx)]
-#                     gseq[yp] = rna[int(ry)]
-#                     xP, yP = rx, ry
-#                     xN = yP
-#                     val = np.amax(J[x, y, :, yP])
-#                     gpy = int(np.where(J[x, y, :, yP] == val)[0])
-#                     yN = int(gpy)
-#                     gseq[x] = rna[yN]
-#                     # Already have indices and value for P just need to Add N
-#                     pvals.append((x, y, xN, yN, val))
-#                 else:
-#                     gseq[y] = rna[int(gpy)]
-#                     gseq[x] = rna[int(gpx)]
-#                     xN, yN = int(gpx), int(gpy)
-#                     yP = xN
-#                     val = np.amax(J[xp, yp, :, yP])
-#                     gpx = int(np.where(J[xp, yp, :, yP] == val)[0])
-#                     xP = int(gpx)
-#                     gseq[yp] = rna[xP]
-#                     # Remove P pval arguments
-#                     del pvals[idd]
-#                     # Append new P arguments
-#                     pvals.append((xp, yp, xP, yP, val))
-#                     # Append new N arguments
-#                     pvals.append((x, y, xN, yN, J[x, y, xN, yN]))
-#     return pvals
+
+# def IndJij_DNA_mutt_wColorBar(subplot, Jmutt, x, y, famid):
+#     pos = subplot.imshow(Jmutt[x, y, :, :], cmap='seismic', vmin=-2, vmax=2)
+#     plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
+#     subplot.set_xticks(np.arange(-.5, 4.5, 1))
+#     subplot.set_yticks(np.arange(-.5, 4.5, 1))
+#     subplot.set_xticklabels(['-', 'A', 'C', 'G', 'T'])
+#     subplot.set_yticklabels(['-', 'A', 'C', 'G', 'T'])
+#     # subplot.tick_params(axis='both', which='major', labelsize=4)
+#     # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
+#     subplot.grid(True, color='r', lw=0.1)
+#     subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
+#     subplot.title.set_size(fontsize=6)
 
 
-def check_vals(x, y, pvals):
-    if len(pvals) == 0:
-        return 0, 0, 'none'
-    else:
-        for idd, pack in enumerate(pvals):
-            xp, yp, rx, ry, pval = pack
-            if x == xp:
-                return 1, idd, 'xs'
-            elif y == yp:
-                return 1, idd, 'ys'
-            elif x == yp:
-                return 1, idd, 'xnyp'
-            elif y == xp:
-                return 1, idd, 'ynxp'
-        return 0, 0, 'none'
+# def IndJij_RNA_wColorBar(subplot, J, x, y, famid):
+#     pos = subplot.imshow(J[x, y, :, :], cmap='seismic', vmin=-0.5, vmax=0.5)
+#     plt.colorbar(pos, ax=subplot, fraction=0.046, pad=0.04)
+#     subplot.set_xticks(np.arange(-.5, 4.5, 1))
+#     subplot.set_yticks(np.arange(-.5, 4.5, 1))
+#     subplot.set_xticklabels(['-', 'A', 'C', 'G', 'U'])
+#     subplot.set_yticklabels(['-', 'A', 'C', 'G', 'U'])
+#     # subplot.tick_params(axis='both', which='major', labelsize=4)
+#     # subplot.tick_params(axis='both', which='minor', labelsfiize=4)
+#     subplot.grid(True, color='r', lw=0.1)
+#     subplot.title.set_text('Fam ' + str(famid) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2))
+#     subplot.title.set_size(fontsize=6)
 
 
-def past_entry_comp(J, pvals, xn, yn):
-    ind, xid, stype = check_vals(xn, yn, pvals)
-    if ind == 0:
-        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
-        rxn = int(tmpxn)
-        ryn = int(tmpyn)
-        pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        return [xn, yn, rxn, ryn], pvals
-    if ind == 1:
-        xp, yp, rxp, ryp, val = pvals[xid]
-        val = np.amax(J[xn, yn, :, :])  # Highest in N w/ no constraints
-        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == val))  # Indices of highest in N
-        rxn = int(tmpxn)
-        ryn = int(tmpyn)
-        if stype == 'xs':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, rxp, :])
-            tchoice = np.max(J[xp, yp, rxn, :]) + J[xn, yn, rxn, ryn]
-        elif stype == 'ys':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, ryp])
-            tchoice = np.max(J[xp, yp, :, ryn]) + J[xn, yn, rxn, ryn]
-        elif stype == 'xnyp':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, ryp, :])
-            tchoice = np.max(J[xp, yp, ryn, :]) + J[xn, yn, rxn, ryn]
-        elif stype == 'ynxp':
-            pchoice = J[xp, yp, rxp, ryp] + np.max(J[xn, yn, :, rxp])
-            tchoice = np.max(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
-
-        if pchoice > tchoice:
-            if stype == 'xs':
-                rxn = rxp
-                # print(rxn)
-                # print(rxp)
-                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :]))[0])
-            if stype == 'ys':
-                ryn = ryp
-                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn]))[0])
-            if stype == 'xnyp':
-                rxn = ryp
-                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :]))[0])
-            if stype == 'ynxp':
-                ryn = rxp
-                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn]))[0])
-            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-
-        if tchoice > pchoice:
-            if stype == 'xs':
-                rxp = rxn
-                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :]))[0])
-            if stype == 'ys':
-                ryp = ryn
-                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp]))[0])
-            if stype == 'xnyp':
-                ryp = rxn
-                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp]))[0])
-            if stype == 'ynxp':
-                rxp = ryn
-                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :]))[0])
-            pvals[xid] = ((xp, yp, rxp, ryp, J[xp, yp, rxp, ryp]))
-            pvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
-        return vals, pvals
+# def top10norms_figure_RNA(id, J, N):
+#     # Get Indices of top 10 norms
+#     jx = topxjnorms(J, N, 10)
+#
+#     fig, ax = plt.subplots(2, 5, constrained_layout=True)
+#     for i in range(10):
+#         x, y, z = jx[i]
+#         j = i % 5
+#         k = 0
+#         if i == 0:
+#             IndJij_wColorBar(ax[k, j], J, x, y, famid)
+#         else:
+#             if i > 4:
+#                 k = 1
+#             IndJij(ax[k, j], J, x, y, famid)
+#
+#     fig.suptitle('Highest Jij Norms')
+#     plt.savefig(analysispath + str(famid) + 'famtop10.png', dpi=600)
 
 
-def Seq_edit_past_entry_comp(array, gseq):
-    if len(array) >= 4:
-        gseq[array[0]] = rna[int(array[2])]
-        gseq[array[1]] = rna[int(array[3])]
-    if len(array) ==8:
-        gseq[array[4]] = rna[int(array[6])]
-        gseq[array[5]] = rna[int(array[7])]
-    return gseq
+# def HJ_Mutant(J, H, N, q):
+#     mutt = copy.deepcopy(J)
+#     for x in range(N - 1):
+#         for k in range(q):  # J Indices
+#             mutt[x, x:N, k, :] += H[x, k]
+#     for y in range(N - 1):
+#         for l in range(q):  # y states
+#             mutt[0:y + 1, y, :, l] += H[y + 1, l]
+#     return mutt
 
 
-def gen_goodseq(famid):
+# def top10norms_figure_DNA_mutt(famid):
+#     analysispath = fullpath
+#     # Matrix Paths
+#     Jp = fullpath + str(famid) + 'j'
+#     Hp = fullpath + str(famid) + 'h'
+#     # N
+#     N = 40
+#     # Get Matrix Ready
+#     J = sortjmat(Jp, N, 5)
+#     H = sorthmat(Hp, N, 5)
+#     # Get Indices of top 10 norms
+#     jmutt = HJ_mutant_RNA(J, H, N)
+#     jx = topxjnorms(J, N, 10)
+#
+#     fig, ax = plt.subplots(2, 5, constrained_layout=True)
+#     for i in range(10):
+#         x, y, z = jx[i]
+#         j = i % 5
+#         k = 0
+#         if i == 0:
+#             IndJij_DNA_mutt_wColorBar(ax[k, j], jmutt, x, y, famid)
+#         else:
+#             if i > 4:
+#                 k = 1
+#             IndJij_DNA_mutt(ax[k, j], jmutt, x, y, famid)
+#
+#     fig.suptitle('Highest Jij Mutt Norms')
+#     plt.savefig(analysispath + str(famid) + 'famTop10muttdisp.png', dpi=600)
+
+
+def mixed_HJ(famid):
     analysispath = fullpath
     # Matrix Paths
     Jp = fullpath + str(famid) + 'j'
     Hp = fullpath + str(famid) + 'h'
+    bJp = fullpath + str(famid) + 'bj'
+    bHp = fullpath + str(famid) + 'bh'
     # N
     N = 40
     # Get Matrix Ready
     J = sortjmat(Jp, N, 5)
     H = sorthmat(Hp, N, 5)
-    # Get Indices of top 10 norms
-    gseq = np.full(40, ['X'], dtype=str)
-    # bseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, 10)
-    pvals = []
-    for i in range(len(tval)):
-        x, y, z = tval[i]
-        vals, pvals = past_entry_comp(J, pvals, x, y)
-        gseq = Seq_edit_past_entry_comp(vals, gseq)
-    for xid, x in enumerate(gseq):
-        if x == 'X':
-            gpx = int(np.where(H[xid, :] == np.amax(H[xid, :]))[0])
-            gseq[xid] = rna[int(gpx)]
-    print(pvals)
-    print(''.join(gseq))
-    return ''.join(gseq)
+    bJ = sortjmat(bJp, N, 5)
+    bH = sorthmat(bHp, N, 5)
+    topJ = topxjnorms(J, N, 80)
+    topBJ = topxjnorms(bJ, N, 80)
+    for xj, yj, val in topJ:
+        for xb, yb, valb in topBJ:
+            if xj == xb and yj == yb:
+                J[xj, yj, :, :] = 0.0
+
+    H *= np.divide(1, np.sum(H))
+    bH *= np.divide(1, np.sum(bH))
+
+    print(np.sum(H))
+    print(np.sum(bH))
+    truH = H - bH
+    return truH, J
 
 
-def Calc_Energy(seq, J, H):
-    full = list(seq)
-    dist = len(full)
-    Jenergy = 0
-    Henergy = 0
-    for x in range(dist-1):
-        ibase = rnad[seq[x]]
-        Henergy += H[x, ibase]
-        for y in range(dist-1):
-            jbase = rnad[seq[y]]
-            Jenergy += J[x, y, ibase, jbase]
-    energy = Jenergy + Henergy
-    return energy
+# def Calc_Energy(seq, J, H):
+#     full = list(seq)
+#     dist = len(full)
+#     Jenergy = 0
+#     Henergy = 0
+#     for x in range(1, dist):
+#         ibase = rnad[seq[x]]
+#         Henergy += H[x, ibase]
+#         for y in range(x+1, dist):
+#             jbase = rnad[seq[y]]
+#             Jenergy += J[x-1, y-2, ibase, jbase]
+#     energy = Jenergy + Henergy
+#     return energy
+
+
+# # Takes in Good Binders J and H and Bad Binders J and H
+# # if htype = 'ind' compares top individual values of GB H and BB H and if they are in common removes them
+# # if htype = 'norm' compares top norms of GB H and BB H and if they are in common removes them
+# def mixed_HJ_w_dist(J, bJ, H, bH, N, q, **kwargs):
+#     filledJnorms = (N-1)*(N-2)/2 + N-1
+#     filledHind = (N * q)
+#     nxj = 10 # Number of J Norms used in Comparison
+#     nxh = 10 # Number of H Norms used n Comparison
+#     htype = 'ind'
+#     hdist = False
+#     jdist = False
+#     hnorms = 10
+#     for key, value in kwargs.items():
+#         if key == 'jnormpct':
+#             nxj = math.ceil(value/100 * filledJnorms)
+#         elif key == 'htype':
+#             htype = value
+#         elif key == 'hnormpct':
+#             if htype == 'norm':
+#                 nxh = math.ceil(value/100 * N)
+#             if htype == 'ind':
+#                 nxh = math.ceil(value/100 * filledHind)
+#         elif key == 'hdist':
+#             hdist = value
+#         elif key == 'jdist':
+#             jdist = value
+#         else:
+#             print('No keyword argument ' + key + ' found')
+#     topJ, valsJ, tvalJ = topxjnorms_w_dist(J, N, nxj, pct=20)
+#     topBJ, valsBJ, tvalBJ = topxjnorms_w_dist(bJ, N, nxj, pct=20)
+#     for xj, yj, val in topJ:
+#         for xb, yb, valb in topBJ:
+#             if xj == xb and yj == yb:
+#                 J[xj, yj, :, :] = 0.0
+#     if htype != 'good':
+#         topH, valsH, tvalH = topxhnorms_w_dist(H, N, nxh, pct=20, htype=htype)
+#         topBH, valsBH, tvalBH = topxhnorms_w_dist(bH, N, nxh, pct=20, htype=htype)
+#         if htype == 'norm':
+#             for xi, val in topH:
+#                 for yb, valb in topBH:
+#                     if xi == yb:
+#                         H[xi, :] = 0.0
+#         elif htype == 'ind':
+#             for xi, yi, val in topH:
+#                 for xb, yb, valb in topBH:
+#                     if xi == xb and yi == yb:
+#                         H[xi, yi] = 0.0
+#         if hdist:
+#             Hdist = [valsH, tvalH, valsBH, tvalBH]
+#     else:
+#         Hdist = [0]
+#     if jdist:
+#         Jdist = [valsJ, tvalJ, valsBJ, tvalBJ]
+#     if hdist and jdist:
+#         return H, J, Hdist, Jdist
+#     elif hdist and not jdist:
+#         return H, J, hdist
+#     elif not hdist and jdist:
+#         return H, J, jdist
+#     elif not hdist and not jdist:
+#         return H, J
+
+
+def subplot_seq_aff_v_E(subplot, famid, J, H, **kwargs):
+    title = 'Family: ' + str(famid) + ' Affinity vs Energy'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+    o=open(fullpath + str(famid) + 'thfull.txt')
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    energies = []
+    for x in seqs:
+        nrg = Calc_Energy(x, J, H)
+        energies.append(nrg)
+    api = list(zip(titles, energies))
+    x = list(set([x for (x,y) in api]))
+    x.sort()
+    avg = []
+    err = []
+    for aff in x:
+        yvals = np.array([y for (x, y) in api if x==aff])
+        yavg = yvals.mean()
+        yerr = np.std(yvals)
+        avg.append(yavg)
+        err.append(yerr)
+    subplot.errorbar(x, avg, err, linestyle='None', marker='^')
+    subplot.set_xlabel('affinity')
+    subplot.set_ylabel('Energy')
+    subplot.set_title(title)
+
+
+def pct_comp_fig(famid):
+    N = 40
+    H10, J10 = mixed_HJ_w_dist(famid, pctnorms=10, hnorms=4, htype='norm')
+    H20, J20 = mixed_HJ_w_dist(famid, pctnorms=20, hnorms=8, htype='norm')
+    H30, J30 = mixed_HJ_w_dist(famid, pctnorms=30, hnorms=12, htype='norm')
+    H40, J40 = mixed_HJ_w_dist(famid, pctnorms=40, hnorms=16, htype='norm')
+    Harr = np.array([H10, H20, H30, H40])
+    Jarr = np.array([J10, J20, J30, J40])
+    pctarr = np.arange(10, 50, 10)
+    fig, ax = plt.subplots(7, 4, figsize=(16, 24))
+    for x in range(4):
+        subplot_seq_aff_v_E(ax[0, x], famid, Jarr[x, 0], Harr[x, 0], title=('Mixed Scoring pct ' + str(pctarr[x])))
+        fig_fullJnorm_RNA(ax[1, x], famid, jnorm(Jarr[x, 0], N), N, lw=0.1, vmin=0, vmax=1.5, title=('J Norm pct ' + str(pctarr[x])), htype='norm')
+        fig_fullH_RNA(ax[2, x], famid, Harr[x, 0], N, vmin=-0.5, vmax=0.5, title=('H Matt pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[3, x], famid, Jarr[x, 1], Jarr[x, 2], title=('Good Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[4, x], famid, Jarr[x, 3], Jarr[x, 4], title=('Bad Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[5, x], famid, Harr[x, 1], Harr[x, 2], title=('Good Binders pct ' + str(pctarr[x])))
+        fig_distofnorms_RNA(ax[6, x], famid, Harr[x, 3], Harr[x, 4], title=('Bad Binders pct ' + str(pctarr[x])))
+    plt.suptitle('Family ' + str(famid) + 'using Editied H Norms')
+    plt.savefig("/home/jonah/Downloads/pctcompNORMH" + str(famid) + ".png", dpi=600)
+
+
+def mix_score_dist(famid):
+    N=40
+    H, J, valsJ, valsBJ, tvalJ, tvalBJ = mixed_HJ_w_dist(famid, pctnorms=20)
+    fig, ax = plt.subplots(3, 2)
+    subplot_seq_aff_v_E(ax[0, 0], famid, J, H, title=('Mixed Scoring Family ' + str(famid)))
+    # Jg = sortjmat(J, N, 5)
+    jgnorm = jnorm(J, N)
+    fig_fullJnorm_RNA(ax[0, 1], famid, jgnorm, N, title='Mixed J Norm', lw=0.1, vmin=0, vmax=2)
+    fig_fullH_RNA(ax[1, 0], famid, H, N, vmin=-0.005, vmax=0.005, title='Good Binders H - Bad Binders H')
+    slpath = fullpath + str(famid) + 'fullsl.png'
+    fig_seqlogoplot_RNA(slpath, ax[1, 1], famid)
+    fig_distofnorms_RNA(ax[2, 0], famid, valsJ, tvalJ, title='Good Binders J Norm Dist')
+    fig_distofnorms_RNA(ax[2, 1], famid, valsBJ, tvalBJ, title='Bad Binders J Norm Dist')
+    plt.savefig("/home/jonah/Downloads/scoring.png")
+
+
+# def get_energy_seqs(famid):
+#     o=open(fullpath + str(famid) + 'thfull.txt')
+#     titles = []
+#     seqs = []
+#     for line in o:
+#         if line.startswith('>'):
+#             titles.append(float(line.rstrip().split('-')[1]))
+#         else:
+#             seqs.append(line.rstrip())
+#     o.close()
+#     return titles, seqs
+
+
+def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
+    title = 'Family: ' + str(famid) + ' Affinity vs Energy including Other Family Seqs'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+    pfams = [5, 7, 8]
+    titles = []
+    seqs = []
+    for x in pfams:
+        titlesub, seqsub = get_energy_seqs(x)
+        titles.append(titlesub)
+        seqs.append(seqsub)
+    energies = []
+    for x in seqs:
+        tmp = []
+        for s in x:
+            nrg = Calc_Energy(s, J, H)
+            tmp.append(nrg)
+        energies.append(tmp)
+    api5 = list(zip(titles[0], energies[0]))
+    api7 = list(zip(titles[1], energies[1]))
+    api8 = list(zip(titles[2], energies[2]))
+    x5 = list(set([x for (x, y) in api5]))
+    x7 = list(set([x for (x, y) in api7]))
+    x8 = list(set([x for (x, y) in api8]))
+    x5.sort()
+    x7.sort()
+    x8.sort()
+    y5A, y5E, y7A, y7E, y8A, y8E = ([] for i in range(6))
+    for aff in x5:
+        yvals5 = np.array([y for (x, y) in api5 if x==aff])
+        yavg5 = yvals5.mean()
+        yerr5 = np.std(yvals5)
+        y5A.append(yavg5)
+        y5E.append(yerr5)
+    for aff in x7:
+        yvals7 = np.array([y for (x, y) in api7 if x==aff])
+        yavg7 = yvals7.mean()
+        yerr7 = np.std(yvals7)
+        y7A.append(yavg7)
+        y7E.append(yerr7)
+    for aff in x8:
+        yvals8 = np.array([y for (x, y) in api8 if x==aff])
+        yavg8 = yvals8.mean()
+        yerr8 = np.std(yvals8)
+        y8A.append(yavg8)
+        y8E.append(yerr8)
+    subplot.errorbar(x5, y5A, y5E, linestyle='None', marker='o', ecolor='r', alpha=0.5)
+    subplot.errorbar(x7, y7A, y7E, linestyle='None', marker='P', ecolor='b', alpha=0.5)
+    subplot.errorbar(x8, y8A, y8E, linestyle='None', marker='^', ecolor='y', alpha=0.5)
+    subplot.set_xlabel('affinity')
+    subplot.set_ylabel('Energy')
+    subplot.set_title(title)
 
 
 
-famid = 8
-Jp = fullpath + str(famid) + 'j'
-Hp = fullpath + str(famid) + 'h'
-# N
-N = 40
-# Get Matrix ReadyVHV
-J = sortjmat(Jp, N, 5)
-H = sorthmat(Hp, N, 5)
+Hval, Jval = mixed_HJ_w_dist(7, htype='ind', hnorms=40, pctnorms=40)
+H = np.array(Hval[0])
+J = np.array(Jval[0])
 
-best5 = gen_goodseq(8)
-b5en = Calc_Energy(best5, J, H)
-print(b5en)
+gen_goodseq_custom_HJ(7, 10, H, J)
+
+
+
+# mix_score_dist(7)
+# pct_comp_fig(7)
