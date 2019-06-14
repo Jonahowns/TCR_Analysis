@@ -8,7 +8,8 @@ from scipy.stats import gaussian_kde
 import sys
 import copy
 import math
-from seq_maker import gen_goodseq_custom_HJ
+import dcamethods as dca
+
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
@@ -16,6 +17,7 @@ droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
 fullpath = upath + droppath
+blpath = "/home/jonah/bl-DCA/"
 clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
             42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
@@ -991,14 +993,20 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
     subplot.set_ylabel('Energy')
     subplot.set_title(title)
 
+N = 40
+q = 5
+gJp = blpath + 'j7_vals'
+gHp = blpath + 'h7_vals'
+bJp = blpath + 'jb7_vals'
+bHp = blpath + 'hb7_vals'
+gH = dca.sorthmat_blDCA(gHp, N, q)
+gJ = dca.sortjmat_blDCA(gJp, N, q)
+bH = dca.sorthmat_blDCA(bHp, N, q)
+bJ = dca.sortjmat_blDCA(bJp, N, q)
+H, J = dca.Binder_Comp_JH(gJ, bJ, gH, bH, N, q, htype='good', hnormpct=40, jnormpct=40)
 
-
-Hval, Jval = mixed_HJ_w_dist(7, htype='ind', hnorms=40, pctnorms=40)
-H = np.array(Hval[0])
-J = np.array(Jval[0])
-
-gen_goodseq_custom_HJ(7, 10, H, J)
-
+testseqpath = fullpath + '7thfull.txt'
+dca.Plot_Seq_Aff_v_E(J, H, (blpath + '7bindcompenergy.png'), testseqpath)
 
 
 # mix_score_dist(7)

@@ -44,15 +44,7 @@ def prune_alignment(names, seqs, simt=0.99):
     return final_choice_names,final_choice_seqs
 
 
-
-
-
-
-
-
-
-
-
+# Method to split up files the way i want them too # lol
 
 
 
@@ -82,7 +74,6 @@ def sortjmat_blDCA(file, N, q):
                 continue
             jmate[i, j, :, :] = jmatu[i, j+1, :, :]
     return jmate
-#
 
 
 # Takes plmDCA J Matrix File and inputs the values into a N-1, N-1, q, q matrix
@@ -95,6 +86,16 @@ def sortjmat_plmDCA(file, N, q):
     o.close()
     return fullmatrix
 
+def sorthmat_blDCA(file, N, q):
+    o = open(file, 'r')
+    fullmatrix = np.full((N, q), 0.0)
+    for line in o:
+        data = line.split(',')
+        fullmatrix[int(data[0]), int(data[1])] = float(data[2].rstrip())
+    o.close()
+    return fullmatrix
+
+
 # Takes plmDCA H Matrix File and inputs the values into a N-1, q matrix
 def sorthmat_plmDCA(file, N, q):
     o = open(file, 'r')
@@ -104,6 +105,9 @@ def sorthmat_plmDCA(file, N, q):
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
     o.close()
     return fullmatrix
+
+
+
 
 # Returns H Matrix with only the top values specified by a percentile
 # by default returns values greater than the 80th percentile
@@ -171,16 +175,6 @@ def FullJ_disp(J, N, q):
     return Jdisp
 
 
-def FullJ_disp_blDCA(J, N, q):
-    Jdisp = np.full((N*q, N*q), 0.0)
-    for i in range(N):
-        for j in range(N):
-            for k in range(q):
-                for l in range(q):
-                    Jdisp[i*q+k, j*q+l] = J[i, j, k, l]
-    return Jdisp
-
-
 # Returns J Matrix with H values added
 def HJ_Mutant(J, H, N, q):
     mutt = copy.deepcopy(J)
@@ -221,12 +215,21 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
             jdist = value
         else:
             print('No keyword argument ' + key + ' found')
+    diff = np.subtract(J, bJ)
+    diffnorms = []
+    for x in range(N-1):
+        for y in range(N-1):
+            if x>y:
+                continue
+            diffnorms.append(np.linalg.norm(diff[x, y, :, :]))
+    cut = np.percentile(diffnorms, 50)
     topJ, valsJ, tvalJ = TopX_JNorms(J, N, nxj, pct=20, dist=True)
     topBJ, valsBJ, tvalBJ = TopX_JNorms(bJ, N, nxj, pct=20, dist=True)
     for xj, yj, val in topJ:
         for xb, yb, valb in topBJ:
             if xj == xb and yj == yb:
-                J[xj, yj, :, :] = 0.0
+                if np.linalg.norm(diff[xj, yj, :, :]) < cut:
+                    J[xj, yj, :, :] = 0.0
     if htype != 'good':
         topH, valsH, tvalH = TopX_HVals(H, N, nxh, pct=20, htype=htype, dist=True)
         topBH, valsBH, tvalBH = TopX_HVals(bH, N, nxh, pct=20, htype=htype, dist=True)
@@ -378,15 +381,6 @@ def getn(fastafile):
     return n
 
 
-N=40
-q=5
-blj = "/home/jonah/bl-dca/j_vals"
-J=sortjmat_blDCA(blj, 40, 5)
-jdistp = FullJ_disp(J, N, q)
-plt.imshow(jdistp, cmap='seismic')
-plt.savefig('/home/jonah/Downloads/testbl.png', dpi=600)
-
-
 ########################################################################################################################
 ########################################################################################################################
 # Subplot Methods
@@ -498,9 +492,9 @@ def Fig_FullH(subplot, id, H, n, q,  **kwargs):
         elif key == 'fontsize':
             fontsize = value
         elif key == 'vmax':
-            vml = value
-        elif key == 'vmin':
             vmg = value
+        elif key == 'vmin':
+            vml = value
         else:
             print('No keyword argument ' + key + ' found')
     subplot.imshow(H, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
@@ -632,9 +626,6 @@ def Fig_IndJij(subplot, J, x, y, id, **kwargs):
     subplot.title.set_size(fontsize=(fontsize+2))
 
 
-
-
-
 ########################################################################################################################
 ########################################################################################################################
 # Full Figure Methods
@@ -667,15 +658,14 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     for key, value in kwargs.items():
         if key == 'title':
             title = value
-
     titles = []
     seqs = []
     for arg in argv:
-        tmpt, tmps = Fasta_Read_aff(arg)
-        titles.append(tmpt)
-        seqs.append(tmps)
+        tmpt, tmps = Fasta_Read_Aff(arg)
+        titles.extend(tmpt)
+        seqs.extend(tmps)
     energies = []
-    for x in alls:
+    for x in seqs:
         nrg = Calc_Energy(x, J, H)
         energies.append(nrg)
     api = list(zip(titles, energies))
