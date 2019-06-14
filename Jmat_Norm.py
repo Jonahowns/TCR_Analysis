@@ -924,17 +924,17 @@ def mix_score_dist(famid):
     plt.savefig("/home/jonah/Downloads/scoring.png")
 
 
-def get_energy_seqs(famid):
-    o=open(fullpath + str(famid) + 'thfull.txt')
-    titles = []
-    seqs = []
-    for line in o:
-        if line.startswith('>'):
-            titles.append(float(line.rstrip().split('-')[1]))
-        else:
-            seqs.append(line.rstrip())
-    o.close()
-    return titles, seqs
+# def get_energy_seqs(famid):
+#     o=open(fullpath + str(famid) + 'thfull.txt')
+#     titles = []
+#     seqs = []
+#     for line in o:
+#         if line.startswith('>'):
+#             titles.append(float(line.rstrip().split('-')[1]))
+#         else:
+#             seqs.append(line.rstrip())
+#     o.close()
+#     return titles, seqs
 
 
 def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):

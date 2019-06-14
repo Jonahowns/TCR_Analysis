@@ -1,7 +1,8 @@
 import numpy as np
 import math
 import copy
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
+import sys
 
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
@@ -13,6 +14,76 @@ rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 dna = ['-', 'A', 'C', 'G', 'T']
 nucs = ['A', 'C', 'G', 'U']
 nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
+
+########################################################################################################################
+########################################################################################################################
+# Seq Prep Methods
+
+
+def prune_alignment(names, seqs, simt=0.99):
+    final_choice_names = []
+    final_choice_seqs = []
+    for sid, seq in enumerate(seqs):
+        print(sid)
+        append = True
+        seqoi=list(seq)
+        for existseq in final_choice_seqs:
+            es=list(existseq)
+            seq_similarity  = 0.
+            for i in range(len(es)):
+                if seqoi[i] == es[i]:
+                    seq_similarity += 1.
+            seq_similarity /= len(seq)
+            if seq_similarity >= simt:
+                append = False
+                break
+        if append:
+            final_choice_names.append(names[sid])
+            final_choice_seqs.append(seq.upper())
+    print('INFO: reduced length of alignment from %d to %d due to sequence similarity' % (len(seqs), len(final_choice_seqs) ),file=sys.stderr),
+    return final_choice_names,final_choice_seqs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################################################################################################################
+########################################################################################################################
+# General Methods
+
+# IN PROGRESS
+def sortjmat_blDCA(file, N, q):
+    o = open(file, 'r')
+    jmatu = np.full((N, N, q, q), 0.0)
+    for line in o:
+        data = line.split(',')
+        jmatu[int(data[0]), int(data[1]), int(data[2]), int(data[3])] = float(data[4].rstrip())
+    o.close()
+    # Fix up the Matrix to be exactly the same as the plmDCA Matrix
+    jmate = np.full((N-1, N-1, q, q), 0.0)
+    for i in range(N-1):
+        for j in range(N-1):
+            if i > j:
+                continue
+            jmate[i, j, :, :] = jmatu[i, j+1, :, :]
+    return jmate
+#
+
 
 # Takes plmDCA J Matrix File and inputs the values into a N-1, N-1, q, q matrix
 def sortjmat_plmDCA(file, N, q):
@@ -100,6 +171,16 @@ def FullJ_disp(J, N, q):
     return Jdisp
 
 
+def FullJ_disp_blDCA(J, N, q):
+    Jdisp = np.full((N*q, N*q), 0.0)
+    for i in range(N):
+        for j in range(N):
+            for k in range(q):
+                for l in range(q):
+                    Jdisp[i*q+k, j*q+l] = J[i, j, k, l]
+    return Jdisp
+
+
 # Returns J Matrix with H values added
 def HJ_Mutant(J, H, N, q):
     mutt = copy.deepcopy(J)
@@ -174,6 +255,35 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
     elif not hdist and not jdist:
         return H, J
 
+
+# Reads Fasta files and specifically takes affinity from how its outputted in seqprep
+def Fasta_Read_Aff(fastafile):
+    o=open(fastafile)
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    return titles, seqs
+
+
+# Calculates 'energy' of give sequence according to provided J and H Matrices
+def Calc_Energy(seq, J, H):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    for x in range(1, dist):
+        ibase = rnad[seq[x]]
+        Henergy += H[x, ibase]
+        for y in range(x+1, dist):
+            jbase = rnad[seq[y]]
+            Jenergy += J[x-1, y-2, ibase, jbase]
+    energy = Jenergy + Henergy
+    return energy
 
 
 # Returns the highest x amount of J Norms
@@ -266,6 +376,15 @@ def getn(fastafile):
     n = len(list(seq))
     o.close()
     return n
+
+
+N=40
+q=5
+blj = "/home/jonah/bl-dca/j_vals"
+J=sortjmat_blDCA(blj, 40, 5)
+jdistp = FullJ_disp(J, N, q)
+plt.imshow(jdistp, cmap='seismic')
+plt.savefig('/home/jonah/Downloads/testbl.png', dpi=600)
 
 
 ########################################################################################################################
@@ -461,7 +580,7 @@ def Fig_SeqLogo(Filepath, Subplot, id):
 # On Specified Subplot shows Individual Jij at specified x and y **NOTE J12 is equivalent to J[0, 0, :, :]
 # Check Function for Keyword Arguments, available are cbar, lw, fontsize, vmin, vmax, title, cmap, and type
 # Three Types are available: 'dna', 'rna' and 'pep'
-def IndJij(subplot, J, x, y, id, **kwargs):
+def Fig_IndJij(subplot, J, x, y, id, **kwargs):
     vml = -0.5
     vmg = 0.5
     cmap = 'seismic'
@@ -513,6 +632,9 @@ def IndJij(subplot, J, x, y, id, **kwargs):
     subplot.title.set_size(fontsize=(fontsize+2))
 
 
+
+
+
 ########################################################################################################################
 ########################################################################################################################
 # Full Figure Methods
@@ -520,7 +642,7 @@ def IndJij(subplot, J, x, y, id, **kwargs):
 
 # Returns a figure showing the Individual Jijs of the top 10 Norms of the provided J Matrix
 # OutPath is the directory the figure is being saved to
-def top10norms_figure_RNA(id, J, N, OutPath):
+def Top10norms_figure_RNA(id, J, N, OutPath):
     # Get Indices of top 10 norms
     jx = TopX_JNorms(J, N, 10)
     fig, ax = plt.subplots(2, 5, constrained_layout=True)
@@ -538,24 +660,371 @@ def top10norms_figure_RNA(id, J, N, OutPath):
     fig.suptitle('Highest Jij Norms ID: ' + str(id))
     plt.savefig(OutPath + str(id) + 'JNormt10.png', dpi=600)
 
+# Can input multiple fasta files and it will combine all seqs, and plot their energies according to provided J and H
+# keyword argument is title
+def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
+    title = 'Affinity vs Energy'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+
+    titles = []
+    seqs = []
+    for arg in argv:
+        tmpt, tmps = Fasta_Read_aff(arg)
+        titles.append(tmpt)
+        seqs.append(tmps)
+    energies = []
+    for x in alls:
+        nrg = Calc_Energy(x, J, H)
+        energies.append(nrg)
+    api = list(zip(titles, energies))
+    x = list(set([x for (x,y) in api]))
+    x.sort()
+    avg = []
+    err = []
+    for aff in x:
+        yvals = np.array([y for (x, y) in api if x==aff])
+        yavg = yvals.mean()
+        yerr = np.std(yvals)
+        avg.append(yavg)
+        err.append(yerr)
+    plt.errorbar(x, avg, err, linestyle='None', marker='^')
+    plt.xlabel('Affinity')
+    plt.ylabel('Energy')
+    plt.suptitle(title)
+    plt.savefig(outpath, dpi=600)
+
 
 
 ########################################################################################################################
 ########################################################################################################################
 # Generate Seq Methods
 
-# Calculates 'energy' of a seq based on provided J and H
-# Higher Energy indicates a better binder
-def Calc_Energy(seq, J, H):
-    full = list(seq)
-    dist = len(full)
-    Jenergy = 0
-    Henergy = 0
-    for x in range(1, dist):
-        ibase = rnad[seq[x]]
-        Henergy += H[x, ibase]
-        for y in range(x+1, dist):
-            jbase = rnad[seq[y]]
-            Jenergy += J[x-1, y-2, ibase, jbase]
-    energy = Jenergy + Henergy
-    return energy
+def check_vals(x, y, pvals):
+    if len(pvals) == 0:
+        return 0, 0, 'none'
+    else:
+        for idd, pack in enumerate(pvals):
+            xp, yp, rx, ry, pval = pack
+            if x == xp:
+                return 1, idd, 'xs'
+            elif y == yp:
+                return 1, idd, 'ys'
+            elif x == yp:
+                return 1, idd, 'xnyp'
+            elif y == xp:
+                return 1, idd, 'ynxp'
+        return 0, 0, 'none'
+
+
+def past_entry_comp_goodseq(J, pvals, xn, yn):
+    tmppvals = copy.deepcopy(pvals)
+    ind, xid, stype = check_vals(xn, yn, pvals)
+    if ind == 0:
+        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
+        rxn = int(tmpxn)
+        ryn = int(tmpyn)
+        tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        return [xn, yn, rxn, ryn], tmppvals
+    elif ind == 1:
+        xp, yp, rxp, ryp, val = tmppvals[xid]
+        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))  # Indices of highest in N
+        rxn = int(tmpxn)
+        ryn = int(tmpyn)
+        if stype == 'xs':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, rxp, :])
+            tchoice = np.amax(J[xp, yp, rxn, :]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ys':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, :, ryp])
+            tchoice = np.amax(J[xp, yp, :, ryn]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'xnyp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, ryp, :])
+            tchoice = np.amax(J[xp, yp, ryn, :]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ynxp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amax(J[xn, yn, :, rxp])
+            tchoice = np.amax(J[xp, yp, :, rxn]) + J[xn, yn, rxn, ryn]
+
+        if pchoice > tchoice:
+            if stype == 'xs':
+                rxn = rxp
+                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :]))[0])
+            if stype == 'ys':
+                ryn = ryp
+                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn]))[0])
+            if stype == 'xnyp':
+                rxn = ryp
+                ryn = int(np.where(J[xn, yn, rxn, :] == np.amax(J[xn, yn, rxn, :]))[0])
+            if stype == 'ynxp':
+                ryn = rxp
+                rxn = int(np.where(J[xn, yn, :, ryn] == np.amax(J[xn, yn, :, ryn]))[0])
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice > pchoice:
+            if stype == 'xs':
+                rxp = rxn
+                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :]))[0])
+            if stype == 'ys':
+                ryp = ryn
+                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp]))[0])
+            if stype == 'xnyp':
+                ryp = rxn
+                rxp = int(np.where(J[xp, yp, :, ryp] == np.amax(J[xp, yp, :, ryp]))[0])
+            if stype == 'ynxp':
+                rxp = ryn
+                ryp = int(np.where(J[xp, yp, rxp, :] == np.amax(J[xp, yp, rxp, :]))[0])
+            tmppvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice == pchoice:
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
+        return vals, tmppvals
+
+
+def past_entry_comp_badseq(J, pvals, xn, yn):
+    tmppvals = copy.deepcopy(pvals)
+    ind, xid, stype = check_vals(xn, yn, pvals)
+    if ind == 0:
+        tmpxn, tmpyn = list(np.where(J[xn, yn, 1:5, 1:5] == np.amin(J[xn, yn, 1:5, 1:5])))
+        rxn = int(tmpxn) + 1
+        ryn = int(tmpyn) + 1
+        tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+        return [xn, yn, rxn, ryn], tmppvals
+    elif ind == 1:
+        xp, yp, rxp, ryp, val = tmppvals[xid]
+        tmpxn, tmpyn = list(np.where(J[xn, yn, 1:5, 1:5] == np.amin(J[xn, yn, 1:5, 1:5])))  # Indices of highest in N
+        rxn = int(tmpxn)+1
+        ryn = int(tmpyn)+1
+        if stype == 'xs':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, rxp, 1:5])
+            tchoice = np.amin(J[xp, yp, rxn, 1:5]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ys':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, 1:5, ryp])
+            tchoice = np.amin(J[xp, yp, 1:5, ryn]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'xnyp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, ryp, 1:5])
+            tchoice = np.amin(J[xp, yp, ryn, 1:5]) + J[xn, yn, rxn, ryn]
+
+        if stype == 'ynxp':
+            pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, 1:5, rxp])
+            tchoice = np.amin(J[xp, yp, 1:5, rxn]) + J[xn, yn, rxn, ryn]
+
+        if pchoice < tchoice:
+            if stype == 'xs':
+                rxn = rxp
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+            if stype == 'ys':
+                ryn = ryp
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+            if stype == 'xnyp':
+                rxn = ryp
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+            if stype == 'ynxp':
+                ryn = rxp
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice < pchoice:
+            if stype == 'xs':
+                rxp = rxn
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+            if stype == 'ys':
+                ryp = ryn
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+            if stype == 'xnyp':
+                ryp = rxn
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+            if stype == 'ynxp':
+                rxp = ryn
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+            tmppvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        if tchoice == pchoice:
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+
+        vals = [xp, yp, rxp, ryp, xn, yn, rxn, ryn]
+        return vals, tmppvals
+
+
+def Seq_edit_past_entry_comp(array, gseq):
+    if len(array) >= 4:
+        gseq[array[0]+0] = rna[int(array[2])]
+        gseq[array[1]+1] = rna[int(array[3])]
+        if len(array) == 8:
+            gseq[array[4]+0] = rna[int(array[6])]
+            gseq[array[5]+1] = rna[int(array[7])]
+    return gseq
+
+
+def gen_goodseq(J, H, N, norms):
+    # Get Indices of top 10 norms
+    gseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_goodseq(J, pvals, x, y)
+        gseq = Seq_edit_past_entry_comp(vals, gseq)
+    for xid, x in enumerate(gseq):
+        if x == 'X':
+            gpx = np.argmax(H[xid, 1:5])
+            print(gpx)
+            gseq[xid] = rna[int(gpx) + 1]
+    print(''.join(gseq))
+    print(dca.Calc_Energy(gseq, J, H))
+    return ''.join(gseq)
+
+
+def gen_badseq(J, H, N, norms):
+    # Get Indices of top 10 norms
+    bseq = np.full(40, ['X'], dtype=str)
+    tval = topxjnorms(J, N, norms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_badseq(J, pvals, x, y)
+        bseq = Seq_edit_past_entry_comp(vals, bseq)
+    for xid, x in enumerate(bseq):
+        if x == 'X':
+            gpx = np.argmin(H[xid, 1:5])
+            bseq[xid] = rna[int(gpx)+1]
+    print(pvals)
+    print(dca.Calc_Energy(gseq, J, H))
+    print(''.join(bseq))
+    return ''.join(bseq)
+
+
+def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
+    ns = 'J'
+    for key, value in kwargs.items():
+        if key == 'normsource':
+            ns = value
+        else:
+            print('No keyword argument ' + key + ' found')
+    # Get Indices of top 10 norms
+    bseq = np.full(40, ['X'], dtype=str)
+    if ns == 'J':
+        tval = dca.TopX_JNorms(J, N, numberofnorms)
+    if ns == 'mutt':
+        tval = dca.TopX_JNorms(JMutt, N, numberofnorms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_badseq(JMutt, pvals, x, y)
+        bseq = Seq_edit_past_entry_comp(vals, bseq)
+    for xid, x in enumerate(bseq):
+        if x == 'X':
+            gpx = np.argmin(H[xid, 1:5])
+            bseq[xid] = rna[int(gpx) + 1]
+    print(pvals)
+    print(''.join(gseq))
+    print(dca.Calc_Energy(gseq, J, H))
+    return ''.join(gseq)
+
+# Input J and number of norms
+def gen_goodseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
+    ns = 'J'
+    for key, value in kwargs.items():
+        if key == 'normsource':
+            ns = value
+        else:
+            print('No keyword argument ' + key + ' found')
+    # Get Indices of top 10 norms
+    gseq = np.full(40, ['X'], dtype=str)
+    if ns == 'J':
+        tval = dca.TopX_JNorms(J, N, numberofnorms)
+    if ns == 'mutt':
+        tval = dca.TopX_JNorms(JMutt, N, numberofnorms)
+    pvals = []
+    for i in range(len(tval)):
+        x, y, z = tval[i]
+        vals, pvals = past_entry_comp_goodseq(JMutt, pvals, x, y)
+        gseq = Seq_edit_past_entry_comp(vals, gseq)
+    for xid, x in enumerate(gseq):
+        if x == 'X':
+            gpx = int(np.where(H[xid, :] == np.amax(H[xid, :]))[0])
+            gseq[xid] = rna[int(gpx)]
+    print(pvals)
+    print(''.join(gseq))
+    print(dca.Calc_Energy(gseq, J, H))
+    return ''.join(gseq)
+
+# Monte Carlo sampling for better binder
+class GenerSeq:
+    def __init__(self, N, T, mut_steps=5, out_after=100, steps=10000):
+        self._history = []
+        self._T = T
+        self._beta = 1. / T
+        self._mut_steps = mut_steps
+        self._out_after = out_after
+        self._steps = steps
+        self._seq = np.random.choice(nucs, N)
+
+    def calculate_energy(self, J, h):
+        J_energy = 0.
+        h_energy = 0.
+        for i in range(1, len(self._seq)):
+            t1 = nuc_to_id[self._seq[i]]
+            h_energy += h[i, t1]
+            for j in range(i + 1, len(self._seq)):
+                t2 = nuc_to_id[self._seq[j]]
+                J_energy += J[i - 1, j - 2, t1, t2]
+        return J_energy + h_energy
+
+    def mutate_seq(self):
+        for m in range(self._mut_steps):
+            pos = np.random.choice(range(len(self._seq)))
+            self._seq[pos] = np.random.choice(nucs)
+        return self._seq
+
+    def run_sampling(self, J, h, outpath):
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if random.random() < p:
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file = out)
+                        print(''.join(self._seq), file = out)
+                    print(str((i / self._steps) * 100) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        out.close()
+
+    def run_bad_sampling(self, J, h, outpath):
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if random.random() > p:
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file=out)
+                        print(''.join(self._seq), file=out)
+                    print((str((i / self._steps) * 100)) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        out.close()
