@@ -174,6 +174,45 @@ def prep_full_fam_seqs(famid, sim):
     print('Total Sequences --' + str(totalseqs) + ' w/ ' + str(seqsperfile) + ' seqs per file')
 
 
+# Given the Percentage of highest negative and positive values you want
+# Function removes all other values from the J Matrix
+def Rm_Vals_Percentage_J(J, pct, N, q):
+    pct1valsJ = math.ceil(N * (N - 1) * (q - 1) * 2 * (pct/100))
+    vals = J.flatten()
+    pos = [i for i in vals if i > 0]
+    neg = [i for i in vals if i < 0]
+    t1pctJpos = 100 - pct1valsJ / len(pos) * 100
+    t1pctJneg = pct1valsJ / len(neg) * 100
+    pc = np.percentile(pos, t1pctJpos)
+    nc = np.percentile(neg, t1pctJneg)
+    for i in range(N - 1):
+        for j in range(N - 1):
+            for k in range(q):
+                for l in range(q):
+                    if i > j:
+                        J[i, j, k, l] = 0.0
+                    if pc > J[i, j, k, l] > nc:
+                        J[i, j, k, l] = 0.0
+    return J
+
+
+def Rm_Vals_Percentage_H(H, pct, N, q):
+    pct1valsH = math.ceil(N * (q - 1) * (pct/100))
+    hvals = H.flatten()
+    hpos = [i for i in hvals if i > 0]
+    hneg = [i for i in hvals if i < 0]
+    t1pctHpos = 100 - pct1valsH / len(hpos) * 100
+    t1pctHneg = pct1valsH / len(hneg) * 100
+    hpc = np.percentile(hpos, t1pctHpos)
+    hnc = np.percentile(hneg, t1pctHneg)
+    for i in range(N - 1):
+        for j in range(q):
+            if hpc > H[i, j] > hnc:
+                H[i, j] = 0.0
+    return H
+
+
+
 # Method to split up files the way i want them too # lol
 
 
@@ -1018,7 +1057,7 @@ def gen_badseq(J, H, N, norms):
     return ''.join(bseq)
 
 
-def badbinderavg(N, q, *argv):
+def Average_J(N, q, *argv):
     hybrid = np.full((N - 1, N - 1, q, q), 0.0)
     for i in range(N - 1):
         for j in range(N - 1):
@@ -1030,6 +1069,17 @@ def badbinderavg(N, q, *argv):
                     for arg in argv:
                         val.append(arg[i, j, k, l])
                     hybrid[i, j, k, l] = np.average(val)
+    return hybrid
+
+
+def Average_H(N, q, *argv):
+    hybrid = np.full((N,  q), 0.0)
+    for i in range(N):
+        for j in range(1, q):
+            val = []
+            for arg in argv:
+                val.append(arg[i, j])
+                hybrid[i, j] = np.average(val)
     return hybrid
 
 
@@ -1052,6 +1102,61 @@ def Normalize_JMatrix(J, N, q):
                 J[i, j, :, 0] = 0.0
     d = 2. * (J - np.min(J)) / np.ptp(J) - 1
     return d
+
+
+def Half_Normalize_JMatrix(J, N, q):
+    for i in range(N - 1):
+        for j in range(N - 1):
+            for k in range(1, q):
+                if i > j:
+                    continue
+                J[i, j, 0, :] = 0.0
+                J[i, j, :, 0] = 0.0
+    d = (J - np.min(J)) / np.ptp(J) - 0.5
+    return d
+
+def Half_Normalize_HMatrix(H, N, q):
+    for i in range(N - 1):
+        for j in range(1, q):
+            H[i, 0] = 0.0
+    d = (H - np.min(H)) / np.ptp(H) - 0.5
+    return d
+
+
+def Sign_Seperator(mat, N, q, **kwargs):
+    sign = 1
+    type = 'j'
+    for key, value in kwargs.items():
+        if key == 'sign':
+            if value == '+':
+                sign = 1
+            elif value == '-':
+                sign = 0
+            else:
+                print('value error')
+        elif key == 'mattype':
+            type = value
+        else:
+            print('No key ' + key + ' found')
+    if type == 'j':
+        for i in range(N - 1):
+            for j in range(N - 1):
+                for k in range(q):
+                    for l in range(q):
+                        if mat[i, j, k, l] < 0 and sign == '+':
+                            mat[i, j, k, l] = 0.0
+                        elif mat[i, j, k, l] > 0 and sign == '-':
+                            mat[i, j, k, l] = 0.0
+    elif type == 'h':
+        for i in range(N):
+            for j in range(q):
+                if mat[i, j] < 0 and sign == '+':
+                    mat[i, j] = 0.0
+                elif mat[i, j] > 0 and sign == '-':
+                    mat[i, j] = 0.0
+    return mat
+
+
 
 
 def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):

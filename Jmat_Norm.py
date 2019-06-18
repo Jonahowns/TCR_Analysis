@@ -993,67 +993,46 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
     subplot.set_ylabel('Energy')
     subplot.set_title(title)
 
+
 N = 40
 q = 5
-gJp = blpath + 'j7_vals'
-gHp = blpath + 'h7_vals'
 bJp = blpath + 'jb7_vals'
 bHp = blpath + 'hb7_vals'
+gJp = blpath + 'j7_vals'
+gHp = blpath + 'h7_vals'
+
+
+bJ = dca.sortjmat_blDCA(bJp, N, q)
+bH = dca.sorthmat_blDCA(bHp, N, q)
 gH = dca.sorthmat_blDCA(gHp, N, q)
 gJ = dca.sortjmat_blDCA(gJp, N, q)
-bH = dca.sorthmat_blDCA(bHp, N, q)
-bJ = dca.sortjmat_blDCA(bJp, N, q)
-pct1valsJ = math.ceil(N*(N-1)*(q-1)*2 * 0.03)  # Want highest 1 percent + and - vals
-pct1valsH = math.ceil(N*(q-1) * 0.4)  # Want highest 10 percent + and - vals
-print(pct1valsJ)
-print(pct1valsH)
 
-# H, J = dca.Binder_Comp_JH(gJ, bJ, gH, bH, N, q, htype='good', hnormpct=40, jnormpct=40)
-H = np.subtract(2*gH, bH)
-J = np.subtract(2*gJ, bJ)
-vals = J.flatten()
-pos = [i for i in vals if i > 0]
-neg = [i for i in vals if i < 0]
-t1pctJpos = 100 - pct1valsJ/len(pos)*100
-t1pctJneg = pct1valsJ/len(neg)*100
-pc = np.percentile(pos, t1pctJpos)
-nc = np.percentile(neg, t1pctJneg)
-print(pc)
-print(nc)
-
-hvals = H.flatten()
-hpos = [i for i in hvals if i > 0]
-hneg = [i for i in hvals if i < 0]
-t1pctHpos = 100 - pct1valsH/len(hpos)*100
-t1pctHneg = pct1valsH/len(hneg)*100
-hpc = np.percentile(hpos, t1pctHpos)
-hnc = np.percentile(hneg, t1pctHneg)
-print(hpc)
-print(hnc)
-for i in range(N - 1):
-    for j in range(q):
-        if H[i, j] > hnc and H[i, j] < hpc:
-            H[i, j] = 0.0
-hvals = H.flatten()
-hpos = [i for i in hvals if i > 0]
-hneg = [i for i in hvals if i < 0]
-print(len(hpos))
-print(len(hneg))
+print(np.average(gH))
+print(np.average(bH))
+print(np.average(gJ))
+print(np.average(bJ))
 
 
-for i in range(N - 1):
-    for j in range(N - 1):
-        for k in range(q):
-            for l in range(q):
-                if i > j:
-                    J[i, j, k, l] = 0.0
-                if J[i, j, k, l] > nc and J[i, j, k, l] < pc:
-                    J[i, j, k, l] = 0.0
-vals = J.flatten()
-pos = [i for i in vals if i > 0]
-neg = [i for i in vals if i < 0]
-print(len(pos))
-print(len(neg))
+bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
+bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
+gHpos = dca.Sign_Seperator(gH, N, q, mattype='h', sign='+')
+gHneg = dca.Sign_Seperator(gH, N, q, mattype='h', sign='-')
+bJpos = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='+')
+bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
+gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
+gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
+
+# H = gH - bHpos + bHneg
+# J = gJ - bJpos
+# H = np.add(dca.Rm_Vals_Percentage_H(np.subtract(gH*Hx, bHpos), 10, N, q), bHneg)
+# H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(gHpos*Hx, bHpos), bHneg), 10, N, q)
+# J = np.add(dca.Rm_Vals_Percentage_J(np.subtract(gJ*Jx, bJpos), 1, N, q), bJneg)
+# J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(gJpos*Jx, bJpos), bJneg), 1, N, q)
+J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(Jx*gJpos, bJpos), gJneg), 1, N, q)
+H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(Hx*gHpos, bHpos), gHneg), 30, N, q)
+
+
+# J = dca.Rm_Vals_Percentage_J(J, 2, N, q)
 
 
 # J *= 2
