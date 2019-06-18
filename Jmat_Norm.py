@@ -1011,7 +1011,8 @@ print(np.average(gH))
 print(np.average(bH))
 print(np.average(gJ))
 print(np.average(bJ))
-
+Jx = abs(np.average(bJ)) / abs(np.average(gJ))
+Hx = abs(np.average(bH)) / abs(np.average(gH))
 
 bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
 bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
