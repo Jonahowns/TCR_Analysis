@@ -1003,7 +1003,64 @@ gH = dca.sorthmat_blDCA(gHp, N, q)
 gJ = dca.sortjmat_blDCA(gJp, N, q)
 bH = dca.sorthmat_blDCA(bHp, N, q)
 bJ = dca.sortjmat_blDCA(bJp, N, q)
-H, J = dca.Binder_Comp_JH(gJ, bJ, gH, bH, N, q, htype='good', hnormpct=40, jnormpct=40)
+pct1valsJ = math.ceil(N*(N-1)*(q-1)*2 * 0.03)  # Want highest 1 percent + and - vals
+pct1valsH = math.ceil(N*(q-1) * 0.4)  # Want highest 10 percent + and - vals
+print(pct1valsJ)
+print(pct1valsH)
+
+# H, J = dca.Binder_Comp_JH(gJ, bJ, gH, bH, N, q, htype='good', hnormpct=40, jnormpct=40)
+H = np.subtract(2*gH, bH)
+J = np.subtract(2*gJ, bJ)
+vals = J.flatten()
+pos = [i for i in vals if i > 0]
+neg = [i for i in vals if i < 0]
+t1pctJpos = 100 - pct1valsJ/len(pos)*100
+t1pctJneg = pct1valsJ/len(neg)*100
+pc = np.percentile(pos, t1pctJpos)
+nc = np.percentile(neg, t1pctJneg)
+print(pc)
+print(nc)
+
+hvals = H.flatten()
+hpos = [i for i in hvals if i > 0]
+hneg = [i for i in hvals if i < 0]
+t1pctHpos = 100 - pct1valsH/len(hpos)*100
+t1pctHneg = pct1valsH/len(hneg)*100
+hpc = np.percentile(hpos, t1pctHpos)
+hnc = np.percentile(hneg, t1pctHneg)
+print(hpc)
+print(hnc)
+for i in range(N - 1):
+    for j in range(q):
+        if H[i, j] > hnc and H[i, j] < hpc:
+            H[i, j] = 0.0
+hvals = H.flatten()
+hpos = [i for i in hvals if i > 0]
+hneg = [i for i in hvals if i < 0]
+print(len(hpos))
+print(len(hneg))
+
+
+for i in range(N - 1):
+    for j in range(N - 1):
+        for k in range(q):
+            for l in range(q):
+                if i > j:
+                    J[i, j, k, l] = 0.0
+                if J[i, j, k, l] > nc and J[i, j, k, l] < pc:
+                    J[i, j, k, l] = 0.0
+vals = J.flatten()
+pos = [i for i in vals if i > 0]
+neg = [i for i in vals if i < 0]
+print(len(pos))
+print(len(neg))
+
+
+# J *= 2
+# jdisp = dca.FullJ_disp(J, N, q)
+# plt.imshow(jdisp, cmap='seismic', vmin=-1, vmax=1)
+# plt.savefig(blpath + 'normedmat.png', dpi=600)
+
 
 ### Last Left off just trying to see if I could get any sort of results with the bl-DCA
 ### Changed the Binder_Comp_JH method to only set the J to 0 if the subtracting the Bad from the good resulted in a norm

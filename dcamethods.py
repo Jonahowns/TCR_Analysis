@@ -3,17 +3,20 @@ import math
 import copy
 import matplotlib.pyplot as plt
 import sys
+from scipy import stats
+import random
 
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
 ################################################
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 rna = ['-', 'A', 'C', 'G', 'U']
-rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U':4}
+rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 dna = ['-', 'A', 'C', 'G', 'T']
 nucs = ['A', 'C', 'G', 'U']
 nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
+
 
 ########################################################################################################################
 ########################################################################################################################
@@ -26,10 +29,10 @@ def prune_alignment(names, seqs, simt=0.99):
     for sid, seq in enumerate(seqs):
         print(sid)
         append = True
-        seqoi=list(seq)
+        seqoi = list(seq)
         for existseq in final_choice_seqs:
-            es=list(existseq)
-            seq_similarity  = 0.
+            es = list(existseq)
+            seq_similarity = 0.
             for i in range(len(es)):
                 if seqoi[i] == es[i]:
                     seq_similarity += 1.
@@ -40,18 +43,138 @@ def prune_alignment(names, seqs, simt=0.99):
         if append:
             final_choice_names.append(names[sid])
             final_choice_seqs.append(seq.upper())
-    print('INFO: reduced length of alignment from %d to %d due to sequence similarity' % (len(seqs), len(final_choice_seqs) ),file=sys.stderr),
-    return final_choice_names,final_choice_seqs
+    print('INFO: reduced length of alignment from %d to %d due to sequence similarity' % (
+    len(seqs), len(final_choice_seqs)), file=sys.stderr),
+    return final_choice_names, final_choice_seqs
+
+
+def remove_diff_len(fullseqaff):
+    seql = []
+    for key, value in fullseqaff.items():
+        seql.append(len(key))
+    nseql = np.array(seql)
+    mostcommonlen = int(stats.mode(nseql)[0])
+    rm = []
+    for xid, dict in enumerate(fullseqaff.items()):
+        key, value = dict
+        if len(key) != mostcommonlen:
+            rm.append(key)
+    for x in rm:
+        fullseqaff.pop(x)
+    return fullseqaff
+
+
+def prep_full_fam_seqs(famid, sim):
+    csvfile = '/home/jonah/Downloads/2HX_' + str(famid) + 'th_new.csv'
+    bb1 = '/home/jonah/Downloads/' + str(famid) + 'bb1.txt'
+    bb2 = '/home/jonah/Downloads/' + str(famid) + 'bb2.txt'
+    bb3 = '/home/jonah/Downloads/' + str(famid) + 'bb3.txt'
+    bb4 = '/home/jonah/Downloads/' + str(famid) + 'bb4.txt'
+    bb5 = '/home/jonah/Downloads/' + str(famid) + 'bb5.txt'
+    gb = '/home/jonah/Downloads/' + str(famid) + 'gb.txt'
+
+    cutoff = 10.0
+    o = open(csvfile, 'r')
+    next(o)
+    fullseqaff = {}
+    print('better get here at least')
+    enough = False
+    count = 0
+    while enough is False:
+        count += 1
+        line = next(o)
+        seq, aff = line.split(';')
+        rs = []
+        for sid, x in enumerate(list(seq)):
+            if x == 'T' or x == 't':
+                rs.append('U')
+            else:
+                rs.append(x.upper())
+        fullseqaff[''.join(rs)] = aff.rstrip()
+        if count >= 40000:
+            enough = True
+    o.close()
+    print('file read')
+
+    fullseqaff = remove_diff_len(fullseqaff)
+    print('removed diff lens')
+    check = False
+    while check is False:
+        # abovecutoff = 0
+        abovecutoff = sum(1 for x in fullseqaff.values() if float(x) >= cutoff)
+        if abovecutoff > 300:
+            check = True
+        else:
+            cutoff -= 1
+            check = False
+
+    print('Sequences w/ affinity >= ' + str(cutoff) + ' -- ' + str(abovecutoff))
+    gbtitles = []
+    gbseqs = []
+    bbtitles = []
+    bbseqs = []
+    for xid, x in enumerate(fullseqaff.items()):
+        key, value = x
+        if float(value) >= cutoff:
+            gbtitles.append(value)
+            gbseqs.append(key)
+        else:
+            bbtitles.append(value)
+            bbseqs.append(key)
+
+    g = open(gb, 'w')
+    for xid, x in enumerate(gbseqs):
+        print('>seq' + str(xid) + '-' + str(gbtitles[xid]), file=g)
+        print(x, file=g)
+    g.close()
+
+    print(len(bbtitles))
+    print(len(bbseqs))
+
+    chosenbbtitles = []
+    chosenbbseqs = []
+
+    for x in range(25000):
+        z = random.randint(0, len(bbseqs) - 1)
+        print(z)
+        chosenbbtitles.append(bbtitles[z])
+        chosenbbseqs.append(bbseqs[z])
+
+    fbbt, fbbs = prune_alignment(chosenbbtitles, chosenbbseqs, sim)
+
+    totalseqs = len(fbbs)
+    seqsperfile = math.floor(totalseqs / 5)
+    f1 = open(bb1, 'w')
+    f2 = open(bb2, 'w')
+    f3 = open(bb3, 'w')
+    f4 = open(bb4, 'w')
+    f5 = open(bb5, 'w')
+    for x in range(len(fbbs)):
+        if x < seqsperfile:
+            print('>seq' + str(x) + '-' + str(fbbt[x]), file=f1)
+            print(fbbs[x], file=f1)
+        elif x > seqsperfile and x < 2 * seqsperfile:
+            print('>seq' + str(x) + '-' + str(fbbt[x]), file=f2)
+            print(fbbs[x], file=f2)
+        elif x > 2 * seqsperfile and x < 3 * seqsperfile:
+            print('>seq' + str(x) + '-' + str(fbbt[x]), file=f3)
+            print(fbbs[x], file=f3)
+        elif x > 3 * seqsperfile and x < 4 * seqsperfile:
+            print('>seq' + str(x) + '-' + str(fbbt[x]), file=f4)
+            print(fbbs[x], file=f4)
+        elif x > 4 * seqsperfile:
+            print('>seq' + str(x) + '-' + str(fbbt[x]), file=f5)
+            print(fbbs[x], file=f5)
+    f1.close()
+    f2.close()
+    f3.close()
+    f4.close()
+    f5.close()
+
+    print('Total Sequences --' + str(totalseqs) + ' w/ ' + str(seqsperfile) + ' seqs per file')
 
 
 # Method to split up files the way i want them too # lol
-
-
-
-
-
-
-
 
 
 ########################################################################################################################
@@ -67,24 +190,27 @@ def sortjmat_blDCA(file, N, q):
         jmatu[int(data[0]), int(data[1]), int(data[2]), int(data[3])] = float(data[4].rstrip())
     o.close()
     # Fix up the Matrix to be exactly the same as the plmDCA Matrix
-    jmate = np.full((N-1, N-1, q, q), 0.0)
-    for i in range(N-1):
-        for j in range(N-1):
+    jmate = np.full((N - 1, N - 1, q, q), 0.0)
+    for i in range(N - 1):
+        for j in range(N - 1):
             if i > j:
                 continue
-            jmate[i, j, :, :] = jmatu[i, j+1, :, :]
-    return jmate
+            jmate[i, j, :, :] = jmatu[i, j + 1, :, :]
+    normed = Normalize_JMatrix(np.negative(jmate), N, q)
+    return normed
 
 
 # Takes plmDCA J Matrix File and inputs the values into a N-1, N-1, q, q matrix
 def sortjmat_plmDCA(file, N, q):
     o = open(file, 'r')
-    fullmatrix = np.full((N-1, N-1, q, q), 0.0)
+    fullmatrix = np.full((N - 1, N - 1, q, q), 0.0)
     for line in o:
         data = line.split(',')
-        fullmatrix[int(data[0])-1, int(data[1])-2, int(data[2])-1, int(data[3])-1] = float(data[4].rstrip())
+        fullmatrix[int(data[0]) - 1, int(data[1]) - 2, int(data[2]) - 1, int(data[3]) - 1] = float(data[4].rstrip())
     o.close()
-    return fullmatrix
+    normed = Normalize_JMatrix(fullmatrix, N, q)
+    return normed
+
 
 def sorthmat_blDCA(file, N, q):
     o = open(file, 'r')
@@ -93,7 +219,8 @@ def sorthmat_blDCA(file, N, q):
         data = line.split(',')
         fullmatrix[int(data[0]), int(data[1])] = float(data[2].rstrip())
     o.close()
-    return fullmatrix
+    normed = Normalize_HMatrix(np.negative(fullmatrix), N, q)
+    return normed
 
 
 # Takes plmDCA H Matrix File and inputs the values into a N-1, q matrix
@@ -105,8 +232,6 @@ def sorthmat_plmDCA(file, N, q):
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
     o.close()
     return fullmatrix
-
-
 
 
 # Returns H Matrix with only the top values specified by a percentile
@@ -127,6 +252,7 @@ def TopH_values_disp(H, N, q, **kwargs):
                 Hdisp[i, j] = H[i, j]
     return Hdisp
 
+
 # Returns J Matrix with only the top NORMS of individual Jij Matrices specified by a percentile
 # by default returns values greater than the 80th percentile
 # Keyword argument percentile sets the percentile
@@ -142,15 +268,15 @@ def TopJ_Norms_disp(J, N, **kwargs):
             dist = True
         else:
             print('No keyword argument ' + key + ' found')
-    jnorm = np.full((N-1, N-1), 0.0)
-    jdisp = np.full((N-1, N-1), 0.0)
+    jnorm = np.full((N - 1, N - 1), 0.0)
+    jdisp = np.full((N - 1, N - 1), 0.0)
     vals = []
-    for i in range(N-1):
-        for j in range(N-1):
+    for i in range(N - 1):
+        for j in range(N - 1):
             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
     tval = np.percentile(jnorm, percentile)
-    for i in range(N-1):
-        for j in range(N-1):
+    for i in range(N - 1):
+        for j in range(N - 1):
             if jnorm[i, j] >= tval:
                 jdisp[i, j] = jnorm[i, j]
             if jnorm[i, j] != 0.0:
@@ -163,15 +289,15 @@ def TopJ_Norms_disp(J, N, **kwargs):
 
 # Return Full J Matrix in 2D so it can be used by matplotlib and shown easily
 def FullJ_disp(J, N, q):
-    Jdisp = np.full(((N-1)*q, (N-1)*q), 0.0)
-    for i in range(N-1):
-        for j in range(N-1):
+    Jdisp = np.full(((N - 1) * q, (N - 1) * q), 0.0)
+    for i in range(N - 1):
+        for j in range(N - 1):
             for k in range(q):
                 for l in range(q):
                     if J[i, j, k, l] != 0.0:
-                        Jdisp[i*q+k, j*q+l] = J[i, j, k, l]
+                        Jdisp[i * q + k, j * q + l] = J[i, j, k, l]
                     else:
-                        Jdisp[i*q+k, j*q+l] = 0.0
+                        Jdisp[i * q + k, j * q + l] = 0.0
     return Jdisp
 
 
@@ -192,7 +318,7 @@ def HJ_Mutant(J, H, N, q):
 # if htype = 'norm' compares top norms of GB H and BB H and if they are in common removes them
 # Set pcts with hnormpct and jnormpct
 def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
-    filledJnorms = (N-1)*(N-2)/2 + N-1
+    filledJnorms = (N - 1) * (N - 2) / 2 + N - 1
     filledHind = (N * q)
     nxj = 10  # Number of J Norms used in Comparison
     nxh = 10  # Number of H Norms used n Comparison
@@ -201,14 +327,14 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
     jdist = False
     for key, value in kwargs.items():
         if key == 'jnormpct':
-            nxj = math.ceil(value/100 * filledJnorms)
+            nxj = math.ceil(value / 100 * filledJnorms)
         elif key == 'htype':
             htype = value
         elif key == 'hnormpct':
             if htype == 'norm':
-                nxh = math.ceil(value/100 * N)
+                nxh = math.ceil(value / 100 * N)
             if htype == 'ind':
-                nxh = math.ceil(value/100 * filledHind)
+                nxh = math.ceil(value / 100 * filledHind)
         elif key == 'hdist':
             hdist = value
         elif key == 'jdist':
@@ -217,9 +343,9 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
             print('No keyword argument ' + key + ' found')
     diff = np.subtract(J, bJ)
     diffnorms = []
-    for x in range(N-1):
-        for y in range(N-1):
-            if x>y:
+    for x in range(N - 1):
+        for y in range(N - 1):
+            if x > y:
                 continue
             diffnorms.append(np.linalg.norm(diff[x, y, :, :]))
     cut = np.percentile(diffnorms, 50)
@@ -261,7 +387,7 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
 
 # Reads Fasta files and specifically takes affinity from how its outputted in seqprep
 def Fasta_Read_Aff(fastafile):
-    o=open(fastafile)
+    o = open(fastafile)
     titles = []
     seqs = []
     for line in o:
@@ -282,9 +408,9 @@ def Calc_Energy(seq, J, H):
     for x in range(1, dist):
         ibase = rnad[seq[x]]
         Henergy += H[x, ibase]
-        for y in range(x+1, dist):
+        for y in range(x + 1, dist):
             jbase = rnad[seq[y]]
-            Jenergy += J[x-1, y-2, ibase, jbase]
+            Jenergy += J[x - 1, y - 2, ibase, jbase]
     energy = Jenergy + Henergy
     return energy
 
@@ -304,11 +430,11 @@ def TopX_JNorms(J, N, x, **kwargs):
             dist = True
         else:
             print('No keyword argument ' + key + ' found')
-    jnorm = np.full((N-1, N-1), 0.0)
+    jnorm = np.full((N - 1, N - 1), 0.0)
     vals = []
-    jvals =[]
-    for i in range(N-1):
-        for j in range(N-1):
+    jvals = []
+    for i in range(N - 1):
+        for j in range(N - 1):
             jnorm[i, j] = np.linalg.norm(J[i, j, :, :])
             if jnorm[i, j] != 0.0:
                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
@@ -347,7 +473,7 @@ def TopX_HVals(H, N, x, **kwargs):
         hnorm = np.full((N - 1), 0.0)
         vals = []
         hvals = []
-        for i in range(N-1):
+        for i in range(N - 1):
             hnorm[i] = np.linalg.norm(H[i, :])
             if hnorm[i] != 0.0:
                 vals.append((i, hnorm[i]))
@@ -373,7 +499,7 @@ def TopX_HVals(H, N, x, **kwargs):
 
 # Quick Method to get N by reading just the length of the first seq.. will only work if all seqs are the same length
 def getn(fastafile):
-    o =open(fastafile,'r')
+    o = open(fastafile, 'r')
     o.readline()
     seq = o.readline().rstrip()
     n = len(list(seq))
@@ -461,7 +587,7 @@ def Fig_Jnorm(subplot, id, J, n, **kwargs):
     subplot.imshow(J, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
     subplot.set_xticks(np.arange(-.5, (n - 1), 1))
     subplot.set_yticks(np.arange(-.5, (n - 1), 1))
-    subplot.set_xticklabels(np.arange(2, n+1, 1))
+    subplot.set_xticklabels(np.arange(2, n + 1, 1))
     subplot.set_yticklabels(np.arange(1, n, 1))
     subplot.grid(True, color='g', lw=lw)
     subplot.set_ylabel(ylabel)
@@ -472,7 +598,7 @@ def Fig_Jnorm(subplot, id, J, n, **kwargs):
 
 # Produces Figure of Full H Matrix on a given subplot
 # Check Function for Keyword Arguments, available are fontsize, xlabel, ylabel, vmin, vmax, title, and cmap
-def Fig_FullH(subplot, id, H, n, q,  **kwargs):
+def Fig_FullH(subplot, id, H, n, q, **kwargs):
     cmap = 'seismic'
     vml = 0
     vmg = 4
@@ -502,8 +628,8 @@ def Fig_FullH(subplot, id, H, n, q,  **kwargs):
     subplot.title.set_size(fontsize=fontsize)
     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
-    subplot.set_xticks(np.arange(0, q+1, 1))
-    subplot.set_yticks(np.arange(0, n+1, 1))
+    subplot.set_xticks(np.arange(0, q + 1, 1))
+    subplot.set_yticks(np.arange(0, n + 1, 1))
     if q == 21 and xl is False:
         subplot.set_xticklabels(aa)
         subplot.set_xlabel('Amino Acid')
@@ -512,7 +638,7 @@ def Fig_FullH(subplot, id, H, n, q,  **kwargs):
         subplot.set_xlabel('Base')
     else:
         subplot.set_xlabel(xlabel)
-    subplot.set_yticklabels(np.arange(1, n+1, 1))
+    subplot.set_yticklabels(np.arange(1, n + 1, 1))
     subplot.set_ylabel(ylabel)
 
 
@@ -623,7 +749,7 @@ def Fig_IndJij(subplot, J, x, y, id, **kwargs):
     subplot.tick_params(axis='both', which='minor', labelsize=fontsize)
     subplot.grid(True, color='r', lw=lw)
     subplot.title.set_text(title)
-    subplot.title.set_size(fontsize=(fontsize+2))
+    subplot.title.set_size(fontsize=(fontsize + 2))
 
 
 ########################################################################################################################
@@ -651,6 +777,7 @@ def Top10norms_figure_RNA(id, J, N, OutPath):
     fig.suptitle('Highest Jij Norms ID: ' + str(id))
     plt.savefig(OutPath + str(id) + 'JNormt10.png', dpi=600)
 
+
 # Can input multiple fasta files and it will combine all seqs, and plot their energies according to provided J and H
 # keyword argument is title
 def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
@@ -669,12 +796,12 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
         nrg = Calc_Energy(x, J, H)
         energies.append(nrg)
     api = list(zip(titles, energies))
-    x = list(set([x for (x,y) in api]))
+    x = list(set([x for (x, y) in api]))
     x.sort()
     avg = []
     err = []
     for aff in x:
-        yvals = np.array([y for (x, y) in api if x==aff])
+        yvals = np.array([y for (x, y) in api if x == aff])
         yavg = yvals.mean()
         yerr = np.std(yvals)
         avg.append(yavg)
@@ -684,7 +811,6 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     plt.ylabel('Energy')
     plt.suptitle(title)
     plt.savefig(outpath, dpi=600)
-
 
 
 ########################################################################################################################
@@ -788,8 +914,8 @@ def past_entry_comp_badseq(J, pvals, xn, yn):
     elif ind == 1:
         xp, yp, rxp, ryp, val = tmppvals[xid]
         tmpxn, tmpyn = list(np.where(J[xn, yn, 1:5, 1:5] == np.amin(J[xn, yn, 1:5, 1:5])))  # Indices of highest in N
-        rxn = int(tmpxn)+1
-        ryn = int(tmpyn)+1
+        rxn = int(tmpxn) + 1
+        ryn = int(tmpyn) + 1
         if stype == 'xs':
             pchoice = J[xp, yp, rxp, ryp] + np.amin(J[xn, yn, rxp, 1:5])
             tchoice = np.amin(J[xp, yp, rxn, 1:5]) + J[xn, yn, rxn, ryn]
@@ -809,31 +935,31 @@ def past_entry_comp_badseq(J, pvals, xn, yn):
         if pchoice < tchoice:
             if stype == 'xs':
                 rxn = rxp
-                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0]) + 1
             if stype == 'ys':
                 ryn = ryp
-                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0]) + 1
             if stype == 'xnyp':
                 rxn = ryp
-                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0])+1
+                ryn = int(np.where(J[xn, yn, rxn, 1:5] == np.amin(J[xn, yn, rxn, 1:5]))[0]) + 1
             if stype == 'ynxp':
                 ryn = rxp
-                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0])+1
+                rxn = int(np.where(J[xn, yn, 1:5, ryn] == np.amin(J[xn, yn, 1:5, ryn]))[0]) + 1
             tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
 
         if tchoice < pchoice:
             if stype == 'xs':
                 rxp = rxn
-                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0]) + 1
             if stype == 'ys':
                 ryp = ryn
-                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0]) + 1
             if stype == 'xnyp':
                 ryp = rxn
-                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
+                rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0]) + 1
             if stype == 'ynxp':
                 rxp = ryn
-                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
+                ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0]) + 1
             tmppvals[xid] = (xp, yp, rxp, ryp, J[xp, yp, rxp, ryp])
             tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
 
@@ -846,11 +972,11 @@ def past_entry_comp_badseq(J, pvals, xn, yn):
 
 def Seq_edit_past_entry_comp(array, gseq):
     if len(array) >= 4:
-        gseq[array[0]+0] = rna[int(array[2])]
-        gseq[array[1]+1] = rna[int(array[3])]
+        gseq[array[0] + 0] = rna[int(array[2])]
+        gseq[array[1] + 1] = rna[int(array[3])]
         if len(array) == 8:
-            gseq[array[4]+0] = rna[int(array[6])]
-            gseq[array[5]+1] = rna[int(array[7])]
+            gseq[array[4] + 0] = rna[int(array[6])]
+            gseq[array[5] + 1] = rna[int(array[7])]
     return gseq
 
 
@@ -885,11 +1011,47 @@ def gen_badseq(J, H, N, norms):
     for xid, x in enumerate(bseq):
         if x == 'X':
             gpx = np.argmin(H[xid, 1:5])
-            bseq[xid] = rna[int(gpx)+1]
+            bseq[xid] = rna[int(gpx) + 1]
     print(pvals)
     print(dca.Calc_Energy(gseq, J, H))
     print(''.join(bseq))
     return ''.join(bseq)
+
+
+def badbinderavg(N, q, *argv):
+    hybrid = np.full((N - 1, N - 1, q, q), 0.0)
+    for i in range(N - 1):
+        for j in range(N - 1):
+            if i > j:
+                continue
+            for k in range(1, q):
+                for l in range(1, q):
+                    val = []
+                    for arg in argv:
+                        val.append(arg[i, j, k, l])
+                    hybrid[i, j, k, l] = np.average(val)
+    return hybrid
+
+
+def Normalize_HMatrix(H, N, q):
+    for i in range(N - 1):
+        for j in range(1, q):
+            H[i, 0] = 0.0
+    d = 2. * (H - np.min(H)) / np.ptp(H) - 1
+    return d
+
+
+# Normalizes Values of J matrix to be between -1 and 1
+def Normalize_JMatrix(J, N, q):
+    for i in range(N - 1):
+        for j in range(N - 1):
+            for k in range(1, q):
+                if i > j:
+                    continue
+                J[i, j, 0, :] = 0.0
+                J[i, j, :, 0] = 0.0
+    d = 2. * (J - np.min(J)) / np.ptp(J) - 1
+    return d
 
 
 def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
@@ -919,6 +1081,7 @@ def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
     print(dca.Calc_Energy(gseq, J, H))
     return ''.join(gseq)
 
+
 # Input J and number of norms
 def gen_goodseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
     ns = 'J'
@@ -946,6 +1109,7 @@ def gen_goodseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
     print(''.join(gseq))
     print(dca.Calc_Energy(gseq, J, H))
     return ''.join(gseq)
+
 
 # Monte Carlo sampling for better binder
 class GenerSeq:
@@ -990,8 +1154,8 @@ class GenerSeq:
                 if i % self._out_after:
                     if ''.join(self._seq) not in self._history:
                         self._history.append(''.join(self._seq))
-                        print('>' + str(i) + '-' + str(newene), file = out)
-                        print(''.join(self._seq), file = out)
+                        print('>' + str(i) + '-' + str(newene), file=out)
+                        print(''.join(self._seq), file=out)
                     print(str((i / self._steps) * 100) + ' Percent Done')
             else:
                 self._seq = copy.deepcopy(oldseq)
