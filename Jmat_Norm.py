@@ -996,10 +996,10 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
 
 N = 40
 q = 5
-bJp = blpath + 'jb7_vals'
-bHp = blpath + 'hb7_vals'
-gJp = blpath + 'j7_vals'
-gHp = blpath + 'h7_vals'
+bJp = blpath + 'jb8_vals'
+bHp = blpath + 'hb8_vals'
+gJp = blpath + 'j8_vals'
+gHp = blpath + 'h8_vals'
 
 
 bJ = dca.sortjmat_blDCA(bJp, N, q)
@@ -1023,6 +1023,11 @@ bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
 gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
 gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
+# print(np.average(gH*Hx))
+print(np.average(gJ * Jx))
+print(np.average(bJ))
+
+
 # H = gH - bHpos + bHneg
 # J = gJ - bJpos
 # H = np.add(dca.Rm_Vals_Percentage_H(np.subtract(gH*Hx, bHpos), 10, N, q), bHneg)
@@ -1039,7 +1044,7 @@ H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(Hx*gHpos, bHpos), gHneg), 30, N,
 # J *= 2
 # jdisp = dca.FullJ_disp(J, N, q)
 # plt.imshow(jdisp, cmap='seismic', vmin=-1, vmax=1)
-# plt.savefig(blpath + 'normedmat.png', dpi=600)
+# plt.savefig(blpath + '8hs.png', dpi=600)
 
 
 ### Last Left off just trying to see if I could get any sort of results with the bl-DCA
@@ -1048,8 +1053,8 @@ H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(Hx*gHpos, bHpos), gHneg), 30, N,
 
 
 
-testseqpath = fullpath + '7thfull.txt'
-dca.Plot_Seq_Aff_v_E(J, H, (blpath + '7bindcompenergy.png'), testseqpath)
+# testseqpath = fullpath + '7thfull.txt'
+# dca.Plot_Seq_Aff_v_E(J, H, (blpath + '7bindcompenergy.png'), testseqpath)
 
 
 # mix_score_dist(7)

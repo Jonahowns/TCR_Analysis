@@ -5,11 +5,14 @@ import data_import as di
 import numpy as np
 import statistics as stats
 import os
+from collections import OrderedDict
 
 # DATA IMPORT
 macpath = "/Users/Amber/Dropbox (ASU)/"
+ubuntpath = "/home/jonah/Dropbox (ASU)/"
 droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
-fullpath = macpath+droppath
+# fullpath = macpath+droppath
+fullpath = ubuntpath + droppath
 family_files = {'AAA': fullpath + 'S_7_AAA_2_norm_plus.tsv.cluster',
                 'ACC': fullpath + 'S_7_ACC_2_norm_plus.tsv.cluster',
                 'AGG': fullpath + 'S_7_AGG_2_norm_plus.tsv.cluster',
@@ -66,12 +69,11 @@ def outfilegen(clustid, types, dataset=0):
 
 def writefasta(seqs, file, clustid):
     y=open(file, 'w+')
-    count = 1
-    for x in seqs:
-        print('>'+'seq' + str(count) + '-' + str(clustid), file=y)
-        print(x, file=y)
-        count += 1
+    for seq, aff in seqs:
+        print('>'+'clust' + str(clustid) + '-' + str(aff), file=y)
+        print(seq, file=y)
     y.close()
+
 
 '''
 def extract_seq_full(cluster, *argv):
@@ -133,6 +135,14 @@ def common_seq_checker(*argv):
             print('CommonSeq = ' + str(2*(len(full)-len(uniq))))
 
 
+def clust_to_lists(clust):
+    cd = clust[['aminoAcid', 'count (templates/reads)']].to_dict('list')
+    seq = []
+    for xid, x in enumerate(cd['aminoAcid']):
+        seq.append((x, cd['count (templates/reads)'][xid]))
+    return seq
+
+
 class SeqHandler:
     def __init__(self, aaa, acc, agg, att, cac, ccg, cta, gag, gct, gtc, tat, tca, tgc, ttg, clusters):
         #File Handling
@@ -186,43 +196,48 @@ class SeqHandler:
             tgcSubClust = self.tgc[self.tgc['cluster_id'] == clustid]
             ttgSubClust = self.ttg[self.ttg['cluster_id'] == clustid]
 
-            aaa_seq = self.clust_to_seq(aaaSubClust, 'i')
-            acc_seq = self.clust_to_seq(accSubClust, 'i')
-            agg_seq = self.clust_to_seq(aggSubClust, 'i')
-            att_seq = self.clust_to_seq(attSubClust, 'i')
-            cac_seq = self.clust_to_seq(cacSubClust, 'i')
-            ccg_seq = self.clust_to_seq(ccgSubClust, 'i')
-            cta_seq = self.clust_to_seq(ctaSubClust, 'i')
-            gag_seq = self.clust_to_seq(gagSubClust, 'i')
-            gct_seq = self.clust_to_seq(gctSubClust, 'i')
-            gtc_seq = self.clust_to_seq(gtcSubClust, 'i')
-            tat_seq = self.clust_to_seq(tatSubClust, 'i')
-            tca_seq = self.clust_to_seq(tcaSubClust, 'i')
-            tgc_seq = self.clust_to_seq(tgcSubClust, 'i')
-            ttg_seq = self.clust_to_seq(ttgSubClust, 'i')
+            aaa_seq = self.clust_to_lists(aaaSubClust)
+            acc_seq = self.clust_to_lists(accSubClust)
+            agg_seq = self.clust_to_lists(aggSubClust)
+            att_seq = self.clust_to_lists(attSubClust)
+            cac_seq = self.clust_to_lists(cacSubClust)
+            ccg_seq = self.clust_to_lists(ccgSubClust)
+            cta_seq = self.clust_to_lists(ctaSubClust)
+            gag_seq = self.clust_to_lists(gagSubClust)
+            gct_seq = self.clust_to_lists(gctSubClust)
+            gtc_seq = self.clust_to_lists(gtcSubClust)
+            tat_seq = self.clust_to_lists(tatSubClust)
+            tca_seq = self.clust_to_lists(tcaSubClust)
+            tgc_seq = self.clust_to_lists(tgcSubClust)
+            ttg_seq = self.clust_to_lists(ttgSubClust)
 
             all_afam_seq = aaa_seq + acc_seq + agg_seq + att_seq
-            uniq_afam_seq = set(all_afam_seq)
+            tmp = OrderedDict(all_afam_seq).items()
+            uniq_afam_seq = list(tmp)
             shared_a = str(len(all_afam_seq) - len(uniq_afam_seq))
             uniq_num_a = str(len(uniq_afam_seq))
 
             all_cfam_seq = cac_seq + ccg_seq + cta_seq
-            uniq_cfam_seq = set(all_cfam_seq)
+            tmp = OrderedDict(all_cfam_seq).items()
+            uniq_cfam_seq = list(tmp)
             shared_c = str(len(all_cfam_seq) - len(uniq_cfam_seq))
             uniq_num_c = str(len(uniq_cfam_seq))
 
             all_gfam_seq = gag_seq + gct_seq + gtc_seq
-            uniq_gfam_seq = set(all_gfam_seq)
+            tmp = OrderedDict(all_gfam_seq).items()
+            uniq_gfam_seq = list(tmp)
             shared_g = str(len(all_gfam_seq) - len(uniq_gfam_seq))
             uniq_num_g = str(len(uniq_gfam_seq))
 
             all_tfam_seq = tat_seq + tca_seq + tgc_seq + ttg_seq
-            uniq_tfam_seq = set(all_tfam_seq)
+            tmp = OrderedDict(all_tfam_seq).items()
+            uniq_tfam_seq = list(tmp)
             shared_t = str(len(all_tfam_seq) - len(uniq_tfam_seq))
             uniq_num_t = str(len(uniq_tfam_seq))
 
             full_seq = all_afam_seq + all_cfam_seq + all_gfam_seq + all_tfam_seq
-            uniq_full_seq = set(full_seq)
+            tmp = OrderedDict(full_seq).items()
+            uniq_full_seq = list(tmp)
             shared_full = str(len(full_seq) - len(uniq_full_seq))
             uniq_num_full = str(len(uniq_full_seq))
 
@@ -258,17 +273,24 @@ class SeqHandler:
             self.clust_all[13, xid] = tgc_seq
             self.clust_all[14, xid] = ttg_seq
 
-    def clust_to_seq(self, cluster, mode='m'):
-        # mode i -> individual cluster, mode m -> multiple clusters
-        seqs = []
-        if mode == 'i':
-            for index, row in cluster.iterrows():
-                seqs.append(row['aminoAcid'])
-        else:
-            for subclust in cluster:
-                for index, row in subclust.iterrows():
-                    seqs.append(row['aminoAcid'])
-        return seqs
+    # def clust_to_seq(self, cluster, mode='m'):
+    #     # mode i -> individual cluster, mode m -> multiple clusters
+    #     seqs = []
+    #     if mode == 'i':
+    #         for index, row in cluster.iterrows():
+    #             seqs.append(row['aminoAcid'])
+    #     else:
+    #         for subclust in cluster:
+    #             for index, row in subclust.iterrows():
+    #                 seqs.append(row['aminoAcid'])
+    #     return seqs
+
+    def clust_to_lists(self, clust):
+        cd = clust[['aminoAcid', 'count (templates/reads)']].to_dict('list')
+        seq = []
+        for xid, x in enumerate(cd['aminoAcid']):
+            seq.append((x, cd['count (templates/reads)'][xid]))
+        return seq
 
     def length_checker_by_ind(self):
         # Checks that Lengths of all Sequences are uniform
