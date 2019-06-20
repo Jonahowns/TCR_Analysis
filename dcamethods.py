@@ -450,6 +450,8 @@ def Calc_Energy(seq, J, H):
             jbase = rnad[seq[y]]
             Jenergy += J[x - 1, y - 2, ibase, jbase]
     energy = Jenergy + Henergy
+    print(Jenergy)
+    print(Henergy)
     return energy
 
 
@@ -587,7 +589,7 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
     subplot.set_yticklabels(np.arange(1, n - 1, 1))
     subplot.grid(True, color='g', lw=lw)
     subplot.set_ylabel(ylabel)
-    supplot.set_xlabel(xlabel)
+    subplot.set_xlabel(xlabel)
     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
 
@@ -838,14 +840,20 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     x.sort()
     avg = []
     err = []
+    highestaff = 1
     for aff in x:
+        if aff > highestaff:
+            highestaff = aff
         yvals = np.array([y for (x, y) in api if x == aff])
         yavg = yvals.mean()
         yerr = np.std(yvals)
         avg.append(yavg)
         err.append(yerr)
+    linreg = stats.linregress(x, avg)
+    xl = np.linspace(0, highestaff, 100)
+    plt.plot(xl, xl*linreg[0]+linreg[1], ':r')
     plt.errorbar(x, avg, err, linestyle='None', marker='^')
-    plt.xlabel('Affinity')
+    plt.xlabel('R-Score: ' + str(linreg[2]))
     plt.ylabel('Energy')
     plt.suptitle(title)
     plt.savefig(outpath, dpi=600)
@@ -1123,6 +1131,7 @@ def Half_Normalize_HMatrix(H, N, q):
 
 
 def Sign_Seperator(mat, N, q, **kwargs):
+    matrix = copy.deepcopy(mat)
     sign = 1
     type = 'j'
     for key, value in kwargs.items():
@@ -1142,18 +1151,18 @@ def Sign_Seperator(mat, N, q, **kwargs):
             for j in range(N - 1):
                 for k in range(q):
                     for l in range(q):
-                        if mat[i, j, k, l] < 0 and sign == '+':
-                            mat[i, j, k, l] = 0.0
-                        elif mat[i, j, k, l] > 0 and sign == '-':
-                            mat[i, j, k, l] = 0.0
+                        if matrix[i, j, k, l] < 0 and sign == 1:
+                            matrix[i, j, k, l] = 0.0
+                        elif matrix[i, j, k, l] > 0 and sign == 0:
+                            matrix[i, j, k, l] = 0.0
     elif type == 'h':
         for i in range(N):
             for j in range(q):
-                if mat[i, j] < 0 and sign == '+':
-                    mat[i, j] = 0.0
-                elif mat[i, j] > 0 and sign == '-':
-                    mat[i, j] = 0.0
-    return mat
+                if matrix[i, j] < 0 and sign == 1:
+                    matrix[i, j] = 0.0
+                elif matrix[i, j] > 0 and sign == 0:
+                    matrix[i, j] = 0.0
+    return matrix
 
 
 

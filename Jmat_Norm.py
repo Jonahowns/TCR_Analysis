@@ -16,8 +16,10 @@ import dcamethods as dca
 droppath = "Projects/DCA/GenSeqs/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
-fullpath = upath + droppath
+testpath = upath + droppath
 blpath = "/home/jonah/bl-DCA/"
+bldrop = "bl78/"
+fullpath = upath + droppath + bldrop
 clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
             42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
@@ -996,10 +998,10 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
 
 N = 40
 q = 5
-bJp = blpath + 'jb8_vals'
-bHp = blpath + 'hb8_vals'
-gJp = blpath + 'j8_vals'
-gHp = blpath + 'h8_vals'
+bJp = fullpath + 'jb7_vals'
+bHp = fullpath + 'hb7_vals'
+gJp = fullpath + 'j7_vals'
+gHp = fullpath + 'h7_vals'
 
 
 bJ = dca.sortjmat_blDCA(bJp, N, q)
@@ -1011,8 +1013,7 @@ print(np.average(gH))
 print(np.average(bH))
 print(np.average(gJ))
 print(np.average(bJ))
-Jx = abs(np.average(bJ)) / abs(np.average(gJ))
-Hx = abs(np.average(bH)) / abs(np.average(gH))
+
 
 bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
 bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
@@ -1023,29 +1024,64 @@ bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
 gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
 gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
-# print(np.average(gH*Hx))
-print(np.average(gJ * Jx))
-print(np.average(bJ))
 
 
-# H = gH - bHpos + bHneg
-# J = gJ - bJpos
+H = 2*gH - bH
+J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+# For Family 7 it looks like 1 percent of the top values give the best R score
+# For Family 8 it looks like 0.1 percent of the top values give the best R score
+
+# H = gH
+# J = dca.Rm_Vals_Percentage_J(gJ, 1, N, q)
 # H = np.add(dca.Rm_Vals_Percentage_H(np.subtract(gH*Hx, bHpos), 10, N, q), bHneg)
 # H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(gHpos*Hx, bHpos), bHneg), 10, N, q)
 # J = np.add(dca.Rm_Vals_Percentage_J(np.subtract(gJ*Jx, bJpos), 1, N, q), bJneg)
 # J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(gJpos*Jx, bJpos), bJneg), 1, N, q)
-J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(Jx*gJpos, bJpos), gJneg), 1, N, q)
-H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(Hx*gHpos, bHpos), gHneg), 30, N, q)
 
+# (J*1.5 - bJ + J)
+# J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg), 2, N, q)
+# J = 2*dca.Rm_Vals_Percentage_J(np.add(np.subtract(gJpos, bJpos, bJneg), gJneg), 2, N, q)
+# H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg), 10, N, q)
+
+# Honestly Not too Shabby
+# J = np.add(np.subtract(gJpos, bJpos, bJneg), gJneg)
+# H = np.add(np.subtract(3*gHpos, 2*bHpos, bHneg), 2*gHneg)
+# H = 2*np.add(np.subtract(gHpos, bHpos, bHneg), gHneg)
+# H = np.add(np.subtract(2*gHpos, bHpos, bHneg), gHneg)
+# EHHHHH
+# J = gJ - bJ
+# H = gH - bH
+
+
+
+
+
+
+# (J*1.5 - bJ + J)
 
 # J = dca.Rm_Vals_Percentage_J(J, 2, N, q)
 
 
 # J *= 2
-# jdisp = dca.FullJ_disp(J, N, q)
-# plt.imshow(jdisp, cmap='seismic', vmin=-1, vmax=1)
-# plt.savefig(blpath + '8hs.png', dpi=600)
-
+jdisp = dca.FullJ_disp(J, N, q)
+# fig, ax = plt.subplots(2, 1)
+# dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-2, vmax=2, cmap='seismic')
+# dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
+# plt.savefig('/home/jonah/Desktop/8gbpos.png', dpi=600)
+# rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #2.76366
+# rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.76366
+# rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #2.76366
+# rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #14.865
+# rdseq801 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.5
+# rdseq807 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAUGUG'  #2.5
+# rdseq804 = 'GGGCUAAGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.07
+# rdseq802 = 'GGCCUGAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.4
+# rdseq803 = 'GGCCUGGGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.8
+#
+#
+# rdseq805 = 'GGCCUGGGGGCGCGCUGGGUGAUGUGUGGGCACCUAUGUC' # -6 Yikes
+# E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
+# print(E)
 
 ### Last Left off just trying to see if I could get any sort of results with the bl-DCA
 ### Changed the Binder_Comp_JH method to only set the J to 0 if the subtracting the Bad from the good resulted in a norm
@@ -1053,8 +1089,8 @@ H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(Hx*gHpos, bHpos), gHneg), 30, N,
 
 
 
-# testseqpath = fullpath + '7thfull.txt'
-# dca.Plot_Seq_Aff_v_E(J, H, (blpath + '7bindcompenergy.png'), testseqpath)
+testseqpath = testpath + '7thfull.txt'
+dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
 
 
 # mix_score_dist(7)
