@@ -441,9 +441,9 @@ def Fasta_Read_Aff(fastafile):
 def Calc_Energy(seq, J, H):
     full = list(seq)
     dist = len(full)
-    Jenergy = 0
-    Henergy = 0
-    for x in range(1, dist):
+    Jenergy = 0.0
+    Henergy = 0.0
+    for x in range(0, dist):
         ibase = rnad[seq[x]]
         Henergy += H[x, ibase]
         for y in range(x + 1, dist):
@@ -880,17 +880,30 @@ def check_vals(x, y, pvals):
         return 0, 0, 'none'
 
 
+# Doesn't Work for the End Scoring Methods
 def past_entry_comp_goodseq(J, pvals, xn, yn):
     tmppvals = copy.deepcopy(pvals)
     ind, xid, stype = check_vals(xn, yn, pvals)
     if ind == 0:
-        tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
-        rxn = int(tmpxn)
-        ryn = int(tmpyn)
-        tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
-        return [xn, yn, rxn, ryn], tmppvals
+        pos = [x for x in J[xn, yn, :, :].flatten() if x > 0]
+        if len(pos) > 0:
+            # tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))
+            tmp = np.argmax(J[xn, yn, :, :].flatten())
+            print(tmp)
+            tmpxn = int(math.floor(tmp/5))
+            tmpyn = int(tmp % 5)
+            print(tmpxn)
+            print(tmpyn)
+            rxn = tmpxn
+            ryn = tmpyn
+            tmppvals.append((xn, yn, rxn, ryn, J[xn, yn, rxn, ryn]))
+            return [xn, yn, rxn, ryn], tmppvals
+        else:
+            tmppvals.append((100, 100, 0, 0, 0))
+            return [100, 100, 0, 0, 0], tmppvals
     elif ind == 1:
         xp, yp, rxp, ryp, val = tmppvals[xid]
+        pos = [x for x in J[xn, yn, :, :].flatten() if x > 0]
         tmpxn, tmpyn = list(np.where(J[xn, yn, :, :] == np.amax(J[xn, yn, :, :])))  # Indices of highest in N
         rxn = int(tmpxn)
         ryn = int(tmpyn)
@@ -1029,26 +1042,28 @@ def Seq_edit_past_entry_comp(array, gseq):
 def gen_goodseq(J, H, N, norms):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, norms)
+    tval = TopX_JNorms(J, N, norms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
         vals, pvals = past_entry_comp_goodseq(J, pvals, x, y)
-        gseq = Seq_edit_past_entry_comp(vals, gseq)
+        xv = vals[0]
+        yv = vals[1]
+        if xv < N and yv < N:
+            gseq = Seq_edit_past_entry_comp(vals, gseq)
     for xid, x in enumerate(gseq):
         if x == 'X':
             gpx = np.argmax(H[xid, 1:5])
-            print(gpx)
             gseq[xid] = rna[int(gpx) + 1]
     print(''.join(gseq))
-    print(dca.Calc_Energy(gseq, J, H))
+    print(Calc_Energy(gseq, J, H))
     return ''.join(gseq)
 
 
 def gen_badseq(J, H, N, norms):
     # Get Indices of top 10 norms
     bseq = np.full(40, ['X'], dtype=str)
-    tval = topxjnorms(J, N, norms)
+    tval = TopX_JNorms(J, N, norms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -1059,7 +1074,7 @@ def gen_badseq(J, H, N, norms):
             gpx = np.argmin(H[xid, 1:5])
             bseq[xid] = rna[int(gpx) + 1]
     print(pvals)
-    print(dca.Calc_Energy(gseq, J, H))
+    print(Calc_Energy(bseq, J, H))
     print(''.join(bseq))
     return ''.join(bseq)
 
@@ -1111,25 +1126,6 @@ def Normalize_JMatrix(J, N, q):
     return d
 
 
-def Half_Normalize_JMatrix(J, N, q):
-    for i in range(N - 1):
-        for j in range(N - 1):
-            for k in range(1, q):
-                if i > j:
-                    continue
-                J[i, j, 0, :] = 0.0
-                J[i, j, :, 0] = 0.0
-    d = (J - np.min(J)) / np.ptp(J) - 0.5
-    return d
-
-def Half_Normalize_HMatrix(H, N, q):
-    for i in range(N - 1):
-        for j in range(1, q):
-            H[i, 0] = 0.0
-    d = (H - np.min(H)) / np.ptp(H) - 0.5
-    return d
-
-
 def Sign_Seperator(mat, N, q, **kwargs):
     matrix = copy.deepcopy(mat)
     sign = 1
@@ -1164,6 +1160,34 @@ def Sign_Seperator(mat, N, q, **kwargs):
                     matrix[i, j] = 0.0
     return matrix
 
+
+# Finds the ideal percentage of J values that make up the final J that results in the highest R score
+# Uses Jonah's Scoring Method ;)
+def Pct_Finder_JS(gJ, bJ, gH, bH, fasta, N, q):
+    pctresults = []
+    titles, seqs = Fasta_Read_Aff(fasta)
+    for x in range(1, 500):
+        pct = x/100
+        H = 2*gH - bH
+        J = Rm_Vals_Percentage_J(2*gJ - bJ, pct, N, q)
+        energies = []
+        for x in seqs:
+            nrg = Calc_Energy(x, J, H)
+            energies.append(nrg)
+        api = list(zip(titles, energies))
+        x = list(set([x for (x, y) in api]))
+        x.sort()
+        avg = []
+        for aff in x:
+            yvals = np.array([y for (x, y) in api if x == aff])
+            yavg = yvals.mean()
+            avg.append(yavg)
+        linreg = stats.linregress(x, avg)
+        pctresults.append((linreg[2], pct))
+    pctresults.sort(key=lambda tup: tup[0])
+    print(pctresults[0:2])
+    print(pctresults[-3:-1])
+    return pctresults[-1][1]
 
 
 

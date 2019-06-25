@@ -998,10 +998,10 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
 
 N = 40
 q = 5
-bJp = fullpath + 'jb7_vals'
-bHp = fullpath + 'hb7_vals'
-gJp = fullpath + 'j7_vals'
-gHp = fullpath + 'h7_vals'
+bJp = fullpath + 'jb8_vals'
+bHp = fullpath + 'hb8_vals'
+gJp = fullpath + 'j8_vals'
+gHp = fullpath + 'h8_vals'
 
 
 bJ = dca.sortjmat_blDCA(bJp, N, q)
@@ -1013,7 +1013,9 @@ print(np.average(gH))
 print(np.average(bH))
 print(np.average(gJ))
 print(np.average(bJ))
-
+testseqpath = testpath + '8thfull.txt'
+# bpct = dca.Pct_Finder_JS(gJ, bJ, gH, bH, testseqpath, N, q)
+bpct = 0.18
 
 bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
 bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
@@ -1025,9 +1027,29 @@ gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
 gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
 
+# H = np.add(np.subtract(3*gHpos, 2*bHpos, bHneg), 2*gHneg)  # Scoring Method 3
+H = 2*gH - bH # Scoring Method 1 and 2
+J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, bpct, N, q)  # Scoring Method 1
 
-H = 2*gH - bH
-J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+genJ = 2*gJ - bJ
+genH = 2*gH - bH
+
+dca.gen_goodseq(genJ, genH, N, 20)
+
+genseq1 = 'AGGGUAAGAGUGGGGGGGCAGUGCGGGGGUGUAGUUAGCG'
+dca.Calc_Energy(genseq1, J, H)
+
+rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #2.76366
+rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.76366
+rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #2.76366
+rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #14.865
+E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H)]
+print(E)
+
+
+
+
+# J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg), bpct, N, q)  # Scoring Method 2/3
 # For Family 7 it looks like 1 percent of the top values give the best R score
 # For Family 8 it looks like 0.1 percent of the top values give the best R score
 
@@ -1053,6 +1075,35 @@ J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 # H = gH - bH
 
 
+# Current: S1, fam8
+
+# gseq = np.full(40, ['X'], dtype=str)
+# tE = []
+# for n in range(N-1): # H Contributions
+#     pS = [H[n, 1], H[n, 2], H[n, 3], H[n, 4]]
+#     #pS = [0, 0, 0, 0]
+#     # for y in range(N-1):
+#         # for k in range(1, 5):
+#             # pS[k-1] += np.sum(J[n, y, k, :])
+#             # if n-1 >= 0:
+#                 # pS[k-1] += np.sum(J[y, n-1, :, k])
+#     tE.append(pS)
+# pS = [np.sum(J[:, N-2, :, 1]), np.sum(J[:, N-2, :, 2]), np.sum(J[:, N-2, :, 3]), np.sum(J[:, N-2, :, 4])]
+# tE.append(pS)
+# E = np.array(tE)
+#
+# for x in range(N):
+#     gseq[x] = rna[int(np.argmax(E[x, :])+1)]
+#
+# print(''.join(gseq))
+# e = dca.Calc_Energy(gseq, J, H)
+# print(e)
+
+
+
+
+
+
 
 
 
@@ -1063,7 +1114,7 @@ J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 
 
 # J *= 2
-jdisp = dca.FullJ_disp(J, N, q)
+# jdisp = dca.FullJ_disp(J, N, q)
 # fig, ax = plt.subplots(2, 1)
 # dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-2, vmax=2, cmap='seismic')
 # dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
@@ -1089,8 +1140,8 @@ jdisp = dca.FullJ_disp(J, N, q)
 
 
 
-testseqpath = testpath + '7thfull.txt'
-dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
+# testseqpath = testpath + '8thfull.txt'
+# dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/s1testenergy8.png'), testseqpath)
 
 
 # mix_score_dist(7)
