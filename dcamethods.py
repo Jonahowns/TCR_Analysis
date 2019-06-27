@@ -859,6 +859,20 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     plt.savefig(outpath, dpi=600)
 
 
+def Raw_Aff_v_E(J, H, outpath, infile):
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    #api = list(zip(titles, energies))
+    #for coord in api:
+     #   x, y = coord
+      #  plt.plot(x, y)
+    plt.scatter(titles, energies)
+    plt.ylabel('Energy')
+    plt.savefig(outpath, dpi=600)
+
+
 ########################################################################################################################
 ########################################################################################################################
 # Generate Seq Methods

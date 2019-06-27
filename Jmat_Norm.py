@@ -1026,8 +1026,10 @@ gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
 
 
-H = 2*gH - bH
-J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+# H = 2*gH - bH
+# J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+# H = gH
+# J = gJ
 # For Family 7 it looks like 1 percent of the top values give the best R score
 # For Family 8 it looks like 0.1 percent of the top values give the best R score
 
@@ -1039,9 +1041,9 @@ J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 # J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(gJpos*Jx, bJpos), bJneg), 1, N, q)
 
 # (J*1.5 - bJ + J)
-# J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg), 2, N, q)
+# J = dca.Rm_Vals_Percentage_J(np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg), 0.5, N, q)
 # J = 2*dca.Rm_Vals_Percentage_J(np.add(np.subtract(gJpos, bJpos, bJneg), gJneg), 2, N, q)
-# H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg), 10, N, q)
+# H = dca.Rm_Vals_Percentage_H(np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg), 2, N, q)
 
 # Honestly Not too Shabby
 # J = np.add(np.subtract(gJpos, bJpos, bJneg), gJneg)
@@ -1063,7 +1065,7 @@ J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 
 
 # J *= 2
-jdisp = dca.FullJ_disp(J, N, q)
+# jdisp = dca.FullJ_disp(J, N, q)
 # fig, ax = plt.subplots(2, 1)
 # dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-2, vmax=2, cmap='seismic')
 # dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
@@ -1083,14 +1085,11 @@ jdisp = dca.FullJ_disp(J, N, q)
 # E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
 # print(E)
 
-### Last Left off just trying to see if I could get any sort of results with the bl-DCA
-### Changed the Binder_Comp_JH method to only set the J to 0 if the subtracting the Bad from the good resulted in a norm
-### Below a certain percentile
-
 
 
 testseqpath = testpath + '7thfull.txt'
-dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
+# dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
+dca.Raw_Aff_v_E(J, H, ('/home/jonah/Desktop/raw7.png'), testseqpath)
 
 
 # mix_score_dist(7)
