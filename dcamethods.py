@@ -441,9 +441,9 @@ def Fasta_Read_Aff(fastafile):
 def Calc_Energy(seq, J, H):
     full = list(seq)
     dist = len(full)
-    Jenergy = 0.0
-    Henergy = 0.0
-    for x in range(0, dist):
+    Jenergy = 0
+    Henergy = 0
+    for x in range(1, dist):
         ibase = rnad[seq[x]]
         Henergy += H[x, ibase]
         for y in range(x + 1, dist):
@@ -859,6 +859,20 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     plt.savefig(outpath, dpi=600)
 
 
+def Raw_Aff_v_E(J, H, outpath, infile):
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    #api = list(zip(titles, energies))
+    #for coord in api:
+     #   x, y = coord
+      #  plt.plot(x, y)
+    plt.scatter(titles, energies)
+    plt.ylabel('Energy')
+    plt.savefig(outpath, dpi=600)
+
+
 ########################################################################################################################
 ########################################################################################################################
 # Generate Seq Methods
@@ -1189,6 +1203,26 @@ def Pct_Finder_JS(gJ, bJ, gH, bH, fasta, N, q):
     print(pctresults[-3:-1])
     return pctresults[-1][1]
 
+
+def best_seperation(J, H, fastafile):
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    energies = []
+
+        for x in seqs:
+            energies.append(Calc_Energy(x, J, H))
+        api = list(zip(titles, energies))
+        affs = list(set(titles))
+        datax = []
+        datae = []
+        for x in affs:
+            prospects = [nrg for (aff, nrg) in api if aff == x]
+            datax.append(x)
+            datae.append(prospects.max())
+        linreg = stats.linregress(datax, datae)
+
+    plt.scatter(titles, energies)
+    plt.ylabel('Energy')
+    plt.savefig(outpath, dpi=600)
 
 
 def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
