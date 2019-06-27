@@ -177,8 +177,9 @@ def prep_full_fam_seqs(famid, sim):
 # Given the Percentage of highest negative and positive values you want
 # Function removes all other values from the J Matrix
 def Rm_Vals_Percentage_J(J, pct, N, q):
+    tmpJ = copy.deepcopy(J)
     pct1valsJ = math.ceil(N * (N - 1) * (q - 1) * 2 * (pct/100))
-    vals = J.flatten()
+    vals = tmpJ.flatten()
     pos = [i for i in vals if i > 0]
     neg = [i for i in vals if i < 0]
     t1pctJpos = 100 - pct1valsJ / len(pos) * 100
@@ -190,15 +191,16 @@ def Rm_Vals_Percentage_J(J, pct, N, q):
             for k in range(q):
                 for l in range(q):
                     if i > j:
-                        J[i, j, k, l] = 0.0
+                        tmpJ[i, j, k, l] = 0.0
                     if pc > J[i, j, k, l] > nc:
-                        J[i, j, k, l] = 0.0
-    return J
+                        tmpJ[i, j, k, l] = 0.0
+    return tmpJ
 
 
 def Rm_Vals_Percentage_H(H, pct, N, q):
+    tmpH = copy.deepcopy(H)
     pct1valsH = math.ceil(N * (q - 1) * (pct/100))
-    hvals = H.flatten()
+    hvals = tmpH.flatten()
     hpos = [i for i in hvals if i > 0]
     hneg = [i for i in hvals if i < 0]
     t1pctHpos = 100 - pct1valsH / len(hpos) * 100
@@ -207,9 +209,9 @@ def Rm_Vals_Percentage_H(H, pct, N, q):
     hnc = np.percentile(hneg, t1pctHneg)
     for i in range(N - 1):
         for j in range(q):
-            if hpc > H[i, j] > hnc:
-                H[i, j] = 0.0
-    return H
+            if hpc > tmpH[i, j] > hnc:
+                tmpH[i, j] = 0.0
+    return tmpH
 
 
 # Method to split up files the way i want them too # lol
@@ -1195,10 +1197,11 @@ def Pct_Finder_JS(gJ, bJ, gH, bH, fasta, N, q):
 
 def best_seperation(J, H, N, q, fastafile):
     titles, seqs = Fasta_Read_Aff(fastafile)
-    tmpH = H
-    for i in range(1, 5000):
-        results = []
+    tmpH = H/4
+    results = []
+    for i in range(1, 1000):
         pct = i/100
+        print('pct = ' + str(pct))
         tmpJ = Rm_Vals_Percentage_J(J, pct, N, q)
         energies = []
         for x in seqs:
@@ -1210,13 +1213,13 @@ def best_seperation(J, H, N, q, fastafile):
         for x in affs:
             prospects = [nrg for (aff, nrg) in api if aff == x]
             datax.append(x)
-            datae.append(prospects.max())
+            datae.append(max(prospects))
         linreg = stats.linregress(datax, datae)
         results.append((pct, linreg[2]))
     results.sort(key=lambda tup: tup[1])
     print(results[0:2])
     print(results[-3:-1])
-    bpct = results[-1][1]
+    bpct = results[-1][0]
     tmpJ = Rm_Vals_Percentage_J(J, bpct, N, q)
     Raw_wRscore(tmpJ, tmpH, '/home/jonah/Desktop/bestfit.png', fastafile)
 
@@ -1230,29 +1233,28 @@ def Raw_Aff_v_E(J, H, outpath, infile):
     plt.ylabel('Energy')
     plt.savefig(outpath, dpi=600)
 
-def Raw_wRscore(J, H, outpath, infile)
+
+def Raw_wRscore(J, H, outpath, infile):
     titles, seqs = Fasta_Read_Aff(infile)
     energies = []
     for x in seqs:
         energies.append(Calc_Energy(x, J, H))
-    # api = list(zip(titles, energies))
-    # for coord in api:
-    #   x, y = coord
-    #  plt.plot(x, y)
     datax = []
     datae = []
     affs = list(set(titles))
+    api = list(zip(titles, energies))
     highestaff = 1
     for x in affs:
         if x > highestaff: highestaff = x
         prospects = [nrg for (aff, nrg) in api if aff == x]
         datax.append(x)
-        datae.append(prospects.max())
+        datae.append(max(prospects))
     linreg = stats.linregress(datax, datae)
     xl = np.linspace(0, highestaff, 100)
     plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
     plt.scatter(titles, energies)
     plt.ylabel('Energy')
+    plt.xlabel('R Score: ' + str(linreg[2]))
     plt.savefig(outpath, dpi=600)
 
 

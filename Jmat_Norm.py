@@ -1024,9 +1024,17 @@ bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
 gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
 gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
+testseqpath = testpath + '7thfull.txt'
+
+H = 2*gH - bH # S1
+# J = 2*gJ - bJ # S1
+# H = gH # S2
+J = 2*gJ - bJpos # S2
+# H = np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg) #S3
+# J = np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg) #S3
 
 
-# H = 2*gH - bH
+dca.best_seperation(J, H, N, q, testseqpath)
 # J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 # H = gH
 # J = gJ
@@ -1089,7 +1097,7 @@ gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
 testseqpath = testpath + '7thfull.txt'
 # dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
-dca.Raw_Aff_v_E(J, H, ('/home/jonah/Desktop/raw7.png'), testseqpath)
+# dca.Raw_Aff_v_E(J, H, ('/home/jonah/Desktop/raw7.png'), testseqpath)
 
 
 # mix_score_dist(7)
