@@ -859,18 +859,7 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     plt.savefig(outpath, dpi=600)
 
 
-def Raw_Aff_v_E(J, H, outpath, infile):
-    titles, seqs = Fasta_Read_Aff(infile)
-    energies = []
-    for x in seqs:
-        energies.append(Calc_Energy(x, J, H))
-    #api = list(zip(titles, energies))
-    #for coord in api:
-     #   x, y = coord
-      #  plt.plot(x, y)
-    plt.scatter(titles, energies)
-    plt.ylabel('Energy')
-    plt.savefig(outpath, dpi=600)
+
 
 
 ########################################################################################################################
@@ -1204,12 +1193,16 @@ def Pct_Finder_JS(gJ, bJ, gH, bH, fasta, N, q):
     return pctresults[-1][1]
 
 
-def best_seperation(J, H, fastafile):
+def best_seperation(J, H, N, q, fastafile):
     titles, seqs = Fasta_Read_Aff(fastafile)
-    energies = []
-
+    tmpH = H
+    for i in range(1, 5000):
+        results = []
+        pct = i/100
+        tmpJ = Rm_Vals_Percentage_J(J, pct, N, q)
+        energies = []
         for x in seqs:
-            energies.append(Calc_Energy(x, J, H))
+            energies.append(Calc_Energy(x, tmpJ, tmpH))
         api = list(zip(titles, energies))
         affs = list(set(titles))
         datax = []
@@ -1219,7 +1212,45 @@ def best_seperation(J, H, fastafile):
             datax.append(x)
             datae.append(prospects.max())
         linreg = stats.linregress(datax, datae)
+        results.append((pct, linreg[2]))
+    results.sort(key=lambda tup: tup[1])
+    print(results[0:2])
+    print(results[-3:-1])
+    bpct = results[-1][1]
+    tmpJ = Rm_Vals_Percentage_J(J, bpct, N, q)
+    Raw_wRscore(tmpJ, tmpH, '/home/jonah/Desktop/bestfit.png', fastafile)
 
+
+def Raw_Aff_v_E(J, H, outpath, infile):
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    plt.scatter(titles, energies)
+    plt.ylabel('Energy')
+    plt.savefig(outpath, dpi=600)
+
+def Raw_wRscore(J, H, outpath, infile)
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    # api = list(zip(titles, energies))
+    # for coord in api:
+    #   x, y = coord
+    #  plt.plot(x, y)
+    datax = []
+    datae = []
+    affs = list(set(titles))
+    highestaff = 1
+    for x in affs:
+        if x > highestaff: highestaff = x
+        prospects = [nrg for (aff, nrg) in api if aff == x]
+        datax.append(x)
+        datae.append(prospects.max())
+    linreg = stats.linregress(datax, datae)
+    xl = np.linspace(0, highestaff, 100)
+    plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
     plt.scatter(titles, energies)
     plt.ylabel('Energy')
     plt.savefig(outpath, dpi=600)
