@@ -1026,15 +1026,26 @@ gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
 testseqpath = testpath + '7thfull.txt'
 
-H = 2*gH - bH # S1
+# H = 2*gH - bH # S1
 # J = 2*gJ - bJ # S1
 # H = gH # S2
-J = 2*gJ - bJpos # S2
+# J = 2*gJ - bJpos # S2
 # H = np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg) #S3
 # J = np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg) #S3
 
+jout = '/home/jonah/Desktop/Jdesigner.txt'
+hout = '/home/jonah/Desktop/Hdesigner.txt'
 
-dca.best_seperation(J, H, N, q, testseqpath)
+
+# H = gH
+# Jdes = dca.designerJ(N, q, testseqpath)
+# dca.export_J(Jdes, N, q, jout)
+Hdes = dca.designerH(N, q, testseqpath)
+dca.export_H(Hdes, N, q, hout)
+
+
+
+# dca.best_seperation(J, H, N, q, testseqpath)
 # J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
 # H = gH
 # J = gJ
@@ -1073,9 +1084,11 @@ dca.best_seperation(J, H, N, q, testseqpath)
 
 
 # J *= 2
-# jdisp = dca.FullJ_disp(J, N, q)
-# fig, ax = plt.subplots(2, 1)
-# dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-2, vmax=2, cmap='seismic')
+jdisp = dca.FullJ_disp(Jdes, N, q)
+fig, ax = plt.subplots(1, 2)
+dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-1, vmax=1, cmap='seismic')
+dca.Fig_FullH(ax[1], 8, Hdes, N, q, vmin=-1, vmax=1, cmap='seismic')
+plt.savefig('/home/jonah/Desktop/designerJ.png', dpi=600)
 # dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
 # plt.savefig('/home/jonah/Desktop/8gbpos.png', dpi=600)
 # rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #2.76366
@@ -1095,7 +1108,7 @@ dca.best_seperation(J, H, N, q, testseqpath)
 
 
 
-testseqpath = testpath + '7thfull.txt'
+# testseqpath = testpath + '7thfull.txt'
 # dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
 # dca.Raw_Aff_v_E(J, H, ('/home/jonah/Desktop/raw7.png'), testseqpath)
 

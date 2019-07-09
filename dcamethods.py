@@ -176,24 +176,37 @@ def prep_full_fam_seqs(famid, sim):
 
 # Given the Percentage of highest negative and positive values you want
 # Function removes all other values from the J Matrix
-def Rm_Vals_Percentage_J(J, pct, N, q):
+def Rm_Vals_Percentage_J(J, pct, N, q, **kwargs):
+    type = 'both'
+    for key, value in kwargs.items():
+        if key == 'type':
+            type = value
     tmpJ = copy.deepcopy(J)
     pct1valsJ = math.ceil(N * (N - 1) * (q - 1) * 2 * (pct/100))
     vals = tmpJ.flatten()
-    pos = [i for i in vals if i > 0]
-    neg = [i for i in vals if i < 0]
-    t1pctJpos = 100 - pct1valsJ / len(pos) * 100
-    t1pctJneg = pct1valsJ / len(neg) * 100
-    pc = np.percentile(pos, t1pctJpos)
-    nc = np.percentile(neg, t1pctJneg)
+    if type == '+' or type == 'both':
+        pos = [i for i in vals if i > 0]
+        t1pctJpos = 100 - pct1valsJ / len(pos) * 100
+        pc = np.percentile(pos, t1pctJpos)
+    if type == '-' or type == 'both':
+        neg = [i for i in vals if i < 0]
+        t1pctJneg = pct1valsJ / len(neg) * 100
+        nc = np.percentile(neg, t1pctJneg)
     for i in range(N - 1):
         for j in range(N - 1):
             for k in range(q):
                 for l in range(q):
                     if i > j:
                         tmpJ[i, j, k, l] = 0.0
-                    if pc > J[i, j, k, l] > nc:
-                        tmpJ[i, j, k, l] = 0.0
+                    if type == 'both':
+                        if pc > J[i, j, k, l] > nc:
+                            tmpJ[i, j, k, l] = 0.0
+                    elif type == '+':
+                        if pc > J[i, j, k, l]:
+                            tmpJ[i, j, k, l] = 0.0
+                    elif type == '-':
+                        if J[i, j, k, l] > nc:
+                            tmpJ[i, j, k, l] = 0.0
     return tmpJ
 
 
@@ -445,15 +458,38 @@ def Calc_Energy(seq, J, H):
     dist = len(full)
     Jenergy = 0
     Henergy = 0
-    for x in range(1, dist):
+    for x in range(0, dist):
         ibase = rnad[seq[x]]
         Henergy += H[x, ibase]
         for y in range(x + 1, dist):
             jbase = rnad[seq[y]]
-            Jenergy += J[x - 1, y - 2, ibase, jbase]
+            Jenergy += J[x, y - 1, ibase, jbase]
     energy = Jenergy + Henergy
     print(Jenergy)
     print(Henergy)
+    return energy
+
+
+def Calc_Energy3(seq, J, H, K):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    Kenergy = 0
+    for x in range(dist):
+        ibase = rnad[seq[x]]
+        Henergy += H[x, ibase]
+        for y in range(x + 1, dist):
+            jbase = rnad[seq[y]]
+            Jenergy += J[x, y - 1, ibase, jbase]
+            if y <= dist-2:
+                for z in range(x+2, dist):
+                    kbase = rnad[seq[z]]
+                    Kenergy += K[x, y-1, z-2, ibase, jbase, kbase]
+    energy = Jenergy + Henergy + Kenergy
+    print(Jenergy)
+    print(Henergy)
+    print(Kenergy)
     return energy
 
 
@@ -885,7 +921,7 @@ def check_vals(x, y, pvals):
         return 0, 0, 'none'
 
 
-# Doesn't Work for the End Scoring Methods
+# Donp.full(())6666esn't Work for the End Scoring Methods
 def past_entry_comp_goodseq(J, pvals, xn, yn):
     tmppvals = copy.deepcopy(pvals)
     ind, xid, stype = check_vals(xn, yn, pvals)
@@ -1202,7 +1238,7 @@ def best_seperation(J, H, N, q, fastafile):
     for i in range(1, 1000):
         pct = i/100
         print('pct = ' + str(pct))
-        tmpJ = Rm_Vals_Percentage_J(J, pct, N, q)
+        tmpJ = J
         energies = []
         for x in seqs:
             energies.append(Calc_Energy(x, tmpJ, tmpH))
@@ -1222,6 +1258,212 @@ def best_seperation(J, H, N, q, fastafile):
     bpct = results[-1][0]
     tmpJ = Rm_Vals_Percentage_J(J, bpct, N, q)
     Raw_wRscore(tmpJ, tmpH, '/home/jonah/Desktop/bestfit.png', fastafile)
+
+
+def designed_GBJmatrix(gJ, N, q, fastafile):
+    H = np.full((N, q), 0.0)
+    finalJ = np.full((N-1, N-1, q, q), 0.0)
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    currentR = -1
+    for i in range(N - 1):
+        for j in range(N - 1):
+            for k in range(q):
+                for l in range(q):
+                    if i > j:
+                        continue
+                    finalJ[i, j, k, l] = gJ[i, j, k, l]
+                    rscore = R_SCORE(titles, seqs, H, finalJ)
+                    if rscore > currentR:
+                        currentR = rscore
+                    else:
+                        finalJ[i, j, k, l] = 0.0
+    print('designed Matrix R score: ' + str(currentR))
+    return finalJ
+
+
+def designed_GBHmatrix(gH, N, q, fastafile):
+    finalH = np.full((N, q), 0.0)
+    J = np.full((N - 1, N - 1, q, q), 0.0)
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    currentR = -1
+    for i in range(N):
+        for j in range(1, q):
+            finalH[i, j] = gH[i, j]
+            rscore = R_SCORE(titles, seqs, finalH, J)
+            if rscore > currentR:
+                currentR = rscore
+            else:
+                finalH[i, j] = 0.0
+    print('designed Matrix R score: ' + str(currentR))
+    return finalH
+
+
+def designerJ(N, q, fastafile):
+    H = np.full((N, q), 0.0)
+    finalJ = np.full((N - 1, N - 1, q, q), 0.0)
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    currentR = -1
+    for i in range(N - 1):
+        for j in range(N - 1):
+            for k in range(q):
+                for l in range(q):
+                    if i > j:
+                        continue
+                    finalJ[i, j, k, l] = 1
+                    rscore = R_SCORE(titles, seqs, H, finalJ)
+                    if rscore > currentR:
+                        currentR = rscore
+                    else:
+                        finalJ[i, j, k, l] = -1
+                        rscore = R_SCORE(titles, seqs, H, finalJ)
+                        if rscore > currentR:
+                            currentR = rscore
+                        else:
+                            finalJ[i, j, k, l] = 0.0
+    print('designed Matrix R score: ' + str(currentR))
+    return finalJ
+
+
+def designerH(N, q, fastafile):
+    finalH = np.full((N, q), 0.0)
+    J = np.full((N-1, N-1, q, q), 0.0)
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    currentR = -1
+    for i in range(N):
+        for j in range(1, q):
+            finalH[i, j] = 1
+            rscore = R_SCORE(titles, seqs, finalH, J)
+            if rscore > currentR:
+                currentR = rscore
+            else:
+                finalH[i, j] = -1
+                rscore = R_SCORE(titles, seqs, finalH, J)
+                if rscore > currentR:
+                    currentR = rscore
+                else:
+                    finalH[i, j] = 0.0
+    print('designed H Matrix R score: ' + str(currentR))
+    return finalH
+
+def designerK(N, q, fastafile):
+    finalK = np.full((N-2, N-2, N-2, q, q, q), 0.0)
+    J = np.full((N - 1, N - 1, q, q), 0.0)
+    H = np.full((N, q), 0.0)
+    titles, seqs = Fasta_Read_Aff(fastafile)
+    currentR = -1
+    for i in range(N-2):
+        for j in range(N - 2):
+            for k in range(N - 2):
+                for x in range(1, q):
+                    for y in range(1, q):
+                        for z in range(1, q):
+                            if i > j or j > k:
+                                continue
+                            finalK[i, j, k, x, y, z] = 1
+                            rscore = R_SCORE3(titles, seqs, H, J, finalK)
+                            if rscore > currentR:
+                                currentR = rscore
+                            else:
+                                finalK[i, j, k, x, y, z] = -1
+                                rscore = R_SCORE3(titles, seqs, H, J, finalK)
+                                if rscore > currentR:
+                                    currentR = rscore
+                                else:
+                                    finalK[i, j, k, x, y, z] = 0.0
+    print('designed K Matrix R score: ' + str(currentR))
+    return finalK
+
+
+def export_K(K, N, q, outfile):
+    o = open(outfile, 'w')
+    for i in range(N-2):
+        for j in range(N - 2):
+            for k in range(N - 2):
+                for x in range(1, q):
+                    for y in range(1, q):
+                        for z in range(1, q):
+                            if i > j or j > k:
+                                continue
+                            if K[i, j, k, x, y, z] != 0.0:
+                                content = str(i)+','+str(j)+','+str(k)+','+str(x)+','+str(y)\
+                                          +','+str(z)+','+str(K[i, j, k, x, y, z])
+                                print(content, file=o)
+    print('K written')
+    o.close()
+
+def export_J(J, N, q, outfile):
+    o = open(outfile, 'w')
+    c = ','
+    for i in range(N-1):
+        for j in range(N-1):
+            for k in range(1, q):
+                for l in range(1, q):
+                    if J[i, j, k, l] != 0.0:
+                        content = str(i) + c + str(j) + c + str(k) + c + str(l) + c + str(J[i, j, k, l])
+                        print(content, file=o)
+    o.close()
+
+
+def export_H(H, N, q, outfile):
+    o = open(outfile, 'w')
+    c = ','
+    for i in range(N):
+        for j in range(1, q):
+            if H[i, j] != 0.0:
+                content = str(i) + c + str(j) + c + str(H[i, j])
+                print(content, file=o)
+    o.close()
+
+
+
+def R_SCORE(titles, seqs, H, J):
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    api = list(zip(titles, energies))
+    affs = list(set(titles))
+    datax = []
+    datae = []
+    for x in affs:
+        prospects = [nrg for (aff, nrg) in api if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    rscore = linreg[2]
+    return rscore
+
+
+def R_SCORE3(titles, seqs, H, J, K):
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy3(x, J, H, K))
+    api = list(zip(titles, energies))
+    affs = list(set(titles))
+    datax = []
+    datae = []
+    for x in affs:
+        prospects = [nrg for (aff, nrg) in api if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    rscore = linreg[2]
+    return rscore
+
+
+def R_SCORE_w_SEQHANDLER(SEQHANDLER, ScoringMatrix, titles):
+    for x in SEQHANDLER:
+        x.score(ScoringMatrix)
+    affs = list(set(titles))
+    datax = []
+    datae = []
+    for a in affs:
+        maxprop = max([x.score for x in SEQHANDLER if x.affinity == a])
+        datax.append(x)
+        datae.append(maxprop)
+    linreg = stats.linregress(datax, datae)
+    rscore = linreg[2]
+    return rscore
+
 
 
 def Raw_Aff_v_E(J, H, outpath, infile):
