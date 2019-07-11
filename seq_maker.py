@@ -153,7 +153,7 @@ nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
 #                 rxp = rxn
 #                 ryp = int(np.where(J[xp, yp, rxp, 1:5] == np.amin(J[xp, yp, rxp, 1:5]))[0])+1
 #             if stype == 'ys':
-#                 ryp = ryn
+#                 ryp = ryn6
 #                 rxp = int(np.where(J[xp, yp, 1:5, ryp] == np.amin(J[xp, yp, 1:5, ryp]))[0])+1
 #             if stype == 'xnyp':
 #                 ryp = rxn

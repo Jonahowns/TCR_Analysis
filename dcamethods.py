@@ -1385,7 +1385,7 @@ def export_K(K, N, q, outfile):
                             if i > j or j > k:
                                 continue
                             if K[i, j, k, x, y, z] != 0.0:
-                                content = str(i)+','+str(j)+','+str(k)+','+str(x)+','+str(y)\
+                                content = str(i)+','+str(j+1)+','+str(k+2)+','+str(x)+','+str(y)\
                                           +','+str(z)+','+str(K[i, j, k, x, y, z])
                                 print(content, file=o)
     print('K written')
@@ -1457,8 +1457,8 @@ def R_SCORE_w_SEQHANDLER(SEQHANDLER, ScoringMatrix, titles):
     datax = []
     datae = []
     for a in affs:
-        maxprop = max([x.score for x in SEQHANDLER if x.affinity == a])
-        datax.append(x)
+        maxprop = max([x.energy for x in SEQHANDLER if x.affinity == a])
+        datax.append(a)
         datae.append(maxprop)
     linreg = stats.linregress(datax, datae)
     rscore = linreg[2]
