@@ -10,6 +10,8 @@ import random
 ## Universal Methods for Analysis of DCA Data ##
 ################################################
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+aad = {'-': 0, 'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12,
+       'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20}
 rna = ['-', 'A', 'C', 'G', 'U']
 rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
@@ -276,6 +278,20 @@ def sorthmat_blDCA(file, N, q):
     return normed
 
 
+def sorthmat_plmDCA_autoNandq(file):
+    o = open(file, 'r')
+    linelist = o.readlines()
+    o.close()
+    ind = linelist[-1].split(',')
+    N = int(ind[0])
+    q = int(ind[1])
+    fullmatrix = np.full((N, q), 0.0)
+    for line in linelist:
+        data = line.split(',')
+        fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
+    return fullmatrix, N, q
+
+
 # Takes plmDCA H Matrix File and inputs the values into a N-1, q matrix
 def sorthmat_plmDCA(file, N, q):
     o = open(file, 'r')
@@ -452,6 +468,18 @@ def Fasta_Read_Aff(fastafile):
     return titles, seqs
 
 
+def Fasta_Read_SeqOnly(fastafile):
+    o = open(fastafile)
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            continue
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    return seqs
+
+
 # Calculates 'energy' of give sequence according to provided J and H Matrices
 def Calc_Energy(seq, J, H):
     full = list(seq)
@@ -464,6 +492,28 @@ def Calc_Energy(seq, J, H):
         for y in range(x + 1, dist):
             jbase = rnad[seq[y]]
             Jenergy += J[x, y - 1, ibase, jbase]
+    energy = Jenergy + Henergy
+    print(Jenergy)
+    print(Henergy)
+    return energy
+
+def Calc_Energy_TCR(seq, J, H):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    for x in range(0, dist):
+        ibase = aad[seq[x]]
+        try:
+            Henergy += H[x, ibase]
+        except IndexError:
+            break
+        for y in range(x + 1, dist):
+            jbase = aad[seq[y]]
+            try:
+                Jenergy += J[x, y - 1, ibase, jbase]
+            except IndexError:
+                continue
     energy = Jenergy + Henergy
     print(Jenergy)
     print(Henergy)

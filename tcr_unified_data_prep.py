@@ -11,8 +11,10 @@ from collections import OrderedDict
 macpath = "/Users/Amber/Dropbox (ASU)/"
 ubuntpath = "/home/jonah/Dropbox (ASU)/"
 droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
+wpath = "C:/Users/Amber/Dropbox (ASU)/"
 # fullpath = macpath+droppath
-fullpath = ubuntpath + droppath
+# fullpath = ubuntpath + droppath
+fullpath = wpath + droppath
 family_files = {'AAA': fullpath + 'S_7_AAA_2_norm_plus.tsv.cluster',
                 'ACC': fullpath + 'S_7_ACC_2_norm_plus.tsv.cluster',
                 'AGG': fullpath + 'S_7_AGG_2_norm_plus.tsv.cluster',
@@ -172,7 +174,7 @@ class SeqHandler:
         self.clust_all = np.zeros((15, len(clusters)), dtype=object)
         self.full_clusts = np.zeros((2, len(clusters)), dtype=object)
         # Store Unique Sequences of the family
-        self.uniq_seq_fam = np.zeros((4 , len(clusters)), dtype=object)
+        self.uniq_seq_fam = np.zeros((4, len(clusters)), dtype=object)
         # Stores Statistics of Sequences (N of uniq seq, N of shared seq) per family per cluster
         self.uniq_seq_fam_stats = np.zeros((4, len(clusters)), dtype=object)
 
@@ -306,8 +308,8 @@ class SeqHandler:
             print(string, file = self.logfile)
 
     def write_seqs(self):
-        os.mkdir(fullpath + 'FullSeq')
-        seqdir = fullpath + 'FullSeq/'
+        os.mkdir(fullpath + 'SeqwAff')
+        seqdir = fullpath + 'SeqwAff/'
         for xid, x in enumerate(self.clusters):
             os.mkdir(seqdir+'Clust'+str(int(x)))
             afamfile = seqdir + 'Clust' + str(int(x)) + '/' + 'afam.fasta'
