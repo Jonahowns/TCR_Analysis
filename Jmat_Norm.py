@@ -1040,8 +1040,8 @@ hout = '/home/jonah/Desktop/Hdesigner.txt'
 # H = gH
 # Jdes = dca.designerJ(N, q, testseqpath)
 # dca.export_J(Jdes, N, q, jout)
-Hdes = dca.designerH(N, q, testseqpath)
-dca.export_H(Hdes, N, q, hout)
+# Hdes = dca.designerH(N, q, testseqpath)
+# dca.export_H(Hdes, N, q, hout)
 
 
 

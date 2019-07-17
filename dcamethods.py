@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 from scipy import stats
 import random
+import multiprocessing as mp
 
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
@@ -18,6 +19,7 @@ rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 dna = ['-', 'A', 'C', 'G', 'T']
 nucs = ['A', 'C', 'G', 'U']
 nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
+base_flip_rna = {'A': 'U', 'U': 'A', 'C': 'G', 'G': 'C'}
 
 
 ########################################################################################################################
@@ -292,6 +294,18 @@ def sorthmat_plmDCA_autoNandq(file):
     return fullmatrix, N, q
 
 
+def Get_Nq_TCR(clustid):
+    upath = "/home/jonah/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/FullSeq/"
+    fpath = upath + 'Clust' + str(clustid) + '/' + str(clustid) + 'full.h'
+    o = open(fpath, 'r')
+    linelist = o.readlines()
+    o.close()
+    ind = linelist[-1].split(',')
+    N = int(ind[0])
+    q = int(ind[1])
+    return N, q
+
+
 # Takes plmDCA H Matrix File and inputs the values into a N-1, q matrix
 def sorthmat_plmDCA(file, N, q):
     o = open(file, 'r')
@@ -497,23 +511,24 @@ def Calc_Energy(seq, J, H):
     print(Henergy)
     return energy
 
-def Calc_Energy_TCR(seq, J, H):
+
+# N and q correspond to the matrix the
+def Calc_Energy_TCR(seq, J, H, N):
     full = list(seq)
-    dist = len(full)
     Jenergy = 0
     Henergy = 0
-    for x in range(0, dist):
-        ibase = aad[seq[x]]
+    for x in range(N):
         try:
-            Henergy += H[x, ibase]
+            ibase = aad[full[x]]
         except IndexError:
             break
-        for y in range(x + 1, dist):
-            jbase = aad[seq[y]]
+        Henergy += H[x, ibase]
+        for y in range(x + 1, N):
             try:
-                Jenergy += J[x, y - 1, ibase, jbase]
+                jbase = aad[full[y]]
             except IndexError:
-                continue
+                break
+            Jenergy += J[x, y - 1, ibase, jbase]
     energy = Jenergy + Henergy
     print(Jenergy)
     print(Henergy)
@@ -1348,52 +1363,256 @@ def designed_GBHmatrix(gH, N, q, fastafile):
     return finalH
 
 
-def designerJ(N, q, fastafile):
+def designerJ(N, q, fastafile, **kwargs):
+    type = 'dna'
+    for key, value in kwargs.items():
+        if key == 'type':
+            type = value
     H = np.full((N, q), 0.0)
     finalJ = np.full((N - 1, N - 1, q, q), 0.0)
     titles, seqs = Fasta_Read_Aff(fastafile)
     currentR = -1
-    for i in range(N - 1):
-        for j in range(N - 1):
-            for k in range(q):
-                for l in range(q):
-                    if i > j:
-                        continue
-                    finalJ[i, j, k, l] = 1
-                    rscore = R_SCORE(titles, seqs, H, finalJ)
-                    if rscore > currentR:
-                        currentR = rscore
-                    else:
-                        finalJ[i, j, k, l] = -1
+    if type == 'pep':
+        for i in range(N - 1):
+            for j in range(N - 1):
+                for k in range(q):
+                    for l in range(q):
+                        if i > j:
+                            continue
+                        finalJ[i, j, k, l] = 1
+                        rscore = R_SCORE(titles, seqs, H, finalJ, type='pep')
+                        if rscore > currentR:
+                            currentR = rscore
+                        else:
+                            finalJ[i, j, k, l] = -1
+                            rscore = R_SCORE(titles, seqs, H, finalJ, type='pep')
+                            if rscore > currentR:
+                                currentR = rscore
+                            else:
+                                finalJ[i, j, k, l] = 0.0
+    else:
+        for i in range(N - 1):
+            for j in range(N - 1):
+                for k in range(q):
+                    for l in range(q):
+                        if i > j:
+                            continue
+                        finalJ[i, j, k, l] = 1
                         rscore = R_SCORE(titles, seqs, H, finalJ)
                         if rscore > currentR:
                             currentR = rscore
                         else:
-                            finalJ[i, j, k, l] = 0.0
+                            finalJ[i, j, k, l] = -1
+                            rscore = R_SCORE(titles, seqs, H, finalJ)
+                            if rscore > currentR:
+                                currentR = rscore
+                            else:
+                                finalJ[i, j, k, l] = 0.0
     print('designed Matrix R score: ' + str(currentR))
     return finalJ
 
 
-def designerH(N, q, fastafile):
+def designerJ_Seperation_TCR(N, q, SEQHANDLER, CoreNum, outfile):
+    comm = round((N - 1) / CoreNum)
+    ind = [x * comm for x in range(CoreNum)]
+    ind.append(N - 1)
+    instructions = []
+    for i in range(CoreNum):
+        instructions.append([i, N, q, ind[i], ind[i + 1], SEQHANDLER])
+    p = mp.Pool(CoreNum)
+    z = p.starmap(dJ_Worker, instructions)
+    r = Write_Output_dJ(z, N, q, outfile)
+    print(r)
+
+
+def Write_Output_dJ(z, N, q, outfile):
+    aPos = []
+    aNeg = []
+    rs = []
+    J = np.full((N-1, N-1, q, q), 0)
+    for i in z:
+        for pos, neg, cR in i:
+            for p in pos:
+                aPos.append(p)
+            for n in neg:
+                aNeg.append(n)
+            rs.append(cR)
+    for d in aPos:
+        x, y, i, j = d
+        J[x, y, i, j] = 1
+    for d in aNeg:
+        x, y, i, j = d
+        J[x, y, i, j] = -1
+    export_J(J, N, q, outfile)
+    return rs
+
+class Sequence:
+    def __init__(self, N, q, aff, seq='null', cv='no', **kwargs):
+        self.type = 'dna'
+        self.mat = 'J'
+        for key, value in kwargs.items():
+            if key == 'type':
+                self.type = value
+            if key == 'mat':
+                self.mat = value
+        self.affinity = aff
+        if seq == 'null':
+            self.seq = np.full(40, ['X'], dtype=str)
+        else:
+            self.seq = np.array(list(seq))
+
+        self.energyp = None
+        self.energyn = None
+
+        if self.mat == 'K':
+            # Automatiically Fill in the K Matrix
+            self.K = []
+            dist = len(self.seq)
+            for x in range(dist):
+                if self.type == 'dna':
+                    ibase = rnad[seq[x]]
+                elif self.type == 'pep':
+                    ibase = aad[seq[x]]
+                for y in range(x + 1, dist):
+                    if self.type == 'dna':
+                        jbase = rnad[seq[y]]
+                    elif self.type == 'pep':
+                        jbase = aad[seq[y]]
+                    if y <= dist - 2:
+                        for z in range(x + 2, dist):
+                            if self.type == 'dna':
+                                kbase = rnad[seq[z]]
+                            elif self.type == 'pep':
+                                kbase = aad[seq[z]]
+                            self.K.append((x, y-1, z-2, ibase, jbase, kbase))
+                            if cv == 'yes' and self.type == 'dna':
+                                cibase = rnad[base_flip_rna[seq[x]]]
+                                cjbase = rnad[base_flip_rna[seq[y]]]
+                                ckbase = rnad[base_flip_rna[seq[z]]]
+                                self.K.append((x, y-1, z-2, cibase, cjbase, ckbase))
+
+        elif self.mat == 'J':
+            #Automatically Fill in the J Matrix
+            self.J = []
+            dist = len(self.seq)
+            for x in range(dist):
+                ibase = aad[seq[x]]
+                for y in range(x + 1, dist):
+                    jbase = aad[seq[y]]
+                    self.J.append((x, y - 1, ibase, jbase))
+
+        elif self.mat == 'H':
+            #Automatically Fill in the H Matrix
+            self.H = []
+            dist = len(self.seq)
+            for x in range(dist):
+                ibase = aad[seq[x]]
+                self.H.append((x, ibase))
+
+
+    def score(self, ScoringMatrixPos, ScoringMatrixNeg):
+        if self.mat == 'K':
+            Pos = [x for x in self.K if x in ScoringMatrixPos]
+            Neg = [x for x in self.K if x in ScoringMatrixNeg]
+        elif self.mat == 'J':
+            Pos = [x for x in self.J if x in ScoringMatrixPos]
+            Neg = [x for x in self.J if x in ScoringMatrixNeg]
+        elif self.mat == 'H':
+            Pos = [x for x in self.H if x in ScoringMatrixPos]
+            Neg = [x for x in self.H if x in ScoringMatrixNeg]
+        return len(Pos)*1, len(Neg)*-1
+
+
+def dJ_Worker(id, N, q, bi, ei, SEQHANDLER):
+    ScoringMatrixPos = []
+    ScoringMatrixNeg = []
+    cS = -1
+    for i in range(bi, ei):
+        for j in range(N-1):
+            for k in range(1, q):
+                for l in range(1, q):
+                    if i > j:
+                        continue
+                    if i == math.floor((ei-bi)/2 + bi) and j == i+1:
+                        print('50% on Worker ' + str(id))
+                    ScoringMatrixPos.append((i, j, k, l))
+                    ScoringMatrixNeg.append((i, j, k, l))
+                    Sscorepos, Sscoreneg = SEP_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg)
+                    if Sscoreneg < cS and Sscorepos < cS:
+                        ScoringMatrixNeg.remove((i, j, k, l))
+                        ScoringMatrixPos.remove((i, j, k, l))
+                    if Sscorepos > Sscoreneg and Sscorepos > cS:
+                        cS = Sscorepos
+                        ScoringMatrixNeg.remove((i, j, k, l))
+                    if Sscoreneg > Sscorepos and Sscoreneg > cS:
+                        cS = Sscoreneg
+                        ScoringMatrixPos.remove((i, j, k,l))
+    print('Worker ' + str(id))
+    print('Optimal R Score Obtained: ' + str(cS))
+    return ScoringMatrixPos, ScoringMatrixNeg, cS
+
+
+def SEP_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg):
+    pEg, pEb = [], []
+    nEg, nEb = [], []
+    for x in SEQHANDLER:
+        if x.affinity == 1:
+            pos, neg = x.score(ScoringMatrixPos, ScoringMatrixNeg)
+            pEb.append(pos)
+            nEb.append(neg)
+        else:
+            pos, neg = x.score(ScoringMatrixPos, ScoringMatrixNeg)
+            pEg.append(pos)
+            nEg.append(neg)
+    ntb, nbb = max(nEb), min(nEb)
+    ptb, pbb = max(pEb), min(pEb)
+    ntg, nbg = max(nEg), min(nEg)
+    ptg, pbg = max(pEg), min(pEg)
+    sepposscore = (ptg - ptb) + 2*(pbg - ptb)
+    sepnegscore = (ntg - ntb) + 2*(nbg - ntb)
+    return sepposscore, sepnegscore
+
+
+def designerH(N, q, fastafile, **kwargs):
+    type = 'dna'
+    for key, value in kwargs.items():
+        if key == 'type':
+            type = value
     finalH = np.full((N, q), 0.0)
     J = np.full((N-1, N-1, q, q), 0.0)
     titles, seqs = Fasta_Read_Aff(fastafile)
     currentR = -1
-    for i in range(N):
-        for j in range(1, q):
-            finalH[i, j] = 1
-            rscore = R_SCORE(titles, seqs, finalH, J)
-            if rscore > currentR:
-                currentR = rscore
-            else:
-                finalH[i, j] = -1
+    if type == 'pep':
+        for i in range(N):
+            for j in range(1, q):
+                finalH[i, j] = 1
+                rscore = R_SCORE(titles, seqs, finalH, J, type='pep')
+                if rscore > currentR:
+                    currentR = rscore
+                else:
+                    finalH[i, j] = -1
+                    rscore = R_SCORE(titles, seqs, finalH, J, type='pep')
+                    if rscore > currentR:
+                        currentR = rscore
+                    else:
+                        finalH[i, j] = 0.0
+    else:
+        for i in range(N):
+            for j in range(1, q):
+                finalH[i, j] = 1
                 rscore = R_SCORE(titles, seqs, finalH, J)
                 if rscore > currentR:
                     currentR = rscore
                 else:
-                    finalH[i, j] = 0.0
+                    finalH[i, j] = -1
+                    rscore = R_SCORE(titles, seqs, finalH, J)
+                    if rscore > currentR:
+                        currentR = rscore
+                    else:
+                       finalH[i, j] = 0.0
     print('designed H Matrix R score: ' + str(currentR))
     return finalH
+
 
 def designerK(N, q, fastafile):
     finalK = np.full((N-2, N-2, N-2, q, q, q), 0.0)
@@ -1466,10 +1685,19 @@ def export_H(H, N, q, outfile):
 
 
 
-def R_SCORE(titles, seqs, H, J):
+def R_SCORE(titles, seqs, H, J, **kwargs):
+    type = 'dna'
+    for key, value in kwargs.items():
+        if key == 'type':
+            type = value
     energies = []
-    for x in seqs:
-        energies.append(Calc_Energy(x, J, H))
+    for xid, x in enumerate(seqs):
+        if xid == 0:
+            N = len(list(x))
+        if type == 'pep':
+            energies.append(Calc_Energy_TCR(x, J, H, N))
+        else:
+            energies.append(Calc_Energy(x, J, H))
     api = list(zip(titles, energies))
     affs = list(set(titles))
     datax = []
@@ -1531,6 +1759,32 @@ def Raw_wRscore(J, H, outpath, infile):
     energies = []
     for x in seqs:
         energies.append(Calc_Energy(x, J, H))
+    datax = []
+    datae = []
+    affs = list(set(titles))
+    api = list(zip(titles, energies))
+    highestaff = 1
+    for x in affs:
+        if x > highestaff: highestaff = x
+        prospects = [nrg for (aff, nrg) in api if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    xl = np.linspace(0, highestaff, 100)
+    plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
+    plt.scatter(titles, energies)
+    plt.ylabel('Energy')
+    plt.xlabel('R Score: ' + str(linreg[2]))
+    plt.savefig(outpath, dpi=600)
+
+
+def Raw_wRscore_TCR(J, H, outpath, infile):
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for xid, x in enumerate(seqs):
+        if xid == 0:
+            N = len(list(x))
+        energies.append(Calc_Energy_TCR(x, J, H, N))
     datax = []
     datae = []
     affs = list(set(titles))
