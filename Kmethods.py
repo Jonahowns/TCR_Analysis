@@ -89,22 +89,6 @@ class Sequence:
         return len(Pos)*1, len(Neg)*-1
 
 
-clustid = 1
-droppath = "Projects/DCA/GenSeqs/"
-#fullpath = macpath+droppath
-upath = "/home/jonah/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/SeqwAff/"
-cpath = upath + 'Clust' + str(clustid) + '/'
-seqp = cpath + 'full.fasta'
-titles, seqs = dca.Fasta_Read_Aff(seqp)
-N = 40
-q = 5
-
-SEQHANDLER = []
-for i in range(len(seqs)):
-    x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
-    SEQHANDLER.append(x)
-
-
 def R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg):
     pE = []
     nE = []
@@ -131,31 +115,30 @@ def R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg):
     return rscorepos, rscoreneg
 
 
-def Node_Worker(id, N, q, i, bj, ej, SEQHANDLER):
+def Node_Worker(id, N, q, i, j, bk, ek, SEQHANDLER):
     ScoringMatrixPos = []
     ScoringMatrixNeg = []
     cR = -1
-    for j in range(bj, ej):
-        for k in range(N-2):
-            for x in range(1, q):
-                for y in range(1, q):
-                    for z in range(1, q):
-                        if i > j or j > k:
-                            continue
-                        if j == math.floor((ej-bj)/2 + bj) and k == N-2 and z == 1:
-                            print('50% on Worker ' + str(id))
-                        ScoringMatrixPos.append((i, j, k, x, y, z))
-                        ScoringMatrixNeg .append((i, j, k, x, y, z))
-                        rscorepos, rscoreneg = R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg)
-                        if rscoreneg < cR and rscorepos < cR:
-                            ScoringMatrixNeg.remove((i, j, k, x, y, z))
-                            ScoringMatrixPos.remove((i, j, k, x, y, z))
-                        if rscorepos > rscoreneg and rscorepos > cR:
-                            cR = rscorepos
-                            ScoringMatrixNeg.remove((i, j, k, x, y, z))
-                        if rscoreneg > rscorepos and rscoreneg > cR:
-                            cR = rscoreneg
-                            ScoringMatrixPos.remove((i, j, k, x, y, z))
+    for k in range(bk, ek):
+        for x in range(1, q):
+            for y in range(1, q):
+                for z in range(1, q):
+                    if i > j or j > k:
+                        continue
+                    if j == math.floor((ek-bk)/2 + bk) and x == 1 and y == 1 and z == 1:
+                        print('50% on Worker ' + str(id))
+                    ScoringMatrixPos.append((i, j, k, x, y, z))
+                    ScoringMatrixNeg .append((i, j, k, x, y, z))
+                    rscorepos, rscoreneg = R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg)
+                    if rscoreneg < cR and rscorepos < cR:
+                        ScoringMatrixNeg.remove((i, j, k, x, y, z))
+                        ScoringMatrixPos.remove((i, j, k, x, y, z))
+                    if rscorepos > rscoreneg and rscorepos > cR:
+                        cR = rscorepos
+                        ScoringMatrixNeg.remove((i, j, k, x, y, z))
+                    if rscoreneg > rscorepos and rscoreneg > cR:
+                        cR = rscoreneg
+                        ScoringMatrixPos.remove((i, j, k, x, y, z))
     print('Worker ' + str(id))
     print('Optimal R Score Obtained: ' + str(cR))
     return ScoringMatrixPos, ScoringMatrixNeg, cR
@@ -174,7 +157,8 @@ def Write_Output_Node(i, z):
             rs.append((i, cR))
     return nPos, nNeg, rs
 
-def Write_Overall_Output(Pos, Neg, rs, outk, outrs):
+
+def Write_Overall_Output(Pos, Neg, rs, outk, outrs, N, q):
     K = np.full((N - 2, N - 2, N - 2, q, q, q), 0)
     for d in Pos:
         x, y, z, i, j, k = d
@@ -191,22 +175,25 @@ def Write_Overall_Output(Pos, Neg, rs, outk, outrs):
     dca.export_K(K, N, q, outk)
 
 
-def gen_indices(bPni):
+def gen_indices(bPni, N):
     ind = []
-    for x in bPni:
+    for xid, x in enumerate(bPni):
         sep = math.floor((N - 2) / x)
         for i in range(x):
             if i == 0:
+                ind.append(xid)
                 ind.append(0)
                 ind.append(sep)
             elif i == x-1:
                 ind.append(ind[-1])
+                ind.insert(-1, xid)
                 ind.append(N-2)
             else:
                 ind.append(ind[-1])
+                ind.insert(-1, xid)
                 ind.append(ind[-1]+sep)
     it = iter(ind)
-    tup = list(zip(it, it))
+    tup = list(zip(it, it, it))
     return tup
 
 
@@ -215,24 +202,46 @@ def Parallelized_ScoringK(N, q, SEQHANDLER, CoreNum, outk, outr):
     bpn = math.floor(CoreNum / (N - 2))
     lo = CoreNum - (N - 2) * bpn
     bPni = [(bpn + 1) if x < lo else bpn for x in range(0, N - 2)]
-    ind = gen_indices(bPni)
+    ind = gen_indices(bPni, N)
     Pos, Neg, r = [], [], []
     for i in range(N-2):
+        print('Starting Node ' + str(i))
         instructions = []
         for j in range(CoreNum):
-            instructions.append([i, N, q, i, ind[j][0], ind[j][1], SEQHANDLER])
+            instructions.append([i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
         p = mp.Pool(CoreNum)
         z = p.starmap(Node_Worker, instructions)
         nPos, nNeg, rs = Write_Output_Node(i, z)
+        p.close()
+        print('Finished Node ' + str(i))
         Pos += nPos
         Neg += nNeg
         r += rs
-    Write_Overall_Output(Pos, Neg, r, outk, outr)
+    Write_Overall_Output(Pos, Neg, r, outk, outr, N, q)
 
 
 
-Parallelized_ScoringK(N, q, SEQHANDLER, 4,  '/home/jonah/Desktop/DesignerK.txt')
 
+
+
+# clustid = 1
+# droppath = "Projects/DCA/GenSeqs/"
+# fullpath = macpath+droppath
+# upath = "/home/jonah/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/SeqwAff/"
+# cpath = upath + 'Clust' + str(clustid) + '/'
+# seqp = cpath + 'full.fasta'
+seqfile = "/home/jprocyk/Kmat/8thfull.txt"
+titles, seqs = dca.Fasta_Read_Aff(seqfile)
+N = 40
+q = 5
+
+SEQHANDLER = []
+for i in range(len(seqs)):
+    x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
+    SEQHANDLER.append(x)
+
+Parallelized_ScoringK(N, q, SEQHANDLER, 114,  '/home/jprocyk/Kmat/DesignerK.txt', '/home/jprocyk/Kmat/rscores.txt')
+print('done bish')
 
 
 
