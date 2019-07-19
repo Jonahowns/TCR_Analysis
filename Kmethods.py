@@ -120,9 +120,11 @@ def Node_Worker(id, N, q, i, j, bk, ek, SEQHANDLER):
     ScoringMatrixNeg = []
     cR = -1
     for k in range(bk, ek):
+        print('Worker ', id, 'k = ', k)
         for x in range(1, q):
             for y in range(1, q):
                 for z in range(1, q):
+                    print('Worker ', id, 'z= ', z)
                     if i > j or j > k:
                         continue
                     if j == math.floor((ek-bk)/2 + bk) and x == 1 and y == 1 and z == 1:
