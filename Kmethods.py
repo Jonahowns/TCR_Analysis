@@ -211,7 +211,9 @@ def Parallelized_ScoringK(N, q, SEQHANDLER, CoreNum, outk, outr):
         instructions = []
         for j in range(CoreNum):
             instructions.append([i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
+        print('Instructions Made')
         p = mp.Pool(CoreNum)
+        print('Pool Started')
         z = p.starmap(Node_Worker, instructions)
         nPos, nNeg, rs = Write_Output_Node(i, z)
         p.close()
