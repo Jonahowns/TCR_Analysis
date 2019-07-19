@@ -1744,13 +1744,15 @@ def R_SCORE_w_SEQHANDLER(SEQHANDLER, ScoringMatrix, titles):
 
 
 
-def Raw_Aff_v_E(J, H, outpath, infile):
+def Raw_Aff_v_E(J, H, title, outpath, infile):
     titles, seqs = Fasta_Read_Aff(infile)
     energies = []
     for x in seqs:
         energies.append(Calc_Energy(x, J, H))
     plt.scatter(titles, energies)
+    plt.title(title)
     plt.ylabel('Energy')
+    plt.xlabel('Affinity')
     plt.savefig(outpath, dpi=600)
 
 

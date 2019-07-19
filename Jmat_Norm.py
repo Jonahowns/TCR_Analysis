@@ -1033,8 +1033,8 @@ testseqpath = testpath + '7thfull.txt'
 # H = np.add(np.subtract(2*gHpos, bHpos, bHneg), 2*gHneg) #S3
 # J = np.add(np.subtract(3*gJpos, 2*bJpos, bJneg), 2*gJneg) #S3
 
-jout = '/home/jonah/Desktop/Jdesigner.txt'
-hout = '/home/jonah/Desktop/Hdesigner.txt'
+# jout = '/home/jonah/Desktop/Jdesigner.txt'
+# hout = '/home/jonah/Desktop/Hdesigner.txt'
 
 
 # H = gH
@@ -1046,8 +1046,8 @@ hout = '/home/jonah/Desktop/Hdesigner.txt'
 
 
 # dca.best_seperation(J, H, N, q, testseqpath)
-# J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
-# H = gH
+J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+H = gH
 # J = gJ
 # For Family 7 it looks like 1 percent of the top values give the best R score
 # For Family 8 it looks like 0.1 percent of the top values give the best R score
@@ -1084,33 +1084,33 @@ hout = '/home/jonah/Desktop/Hdesigner.txt'
 
 
 # J *= 2
-jdisp = dca.FullJ_disp(Jdes, N, q)
-fig, ax = plt.subplots(1, 2)
-dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-1, vmax=1, cmap='seismic')
-dca.Fig_FullH(ax[1], 8, Hdes, N, q, vmin=-1, vmax=1, cmap='seismic')
-plt.savefig('/home/jonah/Desktop/designerJ.png', dpi=600)
+# jdisp = dca.FullJ_disp(Jdes, N, q)
+# fig, ax = plt.subplots(1, 2)
+# dca.Fig_FullJ(ax[0], 8, jdisp, N, q, vmin=-1, vmax=1, cmap='seismic')
+# dca.Fig_FullH(ax[1], 8, Hdes, N, q, vmin=-1, vmax=1, cmap='seismic')
+# plt.savefig('/home/jonah/Desktop/designerJ.png', dpi=600)
 # dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
 # plt.savefig('/home/jonah/Desktop/8gbpos.png', dpi=600)
-# rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #2.76366
-# rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.76366
-# rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #2.76366
-# rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #14.865
-# rdseq801 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.5
-# rdseq807 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAUGUG'  #2.5
-# rdseq804 = 'GGGCUAAGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.07
-# rdseq802 = 'GGCCUGAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.4
-# rdseq803 = 'GGCCUGGGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.8
+rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #29.211
+rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #27.6999
+rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #30.9315
+rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #17.025598
+rdseq801 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.5
+rdseq807 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAUGUG'  #2.5
+rdseq804 = 'GGGCUAAGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.07
+rdseq802 = 'GGCCUGAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.4
+rdseq803 = 'GGCCUGGGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.8
 #
 #
-# rdseq805 = 'GGCCUGGGGGCGCGCUGGGUGAUGUGUGGGCACCUAUGUC' # -6 Yikes
-# E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
-# print(E)
+rdseq805 = 'GGCCUGGGGGCGCGCUGGGUGAUGUGUGGGCACCUAUGUC' # 15.8289
+E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
+print(E)
 
 
 
 # testseqpath = testpath + '7thfull.txt'
 # dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
-# dca.Raw_Aff_v_E(J, H, ('/home/jonah/Desktop/raw7.png'), testseqpath)
+dca.Raw_Aff_v_E(J, H, 'A vs E Family 7', ('/home/jonah/Desktop/raw7.png'), testseqpath)
 
 
 # mix_score_dist(7)
