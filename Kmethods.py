@@ -5,6 +5,7 @@ import copy
 import multiprocessing as mp
 import math
 from sys import getsizeof
+from mpi4py import MPI
 
 aad = {'-': 0, 'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12,
        'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20}
@@ -146,33 +147,21 @@ def Node_Worker(id, N, q, i, j, bk, ek, SEQHANDLER):
     return ScoringMatrixPos, ScoringMatrixNeg, cR
 
 
-def Write_Output_Node(i, z):
-    nPos = []
-    nNeg = []
-    rs = []
-    for x in z:
-        for pos, neg, cR in x:
-            for p in pos:
-                nPos.append(p)
-            for n in neg:
-                nNeg.append(n)
-            rs.append((i, cR))
-    return nPos, nNeg, rs
-
-
 def Write_Overall_Output(Pos, Neg, rs, outk, outrs, N, q):
     K = np.full((N - 2, N - 2, N - 2, q, q, q), 0)
-    for d in Pos:
-        x, y, z, i, j, k = d
-        K[x, y, z, i, j, k] = 1
-    for d in Neg:
-        x, y, z, i, j, k = d
-        K[x, y, z, i, j, k] = -1
+    for npos in Pos:
+        for d in npos:
+            x, y, z, i, j, k = d
+            K[x, y, z, i, j, k] = 1
+    for nneg in Neg:
+        for d in nneg:
+            x, y, z, i, j, k = d
+            K[x, y, z, i, j, k] = -1
     o = open(outrs, 'w')
-    for d in rs:
-        i, rs = d
-        print(i, file=o)
-        print(rs, file=o)
+    for nrs in rs:
+        for d in nrs:
+            r = d
+            print(r, file=o)
     o.close()
     dca.export_K(K, N, q, outk)
 
@@ -244,8 +233,42 @@ for i in range(len(seqs)):
     x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
     SEQHANDLER.append(x)
 
-Parallelized_ScoringK(N, q, SEQHANDLER, 114,  '/home/jprocyk/Kmat/DesignerK.txt', '/home/jprocyk/Kmat/rscores.txt')
-print('done bish')
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+CoreNum = comm.Get_size()
+
+if rank == 0:
+    bpn = math.floor(CoreNum / (N - 2))
+    lo = CoreNum - (N - 2) * bpn
+    bPni = [(bpn + 1) if x < lo else bpn for x in range(0, N - 2)]
+    ind = gen_indices(bPni, N)
+    instructions = []
+    for j in range(CoreNum - 1):
+        instructions.append([j + 1, i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
+    print('Instructions Made')
+comm.bcast(instructions, root=0)
+if rank != 0:
+    si = [(xid, N, q, i, j, bk, ek, SEQHANDLER) for (rank, xid, N, q, i, j, bk, ek, SEQHANDLER)
+          in instructions if xid == rank][0]
+    Pos, Neg, r = Node_Worker(rank, si[0], si[1], si[2], si[3], si[4], si[5], si[6])
+allpos = comm.gather(Pos, root=0)
+allneg = comm.gather(Neg, root=0)
+allrs = comm.gather(r, root=0)
+
+if rank ==0:
+    Write_Overall_Output(allpos, allneg, allrs, '/home/jprocyk/Kmat/DesignerK.txt', '/home/jprocyk/Kmat/rscores.txt', N, q)
+    print('done bish')
+
+
+
+
+
+
+
+
+
+
 
 
 

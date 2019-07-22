@@ -78,20 +78,64 @@ def import_allseqs_lowaff(csvfile, sim):
         print('Current Seq Number :' + str(len(allseqs)))
     return allseqs, allaffs
 
+def import_allseqs_highaff(csvfile):
+    o = open(csvfile, 'r')
+    chunk = []
+    for x in range(10000):
+        chunk.append(next(o))
+    seqs, affs = [], []
+    for line in chunk:
+        seq, aff = line.rstrip().split(',')
+        if int(aff) == 1:
+            break
+        if len(list(seq)) != 40:
+            continue
+        seqs.append(seq)
+        affs.append(aff)
+    o.close()
+    return seqs, affs
+
+
+def final_pruning_lowaff(fastafile, sim):
+    o = open(fastafile)
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            continue
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    affs = [1 for x in seqs]
+    selaffs, selseqs = prune_alignment(affs, seqs, sim)
+    return selseqs, selaffs
+
+
 
 
 if __name__ == '__main__':
     # Variables
-    csvfile = '/home/jonah/Downloads/2HX_8th_new.csv'
-    outfile = '/home/jonah/8allbadbinders.txt'
-    x = open(outfile, 'w')
+    csvfile8 = '/home/jonah/Downloads/2HX_8th_new.csv'
+    csvfile7 = '/home/jonah/Downloads/2HX_7th_new.csv'
+    fastafile7 = '/home/jonah/7allbadbinders.txt'
+    fastafile8 = '/home/jonah/8allbadbinders.txt'
+    outfile8 = '/home/jonah/8allBbindersP.txt'
+    outfile7 = '/home/jonah/7allBbindersP.txt'
+    x = open(outfile7, 'w')
+    y = open(outfile8, 'w')
 
     sim = 0.85
-    seqs, affs = import_allseqs_lowaff(csvfile, sim)
+    #seqs7, affs7 = final_pruning_lowaff(fastafile7, sim)
+    seqs8, affs8 = final_pruning_lowaff(fastafile8, sim)
 
     # Final Sequences Aligned
-    f = open(outfile, 'w')
-    for x in range(len(affs)):
-        print('>seq' + str(x)+'-'+affs[x], file=f)
-        print(seqs[x], file=f)
+    # f = open(outfile7, 'w')
+    # for x in range(len(affs7)):
+    #     print('>seq' + str(x)+'-'+affs7[x], file=f)
+    #     print(seqs7[x], file=f)
+    # f.close()
+
+    f = open(outfile8, 'w')
+    for x in range(len(affs8)):
+        print('>seq' + str(x) + '-' + affs8[x], file=f)
+        print(seqs8[x], file=f)
     f.close()
