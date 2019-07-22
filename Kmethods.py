@@ -223,22 +223,23 @@ def Parallelized_ScoringK(N, q, SEQHANDLER, CoreNum, outk, outr):
 # upath = "/home/jonah/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/SeqwAff/"
 # cpath = upath + 'Clust' + str(clustid) + '/'
 # seqp = cpath + 'full.fasta'
-seqfile = "/home/jprocyk/Kmat/8thfull.txt"
-titles, seqs = dca.Fasta_Read_Aff(seqfile)
+
 N = 40
 q = 5
-
-SEQHANDLER = []
-for i in range(len(seqs)):
-    x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
-    SEQHANDLER.append(x)
-
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 CoreNum = comm.Get_size()
 
+print('My rank is ', rank)
+
 if rank == 0:
+    seqfile = "/home/jprocyk/Kmat/8thfull.txt"
+    titles, seqs = dca.Fasta_Read_Aff(seqfile)
+    SEQHANDLER = []
+    for i in range(len(seqs)):
+        x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
+        SEQHANDLER.append(x)
     bpn = math.floor(CoreNum / (N - 2))
     lo = CoreNum - (N - 2) * bpn
     bPni = [(bpn + 1) if x < lo else bpn for x in range(0, N - 2)]
@@ -247,7 +248,7 @@ if rank == 0:
     for j in range(CoreNum - 1):
         instructions.append([j + 1, i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
     print('Instructions Made')
-comm.bcast(instructions, root=0)
+    comm.bcast(instructions, root=0)
 if rank != 0:
     si = [(xid, N, q, i, j, bk, ek, SEQHANDLER) for (rank, xid, N, q, i, j, bk, ek, SEQHANDLER)
           in instructions if xid == rank][0]
