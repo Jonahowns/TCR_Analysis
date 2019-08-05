@@ -1,10 +1,7 @@
 import numpy as np
 import dcamethods as dca
 from scipy import stats
-import copy
-import multiprocessing as mp
 import math
-from sys import getsizeof
 from mpi4py import MPI
 
 aad = {'-': 0, 'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12,
@@ -116,20 +113,21 @@ def R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg):
     return rscorepos, rscoreneg
 
 
-def Node_Worker(id, N, q, i, j, bk, ek, SEQHANDLER):
+def Node_Worker(rank, N, q, i, j, bk, ek, SEQHANDLER):
     ScoringMatrixPos = []
     ScoringMatrixNeg = []
     cR = -1
     for k in range(bk, ek):
-        print('Worker ', id, 'k = ', k)
+        if k == (ek - 1):
+            print('Worker', rank, 'Node', i, j, 'k = ', k)
         for x in range(1, q):
             for y in range(1, q):
                 for z in range(1, q):
-                    print('Worker ', id, 'z= ', z)
+                    print('Worker ', rank, 'z= ', z)
                     if i > j or j > k:
                         continue
                     if j == math.floor((ek-bk)/2 + bk) and x == 1 and y == 1 and z == 1:
-                        print('50% on Worker ' + str(id))
+                        print("50% on Worker " + str(rank))
                     ScoringMatrixPos.append((i, j, k, x, y, z))
                     ScoringMatrixNeg .append((i, j, k, x, y, z))
                     rscorepos, rscoreneg = R_SCORE_OPTIMIZED(SEQHANDLER, ScoringMatrixPos, ScoringMatrixNeg)
@@ -142,7 +140,7 @@ def Node_Worker(id, N, q, i, j, bk, ek, SEQHANDLER):
                     if rscoreneg > rscorepos and rscoreneg > cR:
                         cR = rscoreneg
                         ScoringMatrixPos.remove((i, j, k, x, y, z))
-    print('Worker ' + str(id))
+    print('Worker ' + str(rank))
     print('Optimal R Score Obtained: ' + str(cR))
     return ScoringMatrixPos, ScoringMatrixNeg, cR
 
@@ -166,55 +164,26 @@ def Write_Overall_Output(Pos, Neg, rs, outk, outrs, N, q):
     dca.export_K(K, N, q, outk)
 
 
-def gen_indices(bPni, N):
+def gen_indices(bPni, i):
     ind = []
     for xid, x in enumerate(bPni):
         sep = math.floor((N - 2) / x)
-        for i in range(x):
-            if i == 0:
-                ind.append(xid)
+        for y in range(x):
+            if y == 0:
+                ind.append(xid+i)
                 ind.append(0)
                 ind.append(sep)
-            elif i == x-1:
+            elif y == x-1:
                 ind.append(ind[-1])
-                ind.insert(-1, xid)
-                ind.append(N-2)
+                ind.insert(-1, xid+i)
+                ind.append(N-3)
             else:
                 ind.append(ind[-1])
-                ind.insert(-1, xid)
+                ind.insert(-1, xid+i)
                 ind.append(ind[-1]+sep)
     it = iter(ind)
     tup = list(zip(it, it, it))
     return tup
-
-
-
-def Parallelized_ScoringK(N, q, SEQHANDLER, CoreNum, outk, outr):
-    bpn = math.floor(CoreNum / (N - 2))
-    lo = CoreNum - (N - 2) * bpn
-    bPni = [(bpn + 1) if x < lo else bpn for x in range(0, N - 2)]
-    ind = gen_indices(bPni, N)
-    Pos, Neg, r = [], [], []
-    for i in range(N-2):
-        print('Starting Node ' + str(i))
-        instructions = []
-        for j in range(CoreNum):
-            instructions.append([i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
-        print('Instructions Made')
-        p = mp.Pool(CoreNum)
-        print('Pool Started')
-        z = p.starmap(Node_Worker, instructions)
-        nPos, nNeg, rs = Write_Output_Node(i, z)
-        p.close()
-        print('Finished Node ' + str(i))
-        Pos += nPos
-        Neg += nNeg
-        r += rs
-    Write_Overall_Output(Pos, Neg, r, outk, outr, N, q)
-
-
-
-
 
 
 # clustid = 1
@@ -224,54 +193,62 @@ def Parallelized_ScoringK(N, q, SEQHANDLER, CoreNum, outk, outr):
 # cpath = upath + 'Clust' + str(clustid) + '/'
 # seqp = cpath + 'full.fasta'
 
-N = 40
-q = 5
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-CoreNum = comm.Get_size()
+if __name__ == "__main__":
+    N = 40
+    q = 5
 
-print('My rank is ', rank)
+    comm = MPI.COMM_WORLD
+    rank = comm.rank
+    CoreNum = comm.size
 
-if rank == 0:
+    print('Corenum: ', CoreNum)
+    print('My rank is ', rank)
+
     seqfile = "/home/jprocyk/Kmat/8thfull.txt"
     titles, seqs = dca.Fasta_Read_Aff(seqfile)
     SEQHANDLER = []
     for i in range(len(seqs)):
         x = Sequence(N, q, titles[i], seqs[i], type='dna', mat='K')
         SEQHANDLER.append(x)
-    bpn = math.floor(CoreNum / (N - 2))
-    lo = CoreNum - (N - 2) * bpn
-    bPni = [(bpn + 1) if x < lo else bpn for x in range(0, N - 2)]
-    ind = gen_indices(bPni, N)
+
+
+    PosContrib = []
+    NegContrib = []
+    rscores = []
     instructions = []
-    for j in range(CoreNum - 1):
-        instructions.append([j + 1, i, N, q, i, ind[j][0], ind[j][1], ind[j][2], SEQHANDLER])
-    print('Instructions Made')
-    comm.bcast(instructions, root=0)
-if rank != 0:
-    si = [(xid, N, q, i, j, bk, ek, SEQHANDLER) for (rank, xid, N, q, i, j, bk, ek, SEQHANDLER)
-          in instructions if xid == rank][0]
-    Pos, Neg, r = Node_Worker(rank, si[0], si[1], si[2], si[3], si[4], si[5], si[6])
-allpos = comm.gather(Pos, root=0)
-allneg = comm.gather(Neg, root=0)
-allrs = comm.gather(r, root=0)
+    for i in range(N-2):
+        if rank == 0:
+            bpn = math.floor(CoreNum/(N-2-i))
+            if bpn > N-2:
+                bpn = 38
+                bPni = [bpn for i in range(N-2-i)]
+                ind = gen_indices(bPni, i)
+                used = len(bPni)*bpn
+            else:
+                lo = CoreNum - (N-2-i)*bpn
+                bPni = [(bpn+1) if x < lo else bpn for x in range(0, N-2-i)]
+                ind = gen_indices(bPni, i)
+                used = CoreNum
+            instructions = []
+            for j in range(used):
+                instructions.append([j+1, N, q, i, ind[j][0], ind[j][1], ind[j][2]])
+        instructions = comm.bcast(instructions, root=0)
+        Pos, Neg, r = [], [], []
+        if rank != 0:
+            try:
+                si  = [(rk, N, q, i, j, bk, ek) for (rk, N, q, i, j, bk, ek) in instructions if rk == rank][0]
+                Pos, Neg, r = Node_Worker(si[0], si[1], si[2], si[3], si[4], si[5], si[6], SEQHANDLER)
+            except IndexError:
+                print('Worker ', rank, 'not used i =',i)
+        allpos = comm.gather(Pos, root = 0)
+        allneg = comm.gather(Neg, root = 0)
+        allrs = comm.gather(r, root = 0)
+        if rank == 0:
+            PosContrib += allpos
+            NegContrib += allneg
+            rscores += r
 
-if rank ==0:
-    Write_Overall_Output(allpos, allneg, allrs, '/home/jprocyk/Kmat/DesignerK.txt', '/home/jprocyk/Kmat/rscores.txt', N, q)
-    print('done bish')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if rank == 0:
+        Write_Overall_Output(PosContrib, NegContrib, rscores, '/home/jprocyk/Kmat/DesignerK.txt', '/home/jprocyk/Kmat/rscores.txt', N, q)
+        print('done')

@@ -2,6 +2,7 @@
 
 
 import sys
+import random
 
 
 
@@ -95,6 +96,27 @@ def import_allseqs_highaff(csvfile):
     o.close()
     return seqs, affs
 
+def import_allseqs_highaff_twogroups(csvfile):
+    o = open(csvfile, 'r')
+    chunk = []
+    for x in range(10000):
+        chunk.append(next(o))
+    vseqs, vaffs, gseqs, gaffs = [], [], [], []
+    for line in chunk:
+        seq, aff = line.rstrip().split(',')
+        if int(aff) == 1:
+            break
+        if len(list(seq)) != 40:
+            continue
+        if int(aff) > 3:
+            vseqs.append(seq)
+            vaffs.append(aff)
+        else:
+            gseqs.append(seq)
+            gaffs.append(aff)
+    o.close()
+    return vseqs, vaffs, gseqs, gaffs
+
 
 def final_pruning_lowaff(fastafile, sim):
     o = open(fastafile)
@@ -109,6 +131,33 @@ def final_pruning_lowaff(fastafile, sim):
     selaffs, selseqs = prune_alignment(affs, seqs, sim)
     return selseqs, selaffs
 
+def create_test_seqs(csvfile):
+    o = open(csvfile, 'r')
+    seqs, affs = [], []
+    for line in o:
+        seq, aff = line.rstrip().split(',')
+        if len(list(seq)) != 40:
+            continue
+        seqs.append(seq)
+        affs.append(aff)
+    print(len(seqs))
+    o.close()
+    sseq, saff = [], []
+    check = False
+    while check is False:
+        for x in range(20000):
+            r = random.randint(0, len(seqs)-1)
+            print(r)
+            sseq.append(seqs[r])
+            saff.append(affs[r])
+        paffs, pseqs = prune_alignment(saff, sseq)
+        sseq = pseqs
+        saff = paffs
+        if len(sseq) < 100000:
+            continue
+        else:
+            check = True
+    return sseq, saff
 
 
 
@@ -118,14 +167,19 @@ if __name__ == '__main__':
     csvfile7 = '/home/jonah/Downloads/2HX_7th_new.csv'
     fastafile7 = '/home/jonah/7allbadbinders.txt'
     fastafile8 = '/home/jonah/8allbadbinders.txt'
-    outfile8 = '/home/jonah/8allBbindersP.txt'
-    outfile7 = '/home/jonah/7allBbindersP.txt'
-    x = open(outfile7, 'w')
-    y = open(outfile8, 'w')
+    outfile8 = '/home/jonah/8test.txt'
+    outfile7 = '/home/jonah/7test.txt'
+
 
     sim = 0.85
-    #seqs7, affs7 = final_pruning_lowaff(fastafile7, sim)
-    seqs8, affs8 = final_pruning_lowaff(fastafile8, sim)
+    seqt, afft = create_test_seqs(csvfile8)
+
+    f = open(outfile8, 'w')
+    for x in range(len(afft)):
+        print('>seq' + str(x) + '-' + str(afft[x]), file=f)
+        print(seqt[x], file=f)
+    f.close()
+
 
     # Final Sequences Aligned
     # f = open(outfile7, 'w')
@@ -134,8 +188,4 @@ if __name__ == '__main__':
     #     print(seqs7[x], file=f)
     # f.close()
 
-    f = open(outfile8, 'w')
-    for x in range(len(affs8)):
-        print('>seq' + str(x) + '-' + affs8[x], file=f)
-        print(seqs8[x], file=f)
-    f.close()
+

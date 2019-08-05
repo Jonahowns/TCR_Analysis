@@ -13,20 +13,22 @@ import dcamethods as dca
 
 #macpath = "/Users/Amber/Dropbox (ASU)/"
 # droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
-droppath = "Projects/DCA/GenSeqs/"
+droppath = "Projects/DCA/v2/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
-testpath = upath + droppath
+testpath = upath + 'Projects/DCA/GenSeqs/'
 blpath = "/home/jonah/bl-DCA/"
 bldrop = "bl78/"
-fullpath = upath + droppath + bldrop
+g2path = upath + droppath + 'FamHJ/'
+g3path = upath + droppath + '3GHJ/'
+
 clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
             42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
 
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 rna = ['-', 'A', 'C', 'G', 'U']
 dna = ['-', 'A', 'C', 'G', 'T']
-rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U':4}
+rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4, 'T': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 
 
@@ -998,33 +1000,48 @@ def subplot_seq_aff_v_E_w_OtherFamSeqs(subplot, famid, J, H, **kwargs):
 
 N = 40
 q = 5
-bJp = fullpath + 'jb7_vals'
-bHp = fullpath + 'hb7_vals'
-gJp = fullpath + 'j7_vals'
-gHp = fullpath + 'h7_vals'
+# 2 Group Method
 
 
-bJ = dca.sortjmat_blDCA(bJp, N, q)
-bH = dca.sorthmat_blDCA(bHp, N, q)
-gH = dca.sorthmat_blDCA(gHp, N, q)
-gJ = dca.sortjmat_blDCA(gJp, N, q)
+fam = 7
+bJp = g2path + str(fam) + 'BP.j'
+bHp = g2path + str(fam) + 'BP.h'
+gHp = g2path + str(fam) + 'GP.h'
+gJp = g2path + str(fam) + 'GP.j'
 
-print(np.average(gH))
-print(np.average(bH))
-print(np.average(gJ))
-print(np.average(bJ))
+fam = 8
+bJp8 = g2path + str(fam) + 'BP.j'
+bHp8 = g2path + str(fam) + 'BP.h'
+gHp8 = g2path + str(fam) + 'GP.h'
+gJp8 = g2path + str(fam) + 'GP.j'
 
+bJ = dca.sortjmat_plmDCA(bJp, N, q)
+bH = dca.sorthmat_plmDCA(bHp, N, q)
+gH = dca.sorthmat_plmDCA(gHp, N, q)
+gJ = dca.sortjmat_plmDCA(gJp, N, q)
+bJ8 = dca.sortjmat_plmDCA(bJp8, N, q)
+bH8 = dca.sorthmat_plmDCA(bHp8, N, q)
+gH8 = dca.sorthmat_plmDCA(gHp8, N, q)
+gJ8 = dca.sortjmat_plmDCA(gJp8, N, q)
 
-bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
-bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
-gHpos = dca.Sign_Seperator(gH, N, q, mattype='h', sign='+')
-gHneg = dca.Sign_Seperator(gH, N, q, mattype='h', sign='-')
-bJpos = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='+')
-bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
-gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
-gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
+# print(np.average(gH))
+# print(np.average(bH))
+# print(np.average(gJ))
+# print(np.average(bJ))
+#
+#
+# bHpos = dca.Sign_Seperator(bH, N, q, mattype='h', sign='+')
+# bHneg = dca.Sign_Seperator(bH, N, q, mattype='h', sign='-')
+# gHpos = dca.Sign_Seperator(gH, N, q, mattype='h', sign='+')
+# gHneg = dca.Sign_Seperator(gH, N, q, mattype='h', sign='-')
+# bJpos = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='+')
+# bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
+# gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
+# gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 
-testseqpath = testpath + '7thfull.txt'
+# testseqpath = testpath + '7thfull.txt'
+testseqpath = g2path + '7test.txt'
+testseqpath8 = g2path + '8test.txt'
 
 # H = 2*gH - bH # S1
 # J = 2*gJ - bJ # S1
@@ -1037,7 +1054,10 @@ testseqpath = testpath + '7thfull.txt'
 # hout = '/home/jonah/Desktop/Hdesigner.txt'
 
 
-# H = gH
+H = gH
+J = 2*gJ - bJ
+H8 = gH8
+J8 = 2*gJ8 - bJ8
 # Jdes = dca.designerJ(N, q, testseqpath)
 # dca.export_J(Jdes, N, q, jout)
 # Hdes = dca.designerH(N, q, testseqpath)
@@ -1045,9 +1065,14 @@ testseqpath = testpath + '7thfull.txt'
 
 
 
-# dca.best_seperation(J, H, N, q, testseqpath)
-J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
-H = gH
+# best7 = dca.best_seperation(J, H, N, q, testseqpath)
+best8 = dca.best_seperation(J8, H8, N, q, testseqpath8)
+# print('7 best Sep Val: ', best7)
+print('8 best Sep Val: ', best8)
+
+
+# J = dca.Rm_Vals_Percentage_J(2*gJ - bJ, 1.0, N, q)
+# H = gH
 # J = gJ
 # For Family 7 it looks like 1 percent of the top values give the best R score
 # For Family 8 it looks like 0.1 percent of the top values give the best R score
@@ -1070,7 +1095,7 @@ H = gH
 # H = 2*np.add(np.subtract(gHpos, bHpos, bHneg), gHneg)
 # H = np.add(np.subtract(2*gHpos, bHpos, bHneg), gHneg)
 # EHHHHH
-# J = gJ - bJ
+# J = 2*gJ - bJ
 # H = gH - bH
 
 
@@ -1091,26 +1116,26 @@ H = gH
 # plt.savefig('/home/jonah/Desktop/designerJ.png', dpi=600)
 # dca.Fig_FullH(ax[1], 8, H, N, q, vmin=-1, vmax=1)
 # plt.savefig('/home/jonah/Desktop/8gbpos.png', dpi=600)
-rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #29.211
-rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #27.6999
-rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #30.9315
-rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #17.025598
-rdseq801 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.5
-rdseq807 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAUGUG'  #2.5
-rdseq804 = 'GGGCUAAGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.07
-rdseq802 = 'GGCCUGAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.4
-rdseq803 = 'GGCCUGGGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.8
-#
-#
-rdseq805 = 'GGCCUGGGGGCGCGCUGGGUGAUGUGUGGGCACCUAUGUC' # 15.8289
-E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
-print(E)
+# rdseq806 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUC'  #29.211
+# rdseq808 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #27.6999
+# rdseq809 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUUGGUC'  #30.9315
+# rdhonly  = 'AGGGUAUGGGUGUGGUGGGCUUUCGGUGGUUUGGUUGGUC'  #17.025598
+# rdseq801 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.5
+# rdseq807 = 'GGGCUAAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAUGUG'  #2.5
+# rdseq804 = 'GGGCUAAGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #2.07
+# rdseq802 = 'GGCCUGAGGGCGUAGUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.4
+# rdseq803 = 'GGCCUGGGGGCGCGCUCGGCGUAUGUUGGGUAGUUAAGUG'  #0.8
+
+
+# rdseq805 = 'GGCCUGGGGGCGCGCUGGGUGAUGUGUGGGCACCUAUGUC' # 15.8289
+# E = [dca.Calc_Energy(rdseq806, J, H), dca.Calc_Energy(rdseq808, J, H), dca.Calc_Energy(rdseq809, J, H), dca.Calc_Energy(rdhonly, J, H), dca.Calc_Energy(rdseq805, J, H)]
+# print(E)
 
 
 
 # testseqpath = testpath + '7thfull.txt'
 # dca.Plot_Seq_Aff_v_E(J, H, ('/home/jonah/Desktop/testenergy.png'), testseqpath)
-dca.Raw_Aff_v_E(J, H, 'A vs E Family 7', ('/home/jonah/Desktop/raw7.png'), testseqpath)
+# dca.Raw_Aff_v_E(J, H, 'A vs E Family 7', ('/home/jonah/Desktop/2Gtrial.png'), testseqpath)
 
 
 # mix_score_dist(7)

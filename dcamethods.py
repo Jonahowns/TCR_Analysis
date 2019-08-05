@@ -14,7 +14,7 @@ aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q',
 aad = {'-': 0, 'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12,
        'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20}
 rna = ['-', 'A', 'C', 'G', 'U']
-rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4}
+rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4, 'T': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 dna = ['-', 'A', 'C', 'G', 'T']
 nucs = ['A', 'C', 'G', 'U']
@@ -592,6 +592,22 @@ def TopX_JNorms(J, N, x, **kwargs):
         return top10
 
 
+def TopX_Pos_JNorms(J, N, q, x):
+    pct = 80
+    jnorm = np.full((N - 1, N - 1), 0.0)
+    vals = []
+    Jpos = Sign_Seperator(J, N, q, mattype='j', sign='+')
+    for i in range(N - 1):
+        for j in range(N - 1):
+            jnorm[i, j] = np.linalg.norm(Jpos[i, j, :, :])
+            if jnorm[i, j] != 0.0:
+                vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
+    vals.sort(key=lambda tup: tup[2])
+    ind = int(-x)
+    top10 = vals[ind:-1]
+    return top10
+
+
 # Returns the highest x amount of H Norms
 # Keyword argument dist determines wheter the cutoff and values are returned for use in distribution figures
 # norm values returned as list of vals and cutoff returned as single value
@@ -1148,7 +1164,7 @@ def Seq_edit_past_entry_comp(array, gseq):
 def gen_goodseq(J, H, N, norms):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
-    tval = TopX_JNorms(J, N, norms)
+    tval = TopX_Pos_JNorms(J, N, 5, norms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -1300,10 +1316,10 @@ def best_seperation(J, H, N, q, fastafile):
     titles, seqs = Fasta_Read_Aff(fastafile)
     tmpH = H/4
     results = []
-    for i in range(1, 1000):
+    for i in range(2, 300, 2):
         pct = i/100
         print('pct = ' + str(pct))
-        tmpJ = J
+        tmpJ = Rm_Vals_Percentage_J(J, pct, N, q)
         energies = []
         for x in seqs:
             energies.append(Calc_Energy(x, tmpJ, tmpH))
@@ -1323,6 +1339,7 @@ def best_seperation(J, H, N, q, fastafile):
     bpct = results[-1][0]
     tmpJ = Rm_Vals_Percentage_J(J, bpct, N, q)
     Raw_wRscore(tmpJ, tmpH, '/home/jonah/Desktop/bestfit.png', fastafile)
+    return bpct
 
 
 def designed_GBJmatrix(gJ, N, q, fastafile):
@@ -1778,6 +1795,7 @@ def Raw_wRscore(J, H, outpath, infile):
     plt.ylabel('Energy')
     plt.xlabel('R Score: ' + str(linreg[2]))
     plt.savefig(outpath, dpi=600)
+    plt.close()
 
 
 def Raw_wRscore_TCR(J, H, outpath, infile):

@@ -7,7 +7,7 @@ import dcamethods as dca
 import math
 import random
 
-droppath = "Projects/DCA/GenSeqs/"
+droppath = "Projects/DCA/v2/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
 fullpath = upath + droppath
@@ -15,7 +15,8 @@ rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U':4}
 rna = ['-', 'A', 'C', 'G', 'U']
 nucs = ['A', 'C', 'G', 'U']
 nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
-
+g2path = upath + droppath + 'FamHJ/'
+g3path = upath + droppath + '3GHJ/'
 
 
 # def check_vals(x, y, pvals):
@@ -347,24 +348,62 @@ nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
 #         out.close()
 
 
-famid = 7
-Jp = fullpath + str(famid) + 'j'
-Hp = fullpath + str(famid) + 'h'
-BJp = fullpath + str(famid) + 'bj'
-BHp = fullpath + str(famid) + 'bh'
-out = fullpath + str(famid) + 'hybridgenbinders.txt'
-# N
 N = 40
-q=5
-# Get Matrix Ready
-J = dca.sortjmat_plmDCA(Jp, N, 5)
-H = dca.sorthmat_plmDCA(Hp, N, 5)
-bJ = dca.sortjmat_plmDCA(BJp, N, 5)
-bH = dca.sorthmat_plmDCA(BHp, N, 5)
+q = 5
+# 2 Group Method
 
-hybridH, hybridJ = dca.Binder_Comp_JH(J, bJ, H, bH, N, 5, htype='good', jnormpct=40)
-hybridmuttJ = dca.HJ_Mutant(hybridJ, hybridH, N, q)
-dca.gen_goodseq_mutt(hybridJ, hybridH, hybridmuttJ, 40, 500, normsource='J')
+
+fam = 7
+#Paths
+#BadBinders Import
+bJp = g2path + str(fam) + 'BP.j'
+bHp = g2path + str(fam) + 'BP.h'
+# Goodbinders
+gHp = g3path + str(fam) + 'gg.h'
+gJp = g3path + str(fam) + 'gg.j'
+# Best Binders
+vJp = g3path + str(fam) + 'vg.j'
+vHp = g3path + str(fam) + 'vg.h'
+# Import Matrices
+bJ = dca.sortjmat_plmDCA(bJp, N, q)
+bH = dca.sorthmat_plmDCA(bHp, N, q)
+
+gH = dca.sorthmat_plmDCA(gHp, N, q)
+gJ = dca.sortjmat_plmDCA(gJp, N, q)
+
+vJ = dca.sortjmat_plmDCA(vJp, N, q)
+vH = dca.sorthmat_plmDCA(vHp, N, q)
+
+
+bJpos = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='+')
+bJneg = dca.Sign_Seperator(bJ, N, q, mattype='j', sign='-')
+
+gJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
+gJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
+
+vJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
+vJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
+
+# testseqpath = testpath + '7thfull.txt'
+testseqpath = g2path + '7test.txt'
+testseqpath8 = g2path + '8test.txt'
+
+print(np.sum(vJ))
+print(np.sum(gJ))
+print(np.sum(bJ))
+
+
+H = (vH + gH - bH) # S1
+J = (vJ + gJ - bJ) # S1
+
+Jmutt = dca.HJ_Mutant(J, H, N, q)
+gmuttseq = dca.gen_goodseq(Jmutt, H, N, 200)
+dca.Calc_Energy(gmuttseq, J, H)
+dca.gen_badseq(J, H, N, 10)
+
+# hybridH, hybridJ = dca.Binder_Comp_JH(J, bJ, H, bH, N, 5, htype='good', jnormpct=40)
+# hybridmuttJ = dca.HJ_Mutant(hybridJ, hybridH, N, q)
+# dca.gen_goodseq_mutt(hybridJ, hybridH, hybridmuttJ, 40, 500, normsource='J')
 
 
 # T = 0.1
