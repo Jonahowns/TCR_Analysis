@@ -265,8 +265,8 @@ def sortjmat_plmDCA(file, N, q):
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 2, int(data[2]) - 1, int(data[3]) - 1] = float(data[4].rstrip())
     o.close()
-    normed = Normalize_JMatrix(fullmatrix, N, q)
-    return normed
+    #normed = Normalize_JMatrix(fullmatrix, N, q)
+    return fullmatrix
 
 
 def sorthmat_blDCA(file, N, q):
@@ -510,6 +510,44 @@ def Calc_Energy(seq, J, H):
     print(Jenergy)
     print(Henergy)
     return energy
+
+
+def Point_mutation_better_binder_checker(seq, J, H):
+    startingE = Calc_Energy(seq, J, H)
+    tseq = list(copy.deepcopy(seq))
+    for iid, i in enumerate(tseq):
+        alternatives = [x for x in nucs if x != i]
+        for y in alternatives:
+            tseq[iid] = y
+            tenergy = Calc_Energy(tseq, J, H)
+            if tenergy > startingE:
+                print(iid+1, i, 'to', y)
+        tseq[iid] = i
+
+
+
+
+
+def Calc_Energy_Breakdown(seq, J, H):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    iE = np.full((dist, 4), 0.0)
+    for x in range(0, dist):
+        ibase = rnad[seq[x]]
+        Henergy += H[x, ibase]
+        iE[x, 0] += H[x, ibase]
+        iE[x, 3] = x+1
+        for y in range(x + 1, dist):
+            jbase = rnad[seq[y]]
+            Jenergy += J[x, y - 1, ibase, jbase]
+            iE[x, 1] += 0.5*J[x, y - 1, ibase, jbase]
+            iE[y, 1] += 0.5*J[x, y - 1, ibase, jbase]
+        iE[x, 2] = iE[x, 0] + iE[x, 1]
+    energy = Jenergy + Henergy
+    return energy, iE
+
 
 
 # N and q correspond to the matrix the
@@ -1895,12 +1933,12 @@ class GenerSeq:
     def calculate_energy(self, J, h):
         J_energy = 0.
         h_energy = 0.
-        for i in range(1, len(self._seq)):
+        for i in range(0, len(self._seq)):
             t1 = nuc_to_id[self._seq[i]]
             h_energy += h[i, t1]
             for j in range(i + 1, len(self._seq)):
                 t2 = nuc_to_id[self._seq[j]]
-                J_energy += J[i - 1, j - 2, t1, t2]
+                J_energy += J[i, j - 1, t1, t2]
         return J_energy + h_energy
 
     def mutate_seq(self):
@@ -1910,14 +1948,23 @@ class GenerSeq:
         return self._seq
 
     def run_sampling(self, J, h, outpath):
+        total, acc = 0, 0
         out = open(outpath, 'w')
         oldene = self.calculate_energy(J, h)
         oldseq = copy.deepcopy(self._seq)
         for i in range(self._steps):
+            total += 1
             self.mutate_seq()
             newene = self.calculate_energy(J, h)
             p = math.exp(self._beta * (newene - oldene))
+            # if .25 < acc/total < .35:
+            #     continue
+            # elif acc/total < 0.25:
+            #     self._T *= 1.05
+            # elif acc/total > .35:
+            #     self._T *= 0.95
             if random.random() < p:
+                acc+=1
                 # accept move
                 oldene = newene
                 oldseq = copy.deepcopy(self._seq)
