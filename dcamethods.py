@@ -1829,10 +1829,13 @@ def Raw_wRscore(J, H, outpath, infile):
     linreg = stats.linregress(datax, datae)
     xl = np.linspace(0, highestaff, 100)
     plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
+    cutoff = max([y for x, y in api if x == 1])
+    plt.plot(xl, [cutoff for i in xl], ':b')
     plt.scatter(titles, energies)
     plt.ylabel('Energy')
     plt.xlabel('R Score: ' + str(linreg[2]))
     plt.savefig(outpath, dpi=600)
+    print("Cutoff",cutoff)
     plt.close()
 
 
@@ -1946,6 +1949,37 @@ class GenerSeq:
             pos = np.random.choice(range(len(self._seq)))
             self._seq[pos] = np.random.choice(nucs)
         return self._seq
+
+    def run_adaptive_sampling(self, J, h, outpath):
+        total, acc = 0, 0
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            total += 1
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if .25 < acc/total < .35:
+                continue
+            elif acc/total < 0.25:
+                self._T += 0.01
+            elif acc/total > .35:
+                self._T -= 0.01
+            if random.random() < p:
+                acc+=1
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file=out)
+                        print(''.join(self._seq), file=out)
+                    print(str((i / self._steps) * 100) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        out.close()
 
     def run_sampling(self, J, h, outpath):
         total, acc = 0, 0

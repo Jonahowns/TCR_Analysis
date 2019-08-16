@@ -15,7 +15,7 @@ droppath = "Projects/DCA/v2/"
 #fullpath = macpath+droppath
 upath = "/home/jonah/Dropbox (ASU)/"
 testpath = upath + 'Projects/DCA/GenSeqs/'
-blpath = "/home/jonah/bl-DCA/"
+cpath = "/home/jonah/Current/"
 bldrop = "bl78/"
 g2path = upath + droppath + 'FamHJ/'
 g3path = upath + droppath + '3GHJ/'
@@ -35,7 +35,7 @@ q = 5
 # 2 Group Method
 
 
-fam = 7
+fam = 8
 #Paths
 #BadBinders Import
 bJp = g2path + str(fam) + 'BP.j'
@@ -67,8 +67,8 @@ vJneg = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='-')
 vJpos = dca.Sign_Seperator(gJ, N, q, mattype='j', sign='+')
 
 # testseqpath = testpath + '7thfull.txt'
-testseqpath = g2path + '7test.txt'
-testseqpath8 = g2path + '8test.txt'
+allseqpath = cpath + str(fam) + 'all.txt'
+
 
 print(np.sum(vJ))
 print(np.sum(gJ))
@@ -81,43 +81,5 @@ J = (vJ + gJ - bJ) # S1
 # norms = dca.TopX_JNorms(J, N, 10)
 # print(norms)
 
-out1 = '/home/jonah/Desktop/fam8GBtV1.txt'
-out2 = '/home/jonah/Desktop/fam8GBtV2.txt'
-out3 = '/home/jonah/Desktop/fam8GBtV3.txt'
-out4 = '/home/jonah/Desktop/fam8GBtV4.txt'
-out5 = '/home/jonah/Desktop/fam8GBtV5.txt'
-out6 = '/home/jonah/Desktop/fam8GBtV6.txt'
-
-T1 = 0.1
-T2 = 0.2
-T3 = 0.3
-gen1 = dca.GenerSeq(N, T1, mut_steps=5, out_after=10000, steps=100000000)
-gen2 = dca.GenerSeq(N, T2, mut_steps=5, out_after=10000, steps=100000000)
-gen3 = dca.GenerSeq(N, T3, mut_steps=5, out_after=10000, steps=100000000)
-gen4 = dca.GenerSeq(N, T1, mut_steps=5, out_after=10000, steps=100000000)
-gen5 = dca.GenerSeq(N, T2, mut_steps=5, out_after=10000, steps=100000000)
-gen6 = dca.GenerSeq(N, T3, mut_steps=5, out_after=10000, steps=100000000)
-
-p1g = Process(target=gen1.run_sampling, args=(J, H, out1))
-p2g = Process(target=gen2.run_sampling, args=(J, H, out2))
-p3g = Process(target=gen3.run_sampling, args=(J, H, out3))
-
-p1b = Process(target=gen4.run_sampling, args=(J, H, out4))
-p2b = Process(target=gen5.run_sampling, args=(J, H, out5))
-p3b = Process(target=gen6.run_sampling, args=(J, H, out6))
-
-p1g.start()
-p2g.start()
-p3g.start()
-p1b.start()
-p2b.start()
-p3b.start()
-
-p1g.join()
-p2g.join()
-p3g.join()
-p1b.join()
-p2b.join()
-p3b.join()
-# dca.Raw_Aff_v_E(J, H, ('A vs E Family ' + str(fam)), ('/home/jonah/Desktop/' + str(fam) + '3Gtrial.png'), testseqpath)
+dca.Raw_Aff_v_E(J, H, ('A vs E Family ' + str(fam)), ('/home/jonah/Desktop/' + str(fam) + '3Gtrial.png'), allseqpath)
 # dca.Raw_wRscore(J, H, ('/home/jonah/Desktop/' + str(fam) + 'normfam7.png'), testseqpath)

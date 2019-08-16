@@ -14,7 +14,7 @@ droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/"
 wpath = "C:/Users/Amber/Dropbox (ASU)/"
 # fullpath = macpath+droppath
 # fullpath = ubuntpath + droppath
-fullpath = wpath + droppath
+fullpath = ubuntpath + droppath
 family_files = {'AAA': fullpath + 'S_7_AAA_2_norm_plus.tsv.cluster',
                 'ACC': fullpath + 'S_7_ACC_2_norm_plus.tsv.cluster',
                 'AGG': fullpath + 'S_7_AGG_2_norm_plus.tsv.cluster',
@@ -308,8 +308,8 @@ class SeqHandler:
             print(string, file = self.logfile)
 
     def write_seqs(self):
-        os.mkdir(fullpath + 'SeqwAff')
-        seqdir = fullpath + 'SeqwAff/'
+        # os.mkdir(fullpath + 'SeqwAff')
+        seqdir = fullpath + 'Ind/'
         for xid, x in enumerate(self.clusters):
             os.mkdir(seqdir+'Clust'+str(int(x)))
             afamfile = seqdir + 'Clust' + str(int(x)) + '/' + 'afam.fasta'
@@ -317,24 +317,56 @@ class SeqHandler:
             gfamfile = seqdir + 'Clust' + str(int(x)) + '/' + 'gfam.fasta'
             tfamfile = seqdir + 'Clust' + str(int(x)) + '/' + 'tfam.fasta'
             fullfile = seqdir + 'Clust' + str(int(x)) + '/' + 'full.fasta'
-            clustid = str(int(x))
-            w = 'WROTE: UNIQ SEQ CLUSTER ' + clustid
-            wa = w + '-A TO ' + afamfile
-            wc = w + '-C TO ' + cfamfile
-            wg = w + '-G TO ' + gfamfile
-            wt = w + '-T TO ' + tfamfile
-            wf = w + '-FULL TO ' + fullfile
+            aaafile = seqdir + 'Clust' + str(int(x)) + '/' + 'aaa.fasta'
+            accfile = seqdir + 'Clust' + str(int(x)) + '/' + 'acc.fasta'
+            aggfile = seqdir + 'Clust' + str(int(x)) + '/' + 'agg.fasta'
+            attfile = seqdir + 'Clust' + str(int(x)) + '/' + 'att.fasta'
+            cacfile = seqdir + 'Clust' + str(int(x)) + '/' + 'cac.fasta'
+            ccgfile = seqdir + 'Clust' + str(int(x)) + '/' + 'ccg.fasta'
+            ctafile = seqdir + 'Clust' + str(int(x)) + '/' + 'cta.fasta'
+            gagfile = seqdir + 'Clust' + str(int(x)) + '/' + 'gag.fasta'
+            gctfile = seqdir + 'Clust' + str(int(x)) + '/' + 'gct.fasta'
+            gtcfile = seqdir + 'Clust' + str(int(x)) + '/' + 'gtc.fasta'
+            tatfile = seqdir + 'Clust' + str(int(x)) + '/' + 'tat.fasta'
+            tcafile = seqdir + 'Clust' + str(int(x)) + '/' + 'tca.fasta'
+            tgcfile = seqdir + 'Clust' + str(int(x)) + '/' + 'tgc.fasta'
+            ttgfile = seqdir + 'Clust' + str(int(x)) + '/' + 'ttg.fasta'
 
+            clustid = str(int(x))
+            # w = 'WROTE: UNIQ SEQ CLUSTER ' + clustid
+            # wa = w + '-A TO ' + afamfile
+            # wc = w + '-C TO ' + cfamfile
+            # wg = w + '-G TO ' + gfamfile
+            # wt = w + '-T TO ' + tfamfile
+            # wf = w + '-FULL TO ' + fullfile
+            #
             writefasta(self.clust_by_fam[1, xid], afamfile, 'A')
-            self.logger(wa)
+            # self.logger(wa)
             writefasta(self.clust_by_fam[2, xid], cfamfile, 'C')
-            self.logger(wc)
+            # self.logger(wc)
             writefasta(self.clust_by_fam[3, xid], gfamfile, 'G')
-            self.logger(wg)
+            # self.logger(wg)
             writefasta(self.clust_by_fam[4, xid], tfamfile, 'T')
-            self.logger(wt)
+            # self.logger(wt)
             writefasta(self.full_clusts[1, xid], fullfile, 'full')
-            self.logger(wf)
+            # self.logger(wf)
+
+            writefasta(self.clust_all[1, xid], aaafile, 'AAA')
+            writefasta(self.clust_all[2, xid], accfile, 'ACC')
+            writefasta(self.clust_all[3, xid], aggfile, 'AGG')
+            writefasta(self.clust_all[4, xid], attfile, 'ATT')
+            writefasta(self.clust_all[5, xid], cacfile, 'CAC')
+            writefasta(self.clust_all[6, xid], ccgfile, 'CCG')
+            writefasta(self.clust_all[7, xid], ctafile, 'CTA')
+            writefasta(self.clust_all[8, xid], gagfile, 'GAG')
+            writefasta(self.clust_all[9, xid], gctfile, 'GCT')
+            writefasta(self.clust_all[10, xid], gtcfile, 'GTC')
+            writefasta(self.clust_all[11, xid], tatfile, 'TAT')
+            writefasta(self.clust_all[12, xid], tcafile, 'TCA')
+            writefasta(self.clust_all[13, xid], tgcfile, 'TGC')
+            writefasta(self.clust_all[14, xid], ttgfile, 'TTG')
+
+
 
     def __del__(self):
          print('Logfile Written to ' + fullpath)
