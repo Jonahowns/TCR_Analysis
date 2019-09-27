@@ -2217,12 +2217,12 @@ class GenerSeq:
             self.mutate_seq()
             newene = self.calculate_energy(J, h)
             p = math.exp(self._beta * (newene - oldene))
-            if .25 < acc/total < .35:
+            if .3 < acc/total < .8:
                 continue
-            elif acc/total < 0.25:
-                self._T += 0.01
-            elif acc/total > .35:
-                self._T -= 0.01
+            elif acc/total < 0.3:
+                self._T *= 1.05
+            elif acc/total > .8:
+                self._T *= 0.95
             if random.random() < p:
                 acc+=1
                 # accept move
