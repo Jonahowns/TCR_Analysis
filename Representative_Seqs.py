@@ -4,7 +4,9 @@
 import sys
 import random
 import dcamethods as dca
+import math
 import numpy as np
+import random
 
 
 
@@ -88,7 +90,7 @@ def import_allseqs_highaff(csvfile):
         chunk.append(next(o))
     seqs, affs = [], []
     for line in chunk:
-        seq, aff = line.rstrip().split(',')
+        seq, aff = line.rstrip().split(';')
         if int(aff) == 1:
             break
         if len(list(seq)) != 40:
@@ -193,6 +195,18 @@ def ensemble_checker(seqfile, *seqs):
         results.append((seq, highest_sim_score, msseq))
     return results
 
+def seq_splitter(seqs):
+    l1, l2 = [], []
+    pos = 20
+    for x in seqs:
+        seql = list(x)
+        seq1 = seql[:pos]
+        seq2 = seql[pos:]
+        l1.append(''.join(seq1))
+        l2.append(''.join(seq2))
+    return l1, l2
+
+
 
 
 
@@ -213,60 +227,96 @@ if __name__ == '__main__':
     all5 = '/home/jonah/5all.txt'
     all7 = '/home/jonah/7all.txt'
     all8 = '/home/jonah/8all.txt'
+    outgood8 = '/home/jonah/Desktop/8gv2.txt'
+    outg1 = '/home/jonah/Desktop/split/8gsplit1.txt'
+    outg2 = '/home/jonah/Desktop/split/8gsplit2.txt'
 
     droppath = "Projects/DCA/v2/"
     upath = "/home/jonah/Dropbox (ASU)/"
     g2path = upath + droppath + 'FamHJ/'
     g3path = upath + droppath + '3GHJ/'
+    out10 = '/home/jonah/Desktop/Current/v4/10percent/s10.txt'
+    out90 = '/home/jonah/Desktop/Current/v4/10percent/s90.txt'
 
 
-    fam = 8
-    N =40
-    q =5
-    # Paths
-    # BadBinders Import
-    bJp = g2path + str(fam) + 'BP.j'
-    bHp = g2path + str(fam) + 'BP.h'
-    # Goodbinders
-    gHp = g3path + str(fam) + 'gg.h'
-    gJp = g3path + str(fam) + 'gg.j'
-    # Best Binders
-    vJp = g3path + str(fam) + 'vg.j'
-    vHp = g3path + str(fam) + 'vg.h'
-    # Import Matrices
-    bJ = dca.sortjmat_plmDCA(bJp, N, q)
-    bH = dca.sorthmat_plmDCA(bHp, N, q)
+    seqs, affs = import_allseqs_highaff(csvfile8)
+    seq10, aff10, pc = [], [], []
+    for i in range(math.floor(len(seqs)/10)):
+        r = random.randint(0, len(seqs)-1)
+        if r not in pc:
+            pc.append(r)
+            seq10.append(seqs[r])
+            aff10.append(affs[r])
+        else:
+            continue
 
-    gH = dca.sorthmat_plmDCA(gHp, N, q)
-    gJ = dca.sortjmat_plmDCA(gJp, N, q)
+    seq90 = [x for x in seqs if x not in seq10]
+    aff90 = []
+    for seq in seq90:
+        ai = seqs.index(seq)
+        aff90.append(ai)
 
-    vJ = dca.sortjmat_plmDCA(vJp, N, q)
-    vH = dca.sorthmat_plmDCA(vHp, N, q)
+    o = open(out10, 'w')
+    for iid, i in enumerate(aff10):
+        print('>' + 'seq' + str(iid) + '-' + str(i), file=o)
+        print(seq10[iid], file=o)
+    o.close()
 
-    H = (vH + gH - bH)  # S1
-    J = (vJ + gJ - bJ)  # S1
+    x = open(out90, 'w')
+    for iid, i in enumerate(aff90):
+        print('>' + 'seq' + str(iid) + '-' + str(i), file=x)
+        print(seq90[iid], file=x)
+    x.close()
 
 
-    # sim = 0.85
-    # seqt, afft = all_seqs(csvfile6)
+
+    # fam = 8
+    # N =40
+    # q =5
+    # # Paths
+    # # BadBinders Import
+    # bJp = g2path + str(fam) + 'BP.j'
+    # bHp = g2path + str(fam) + 'BP.h'
+    # # Goodbinders
+    # gHp = g3path + str(fam) + 'gg.h'
+    # gJp = g3path + str(fam) + 'gg.j'
+    # # Best Binders
+    # vJp = g3path + str(fam) + 'vg.j'
+    # vHp = g3path + str(fam) + 'vg.h'
+    # # Import Matrices
+    # bJ = dca.sortjmat_plmDCA(bJp, N, q)
+    # bH = dca.sorthmat_plmDCA(bHp, N, q)
     #
-    # f = open(outall6, 'w')
-    # for x in range(len(afft)):
-    #     print('>seq' + str(x) + '-' + str(afft[x]), file=f)
-    #     print(seqt[x], file=f)
-    # f.close()
-    np.set_printoptions(suppress=True)
-    results = ensemble_checker(all8, 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG')
-    print(results)
-    badbindermut = 'AGGGUAGGUGUGGAUGAUGCCUCGGAUGGGUGGGGUGGUG'
-    goodbindermut = 'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
-    highestaff =    'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
-    highestEseq =   'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
-    totalo, breakdowno = dca.Calc_Energy_Breakdown(highestaff, J, H)
-    print(totalo)
-    print(breakdowno)
-    #total, breakdown = dca.Calc_Energy_Breakdown(goodbindermut, J, H)
-    dca.Point_mutation_better_binder_checker(highestaff, J, H)
+    # gH = dca.sorthmat_plmDCA(gHp, N, q)
+    # gJ = dca.sortjmat_plmDCA(gJp, N, q)
+    #
+    # vJ = dca.sortjmat_plmDCA(vJp, N, q)
+    # vH = dca.sorthmat_plmDCA(vHp, N, q)
+    #
+    # H = (vH + gH - bH)  # S1
+    # J = (vJ + gJ - bJ)  # S1
+    #
+    #
+    # # sim = 0.85
+    # # seqt, afft = all_seqs(csvfile6)
+    # #
+    # # f = open(outall6, 'w')
+    # # for x in range(len(afft)):
+    # #     print('>seq' + str(x) + '-' + str(afft[x]), file=f)
+    # #     print(seqt[x], file=f)
+    # # f.close()
+    # np.set_printoptions(suppress=True)
+    # results = ensemble_checker(all8, 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG')
+    # print(results)
+    # badbindermut = 'AGGGUAGGUGUGGAUGAUGCCUCGGAUGGGUGGGGUGGUG'
+    # goodbindermut = 'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
+    # highestaff =    'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
+    # highestEseq =   'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
+    # totalo, breakdowno = dca.Calc_Energy_Breakdown(highestaff, J, H)
+    # print(totalo)
+    # print(breakdowno)
+    # #total, breakdown = dca.Calc_Energy_Breakdown(goodbindermut, J, H)
+    # dca.Point_mutation_better_binder_checker(highestaff, J, H)
     # print(total)
     # print(breakdown)
     #

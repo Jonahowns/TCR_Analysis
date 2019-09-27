@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import pandas as pd
-import data_import as di
 import numpy as np
 import statistics as stats
 import os
@@ -373,6 +372,7 @@ class SeqHandler:
 
 
 handle = SeqHandler(AAA, ACC, AGG, ATT, CAC, CCG, CTA, GAG, GCT, GTC, TAT, TCA, TGC, TTG, clustersofInterest)
-handle.length_checker_by_ind()
-handle.write_seqs()
+print(clustersofInterest)
+# handle.length_checker_by_ind()
+# handle.write_seqs()
 

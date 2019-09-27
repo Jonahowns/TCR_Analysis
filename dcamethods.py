@@ -6,6 +6,8 @@ import sys
 from scipy import stats
 import random
 import multiprocessing as mp
+from statistics import mean
+from scipy.stats import gaussian_kde
 
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
@@ -27,7 +29,17 @@ base_flip_rna = {'A': 'U', 'U': 'A', 'C': 'G', 'G': 'C'}
 # Seq Prep Methods
 
 
-def prune_alignment(names, seqs, simt=0.99):
+def sim_score(masterseq, testseq):
+    ms = list(rna2dna(masterseq))
+    ts = list(rna2dna(testseq))
+    sc = 0
+    for xid, x in enumerate(ms):
+        if x == ts[xid]:
+            sc += 1
+    return sc/len(ms)
+
+
+def prune_alignment(seqs, simt=0.99, names=[]):
     final_choice_names = []
     final_choice_seqs = []
     for sid, seq in enumerate(seqs):
@@ -45,11 +57,15 @@ def prune_alignment(names, seqs, simt=0.99):
                 append = False
                 break
         if append:
-            final_choice_names.append(names[sid])
+            if names:
+                final_choice_names.append(names[sid])
             final_choice_seqs.append(seq.upper())
     print('INFO: reduced length of alignment from %d to %d due to sequence similarity' % (
     len(seqs), len(final_choice_seqs)), file=sys.stderr),
-    return final_choice_names, final_choice_seqs
+    if names:
+        return final_choice_names, final_choice_seqs
+    else:
+        return final_choice_seqs
 
 
 def remove_diff_len(fullseqaff):
@@ -265,6 +281,8 @@ def sortjmat_plmDCA(file, N, q):
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 2, int(data[2]) - 1, int(data[3]) - 1] = float(data[4].rstrip())
     o.close()
+    fullmatrix[:, :, 0, :] = 0.0
+    fullmatrix[:, :, :, 0] = 0.0
     #normed = Normalize_JMatrix(fullmatrix, N, q)
     return fullmatrix
 
@@ -314,6 +332,7 @@ def sorthmat_plmDCA(file, N, q):
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
     o.close()
+    fullmatrix[:, 0] = 0.0
     return fullmatrix
 
 
@@ -507,8 +526,8 @@ def Calc_Energy(seq, J, H):
             jbase = rnad[seq[y]]
             Jenergy += J[x, y - 1, ibase, jbase]
     energy = Jenergy + Henergy
-    print(Jenergy)
-    print(Henergy)
+    # print(Jenergy)
+    # print(Henergy)
     return energy
 
 
@@ -520,15 +539,68 @@ def Point_mutation_better_binder_checker(seq, J, H):
         for y in alternatives:
             tseq[iid] = y
             tenergy = Calc_Energy(tseq, J, H)
+            print(iid+1, i, y, tenergy)
             if tenergy > startingE:
                 print(iid+1, i, 'to', y)
         tseq[iid] = i
 
+def Weighting_Positions_highEseq(seq, J, H):
+    tseq = list(copy.deepcopy(seq))
+    avgs, score = [], []
+    for iid, i in enumerate(tseq):
+        alternatives = [x for x in nucs if x != i]
+        altE = []
+        for y in alternatives:
+            tseq[iid] = y
+            tenergy = Calc_Energy(tseq, J, H)
+            altE.append(tenergy)
+        avgs.append(mean(altE))
+        tseq[iid] = i
+    tavg = mean(avgs)
+    savgs = copy.deepcopy(avgs)
+    savgs.sort()
+    results = np.full((len(tseq), 2), 0.0)
+    print(avgs)
+    print(savgs)
+    for x in savgs[:5]:
+        xid = avgs.index(x)
+        score = -x/tavg
+        results[xid, 0], results[xid, 1] = xid+1, score
+    for x in savgs[-5:]:
+        xid = avgs.index(x)
+        score = x/tavg
+        results[xid, 0], results[xid, 1] = xid+1, score
+    return results
 
 
 
 
 def Calc_Energy_Breakdown(seq, J, H):
+    full = list(seq)
+    dist = len(full)
+    Jenergy = 0
+    Henergy = 0
+    iE = np.full((dist, 4), 0.0)
+    hpe = 0.0
+    for x in range(0, dist):
+        ibase = rnad[seq[x]]
+        Henergy += H[x, ibase]
+        iE[x, 0] += H[x, ibase]
+        iE[x, 3] = x+1
+        for y in range(x + 1, dist):
+            jbase = rnad[seq[y]]
+            Jenergy += J[x, y - 1, ibase, jbase]
+            if J[x, y-1, ibase, jbase] > hpe:
+                hpe = Jenergy
+                highestpair = [x+1, y+1]
+            iE[x, 1] += 0.5*J[x, y - 1, ibase, jbase]
+            iE[y, 1] += 0.5*J[x, y - 1, ibase, jbase]
+        iE[x, 2] = iE[x, 0] + iE[x, 1]
+    energy = Jenergy + Henergy
+    return energy, iE, highestpair
+
+
+def Calc_Energy_Breakdown_Ind_Position(seq, J, H, pos):
     full = list(seq)
     dist = len(full)
     Jenergy = 0
@@ -548,8 +620,6 @@ def Calc_Energy_Breakdown(seq, J, H):
     energy = Jenergy + Henergy
     return energy, iE
 
-
-
 # N and q correspond to the matrix the
 def Calc_Energy_TCR(seq, J, H, N):
     full = list(seq)
@@ -568,8 +638,8 @@ def Calc_Energy_TCR(seq, J, H, N):
                 break
             Jenergy += J[x, y - 1, ibase, jbase]
     energy = Jenergy + Henergy
-    print(Jenergy)
-    print(Henergy)
+    # print(Jenergy)
+    # print(Henergy)
     return energy
 
 
@@ -603,11 +673,8 @@ def Calc_Energy3(seq, J, H, K):
 # Keyword argument percentile determines the percentile used as a cutoff
 def TopX_JNorms(J, N, x, **kwargs):
     dist = False
-    pct = 80
     for key, value in kwargs.items():
-        if key == 'percentile':
-            pct = value
-        elif key == 'dist':
+        if key == 'dist':
             dist = True
         else:
             print('No keyword argument ' + key + ' found')
@@ -620,7 +687,8 @@ def TopX_JNorms(J, N, x, **kwargs):
             if jnorm[i, j] != 0.0:
                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
                 jvals.append(jnorm[i, j])
-    tval = np.percentile(jnorm, pct)
+    tot = (N*(N-1)/2)
+    tval = np.percentile(jnorm, (tot - x)/tot*100)
     vals.sort(key=lambda tup: tup[2])
     ind = int(-x)
     top10 = vals[ind:-1]
@@ -644,6 +712,32 @@ def TopX_Pos_JNorms(J, N, q, x):
     ind = int(-x)
     top10 = vals[ind:-1]
     return top10
+
+
+def TopX_Hnorms(H, N, x, **kwargs):
+    dist = False
+    for key, value in kwargs.items():
+        if key == 'dist':
+            dist = True
+        else:
+            print('No keyword argument ' + key + ' found')
+    hnorm = np.full((N), 0.0)
+    vals = []
+    hvals = []
+    for i in range(N):
+        hnorm[i] = np.linalg.norm(H[i, :])
+        if hnorm[i] != 0.0:
+            vals.append((i, hnorm[i]))  # 0, 0 -> 1, 2
+            hvals.append(hnorm[i])
+    tot = N
+    tval = np.percentile(hnorm, (tot - x)/tot*100)
+    vals.sort(key=lambda tup: tup[1])
+    ind = int(-x)
+    top10 = vals[ind:-1]
+    if dist:
+        return top10, hvals, tval
+    else:
+        return top10
 
 
 # Returns the highest x amount of H Norms
@@ -797,8 +891,8 @@ def Fig_Jnorm(subplot, id, J, n, **kwargs):
 # Check Function for Keyword Arguments, available are fontsize, xlabel, ylabel, vmin, vmax, title, and cmap
 def Fig_FullH(subplot, id, H, n, q, **kwargs):
     cmap = 'seismic'
-    vml = 0
-    vmg = 4
+    vml = -1
+    vmg = 1
     xl = False
     xlabel = 'hello'
     ylabel = 'i'
@@ -949,6 +1043,20 @@ def Fig_IndJij(subplot, J, x, y, id, **kwargs):
     subplot.title.set_size(fontsize=(fontsize + 2))
 
 
+def TopJNorms_Jmatrix(J, N, q, numberofnorms):
+    TJ = np.full((N-1, N-1, q, q), 0.0)
+    t10, jvals, dist = TopX_JNorms(J, N, numberofnorms, dist='True')
+    for x, y, val in t10:
+        TJ[x, y, :, :] = copy.deepcopy(J[x, y, :, :])
+    return TJ, jvals, dist
+
+def TopHNorms_Hmatrix(H, N, q, numberofnorms):
+    TH = np.full((N, q), 0.0)
+    t10, jvals, dist = TopX_Hnorms(H, N, numberofnorms, dist='True')
+    for x, val in t10:
+        TH[x, :] = copy.deepcopy(H[x, :])
+    return TH, jvals, dist
+
 ########################################################################################################################
 ########################################################################################################################
 # Full Figure Methods
@@ -958,18 +1066,18 @@ def Fig_IndJij(subplot, J, x, y, id, **kwargs):
 # OutPath is the directory the figure is being saved to
 def Top10norms_figure_RNA(id, J, N, OutPath):
     # Get Indices of top 10 norms
-    jx = TopX_JNorms(J, N, 10)
+    jx = TopX_JNorms(J, N, 30)
     fig, ax = plt.subplots(2, 5, constrained_layout=True)
     for i in range(10):
         x, y, z = jx[i]
         j = i % 5
         k = 0
         if i == 0:
-            IndJij(ax[k, j], J, x, y, id, vmin=0, vmax=2, type='rna', cbar=True)
+            Fig_IndJij(ax[k, j], J, x, y, id, vmin=-0.5, vmax=.5, type='rna', cbar=False)
         else:
             if i > 4:
                 k = 1
-            IndJij(ax[k, j], J, x, y, id, vmin=0, vmax=2, type='rna')
+            Fig_IndJij(ax[k, j], J, x, y, id, vmin=-0.5, vmax=.5, type='rna')
 
     fig.suptitle('Highest Jij Norms ID: ' + str(id))
     plt.savefig(OutPath + str(id) + 'JNormt10.png', dpi=600)
@@ -1016,8 +1124,99 @@ def Plot_Seq_Aff_v_E(J, H, outpath, *argv, **kwargs):
     plt.savefig(outpath, dpi=600)
 
 
+def seq_breakdown_by_aff(seqfile, J, H, aff):
+    affs, seqs = Fasta_Read_Aff(seqfile)
+    energies, seqoi = [], []
+    for sid, seq in enumerate(seqs):
+        if affs[sid] == aff:
+            energies.append(Calc_Energy(seq, J, H))
+            seqoi.append(seq)
+    lv = min(energies)
+    hv = max(energies)
+    rv = (hv - lv)/50
+    results = np.full((50, 2), 0.0)
+    for i in range(1,51):
+        cutoff = lv+i*rv
+        pct = len([x for x in energies if x >= cutoff])/len(energies)
+        results[i-1, 0], results[i-1, 1] = .02*i*hv, pct*len(energies)
+    return results
 
 
+def ensemble_checker(seqfile, *seqs):
+    eaffs, eseqs = Fasta_Read_Aff(seqfile)
+    results = []
+    for seq in seqs:
+        tseq = rna2dna(seq)
+        seqoi = list(tseq)
+        highest_sim_score = 0.
+        msseq = seq
+        for eseq in eseqs:
+            es = list(eseq)
+            seq_similarity = 0.
+            for i in range(len(es)):
+                if seqoi[i] == es[i]:
+                    seq_similarity += 1.
+            seq_similarity /= len(seq)
+            if seq_similarity > highest_sim_score:
+                highest_sim_score = seq_similarity
+                msseq = eseq
+        results.append((tseq, highest_sim_score, msseq))
+    return results
+
+
+def Jnorm_finder(J, N, q, sn, en, step, seqfile, z):
+    norml = np.arange(sn, en, step)
+    affs, seqs = Fasta_Read_Aff(seqfile)
+    emptyH = np.full((N, q), 0.0)
+    cR = -1.0
+    results = []
+    for norm_number in norml:
+        tJ, jvals, dist = TopJNorms_Jmatrix(J, N, q, norm_number)
+        rscore = R_SCORE(affs, seqs, emptyH, tJ)
+        if rscore > cR:
+            cR = rscore
+            results.append((norm_number, rscore))
+    z.put(results)
+
+
+def Hnorm_finder(H, N, q, sn, en, step, seqfile, z):
+    norml = np.arange(sn, en, step)
+    affs, seqs = Fasta_Read_Aff(seqfile)
+    emptyJ = np.full((N, N, q, q), 0.0)
+    cR = -1.0
+    results = []
+    for norm_number in norml:
+        tH, hvals, dist = TopHNorms_Hmatrix(H, N, q, norm_number)
+        rscore = R_SCORE(affs, seqs, tH, emptyJ)
+        if rscore > cR:
+            cR = rscore
+            results.append((norm_number, rscore))
+    z.put(results)
+
+
+def Jnorm_finder_bJ(bJ, N, q, sn, en, step, seqfile, z):
+    norml = np.arange(sn, en, step)
+    affs, seqs = Fasta_Read_Aff(seqfile)
+    emptyH = np.full((N, q), 0.0)
+    cR = 1
+    results = []
+    for norm_number in norml:
+        tJ, jvals, dist = TopJNorms_Jmatrix(bJ, N, q, norm_number)
+        rscore = R_SCORE(affs, seqs, emptyH, tJ)
+        if rscore < cR:
+            cR = rscore
+            results.append((norm_number, rscore))
+    z.put(results)
+
+
+def rna2dna(seq):
+    tseq = ''
+    for iid, i in enumerate(list(seq)):
+        if i == 'U':
+            tseq += 'T'
+        else:
+            tseq += i
+    return tseq
 
 ########################################################################################################################
 ########################################################################################################################
@@ -1811,6 +2010,37 @@ def Raw_Aff_v_E(J, H, title, outpath, infile):
     plt.savefig(outpath, dpi=600)
 
 
+def Stats_Energy_Seqs(infile, J, H, N):
+    seqs = Fasta_Read_SeqOnly(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy_TCR(x, J, H, N))
+    return mean(energies), np.std(energies), min(energies), max(energies)
+
+
+def write_stat_file_TCR(filename, clusters, nameL, means, stds, mins, maxs):
+    o = open(filename, 'w')
+    for x in range(len(clusters)):
+        print('Cluster:', clusters[x],file=o)
+        for y in range(len(nameL)):
+            print('Fam:',nameL[y],'Mean:',means[x,y],'Std:',stds[x,y],'Min',mins[x,y],'Max',maxs[x,y],file=o)
+    o.close()
+
+
+def write_fasta_aff(seqs, affs, out):
+    o = open(out, 'w')
+    for xid, x in enumerate(affs):
+        print('>seq' + str(xid) + '-' + str(x), file=o)
+        print(seqs[xid], file=o)
+    o.close()
+
+def write_fasta_seqonly(seqs, out):
+    o = open(out, 'w')
+    for xid, x in enumerate(seqs):
+        print('>seq' + str(xid), file=o)
+        print(x, file=o)
+    o.close()
+
 def Raw_wRscore(J, H, outpath, infile):
     titles, seqs = Fasta_Read_Aff(infile)
     energies = []
@@ -1837,6 +2067,33 @@ def Raw_wRscore(J, H, outpath, infile):
     plt.savefig(outpath, dpi=600)
     print("Cutoff",cutoff)
     plt.close()
+
+
+def Raw_wRscore_subplot(subplot, J, H, infile):
+    titles, seqs = Fasta_Read_Aff(infile)
+    energies = []
+    for x in seqs:
+        energies.append(Calc_Energy(x, J, H))
+    datax = []
+    datae = []
+    affs = list(set(titles))
+    api = list(zip(titles, energies))
+    highestaff = 1
+    for x in affs:
+        if x > highestaff: highestaff = x
+        prospects = [nrg for (aff, nrg) in api if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    xl = np.linspace(0, highestaff, 100)
+    subplot.plot(xl, xl * linreg[0] + linreg[1], ':r')
+    cutoff = max([y for x, y in api if x == 1])
+    subplot.plot(xl, [cutoff for i in xl], ':b')
+    subplot.scatter(titles, energies)
+    subplot.set_ylabel('Energy')
+    subplot.set_xlabel('R Score: ' + str(linreg[2]))
+    print("Cutoff", cutoff)
+
 
 
 def Raw_wRscore_TCR(J, H, outpath, infile):
@@ -1875,9 +2132,9 @@ def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
     # Get Indices of top 10 norms
     bseq = np.full(40, ['X'], dtype=str)
     if ns == 'J':
-        tval = dca.TopX_JNorms(J, N, numberofnorms)
+        tval = TopX_JNorms(J, N, numberofnorms)
     if ns == 'mutt':
-        tval = dca.TopX_JNorms(JMutt, N, numberofnorms)
+        tval = TopX_JNorms(JMutt, N, numberofnorms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -1889,7 +2146,7 @@ def gen_badseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
             bseq[xid] = rna[int(gpx) + 1]
     print(pvals)
     print(''.join(gseq))
-    print(dca.Calc_Energy(gseq, J, H))
+    print(Calc_Energy(gseq, J, H))
     return ''.join(gseq)
 
 
@@ -1904,9 +2161,9 @@ def gen_goodseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
     # Get Indices of top 10 norms
     gseq = np.full(40, ['X'], dtype=str)
     if ns == 'J':
-        tval = dca.TopX_JNorms(J, N, numberofnorms)
+        tval = TopX_JNorms(J, N, numberofnorms)
     if ns == 'mutt':
-        tval = dca.TopX_JNorms(JMutt, N, numberofnorms)
+        tval = TopX_JNorms(JMutt, N, numberofnorms)
     pvals = []
     for i in range(len(tval)):
         x, y, z = tval[i]
@@ -1918,7 +2175,7 @@ def gen_goodseq_mutt(J, H, JMutt, N, numberofnorms, **kwargs):
             gseq[xid] = rna[int(gpx)]
     print(pvals)
     print(''.join(gseq))
-    print(dca.Calc_Energy(gseq, J, H))
+    print(Calc_Energy(gseq, J, H))
     return ''.join(gseq)
 
 
@@ -2033,3 +2290,53 @@ class GenerSeq:
             else:
                 self._seq = copy.deepcopy(oldseq)
         out.close()
+
+
+# Monte Carlo sampling for Secondary Structure Prediction from plmDCA output
+
+
+def import_correlations(file, N):
+    o = open(file, 'r')
+    corr = np.full((N-1, N-1), 0.0)
+    for line in o:
+        data = line.split(',')
+        corr[int(data[0])-1, int(data[1])-2] = float(data[2].rstrip())
+    o.close()
+    return corr
+
+# RULES each base can only bind to one other base
+# Not all bases need by bound
+def sample_corr(corr, N):
+    tcorr = copy.deepcopy(corr).flatten()
+    xs, ys = [], []
+    for i in range(50):
+        tmp = np.argmax(tcorr)
+        x = math.floor(tmp/(N-1))
+        y = tmp%(N-1)
+        tcorr[tmp]=0.0
+        if abs(x-y) > 3:
+            xs.append(x)
+            ys.append(y)
+    for i in range(len(xs)):
+        print(xs[i]+1,ys[i]+2)
+
+
+def mc_analysis_plot(mcfile, ensemblefile, N, J, H, out):
+    seqs = Fasta_Read_SeqOnly(mcfile)
+    energy, mutations = [], []
+    for seq in seqs:
+        escore = ensemble_checker(ensemblefile, seq)[0][1]
+        mut_num = N-escore*N
+        E = Calc_Energy(seq, J, H)
+        energy.append(E)
+        mutations.append(mut_num)
+    fig, ax = plt.subplots(1,2)
+    x = np.arange(0, len(seqs), 1)
+    ax[0].plot(x, energy, color='g')
+    ax[0].set_ylabel('Energy')
+    ax[0].set_xlabel('Seq')
+    ax[1].plot(x, mutations, color='r')
+    ax[1].set_ylabel('Mutation #')
+    ax[1].set_xlabel('Seq')
+    plt.savefig(out, dpi=400)
+    plt.close()
