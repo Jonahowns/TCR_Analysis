@@ -270,68 +270,6 @@ if __name__ == '__main__':
 
 
 
-    # fam = 8
-    # N =40
-    # q =5
-    # # Paths
-    # # BadBinders Import
-    # bJp = g2path + str(fam) + 'BP.j'
-    # bHp = g2path + str(fam) + 'BP.h'
-    # # Goodbinders
-    # gHp = g3path + str(fam) + 'gg.h'
-    # gJp = g3path + str(fam) + 'gg.j'
-    # # Best Binders
-    # vJp = g3path + str(fam) + 'vg.j'
-    # vHp = g3path + str(fam) + 'vg.h'
-    # # Import Matrices
-    # bJ = dca.sortjmat_plmDCA(bJp, N, q)
-    # bH = dca.sorthmat_plmDCA(bHp, N, q)
-    #
-    # gH = dca.sorthmat_plmDCA(gHp, N, q)
-    # gJ = dca.sortjmat_plmDCA(gJp, N, q)
-    #
-    # vJ = dca.sortjmat_plmDCA(vJp, N, q)
-    # vH = dca.sorthmat_plmDCA(vHp, N, q)
-    #
-    # H = (vH + gH - bH)  # S1
-    # J = (vJ + gJ - bJ)  # S1
-    #
-    #
-    # # sim = 0.85
-    # # seqt, afft = all_seqs(csvfile6)
-    # #
-    # # f = open(outall6, 'w')
-    # # for x in range(len(afft)):
-    # #     print('>seq' + str(x) + '-' + str(afft[x]), file=f)
-    # #     print(seqt[x], file=f)
-    # # f.close()
-    # np.set_printoptions(suppress=True)
-    # results = ensemble_checker(all8, 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG')
-    # print(results)
-    # badbindermut = 'AGGGUAGGUGUGGAUGAUGCCUCGGAUGGGUGGGGUGGUG'
-    # goodbindermut = 'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
-    # highestaff =    'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
-    # highestEseq =   'AGGGUAGGUGUGGAUGAUGCCUAGGAUGGGUAGGGUGGUG'
-    # totalo, breakdowno = dca.Calc_Energy_Breakdown(highestaff, J, H)
-    # print(totalo)
-    # print(breakdowno)
-    # #total, breakdown = dca.Calc_Energy_Breakdown(goodbindermut, J, H)
-    # dca.Point_mutation_better_binder_checker(highestaff, J, H)
-    # print(total)
-    # print(breakdown)
-    #
-    #
-    # dca.Raw_Aff_v_E(J, H, 'All Seqs Fam6 on 8HJ', '/home/jonah/fam6on8HJ.png', all6)
-    # dca.Plot_Seq_Aff_v_E(J, H, '/home/jonah/fam6on8HavgJ.png', all6, title='Averages All Seqs Fam6 on 8 JH')
 
-
-
-
-    # Final Sequences Aligned
-    # f = open(outfile7, 'w')
-    # for x in range(len(affs7)):
-    #     print('>seq' + str(x)+'-'+affs7[x], file=f)
-    #     print(seqs7[x], file=f)
-    # f.close()
 
 

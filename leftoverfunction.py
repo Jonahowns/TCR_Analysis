@@ -2,6 +2,31 @@ import dcamethods as dca
 import matplotlib.pyplot as plt
 import numpy as np
 
+droppathw = "Projects/DCA/working/"
+droppathv = "Projects/DCA/v2/"
+droppathv3 = "Projects/DCA/v3/"
+#fullpath = macpath+droppath
+upath = "/home/jonah/Dropbox (ASU)/"
+testpath = upath + 'Projects/DCA/GenSeqs/'
+blpath = "/home/jonah/bl-DCA/"
+bldrop = "bl78/"
+cpath = "/home/jonah/Desktop/Current/"
+g22path = upath + droppathv +"FamHJ/"
+g2path = upath + droppathw
+g3path = upath + droppathv + "3GHJ/"
+v3path = upath + droppathv3
+
+clusters = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37, 38,
+            42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+rna = ['-', 'A', 'C', 'G', 'U']
+dna = ['-', 'A', 'C', 'G', 'T']
+rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4, 'T': 4}
+rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
+
+
+
 AnalysisPath = "C:/Users/Amber/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/FullSeq/Analysis/Comparisons/"
 wpath = "C:/Users/Amber/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/FullSeq"
 upath = "/home/jonah/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/SeqwAff/"
@@ -471,7 +496,6 @@ for clust in clusters:
 
 
 
-###########################################################
 # TCR BINDERS LOL
 mdir = "C:/Users/Amber/Dropbox (ASU)/LabFolders/fernando_tcr_cluster/Data_with_cluster_id/SeqwAff/"
 
@@ -520,3 +544,276 @@ clusterlist = [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25,
 
 for i in clusterlist:
     Sep_G_AND_B_BINDERS(i)
+
+
+#MORE TCR BINDERS LOOOOLLLL
+import dcamethods as dca
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+from matplotlib import cm
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
+from statistics import mean
+
+
+upath = "/home/jonah/Dropbox (ASU)/"
+dpath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/Ind/"
+cid = 1
+apath = upath + dpath + 'Analysis/'
+
+
+def import_allseqpaths_cluster(cid):
+    cpath = upath + dpath + 'Clust' + str(cid) + '/'
+    # Seqs
+    aaas = cpath + 'aaa.fasta'
+    accs = cpath + 'acc.fasta'
+    aggs = cpath + 'agg.fasta'
+    atts = cpath + 'att.fasta'
+    cacs = cpath + 'cac.fasta'
+    ccgs = cpath + 'ccg.fasta'
+    ctas = cpath + 'cta.fasta'
+    gags = cpath + 'gag.fasta'
+    gcts = cpath + 'gct.fasta'
+    gtcs = cpath + 'gtc.fasta'
+    tats = cpath + 'tat.fasta'
+    tcas = cpath + 'tca.fasta'
+    tgcs = cpath + 'tgc.fasta'
+    ttgs = cpath + 'ttg.fasta'
+    seqL = [aaas, accs, aggs, atts, cacs, ccgs, ctas, gags, gcts, gtcs, tats, tcas, tgcs, ttgs]
+    nL = dca.getn(seqL[0])
+    return seqL, nL
+
+def import_allHJ_from_cluster(cid):
+    cpath = upath + dpath + 'Clust' + str(cid) +'/'
+    #H and J Matrices
+    aaahp = cpath + str(cid) + 'aaa.h'
+    aaajp = cpath + str(cid) + 'aaa.j'
+    accjp = cpath + str(cid) + 'acc.j'
+    acchp = cpath + str(cid) + 'acc.h'
+    aggjp = cpath + str(cid) + 'agg.j'
+    agghp = cpath + str(cid) + 'agg.h'
+    attjp = cpath + str(cid) + 'att.j'
+    atthp = cpath + str(cid) + 'att.h'
+
+    cacjp = cpath + str(cid) + 'cac.j'
+    cachp = cpath + str(cid) + 'cac.h'
+    ccgjp = cpath + str(cid) + 'ccg.j'
+    ccghp = cpath + str(cid) + 'ccg.h'
+    ctajp = cpath + str(cid) + 'cta.j'
+    ctahp = cpath + str(cid) + 'cta.h'
+
+    gagjp = cpath + str(cid) + 'gag.j'
+    gaghp = cpath + str(cid) + 'gag.h'
+    gctjp = cpath + str(cid) + 'gct.j'
+    gcthp = cpath + str(cid) + 'gct.h'
+    gtcjp = cpath + str(cid) + 'gtc.j'
+    gtchp = cpath + str(cid) + 'gtc.h'
+
+    tathp = cpath + str(cid) + 'tat.h'
+    tatjp = cpath + str(cid) + 'tat.j'
+    tcajp = cpath + str(cid) + 'tca.j'
+    tcahp = cpath + str(cid) + 'tca.h'
+    tgcjp = cpath + str(cid) + 'tgc.j'
+    tgchp = cpath + str(cid) + 'tgc.h'
+    ttgjp = cpath + str(cid) + 'ttg.j'
+    ttghp = cpath + str(cid) + 'ttg.h'
+
+    aaah, N, q = dca.sorthmat_plmDCA_autoNandq(aaahp)
+    aaaj = dca.sortjmat_plmDCA(aaajp, N, q)
+    acch = dca.sorthmat_plmDCA(acchp, N, q)
+    accj = dca.sortjmat_plmDCA(accjp, N, q)
+    aggh = dca.sorthmat_plmDCA(agghp, N, q)
+    aggj = dca.sortjmat_plmDCA(aggjp, N, q)
+    atth = dca.sorthmat_plmDCA(atthp, N, q)
+    attj = dca.sortjmat_plmDCA(attjp, N, q)
+    cach = dca.sorthmat_plmDCA(cachp, N, q)
+    cacj = dca.sortjmat_plmDCA(cacjp, N, q)
+    ccgh = dca.sorthmat_plmDCA(ccghp, N, q)
+    ccgj = dca.sortjmat_plmDCA(ccgjp, N, q)
+    ctah = dca.sorthmat_plmDCA(ctahp, N, q)
+    ctaj = dca.sortjmat_plmDCA(ctajp, N, q)
+    gagh = dca.sorthmat_plmDCA(gaghp, N, q)
+    gagj = dca.sortjmat_plmDCA(gagjp, N, q)
+    gcth = dca.sorthmat_plmDCA(gcthp, N, q)
+    gctj = dca.sortjmat_plmDCA(gctjp, N, q)
+    gtch = dca.sorthmat_plmDCA(gtchp, N, q)
+    gtcj = dca.sortjmat_plmDCA(gtcjp, N, q)
+    tath = dca.sorthmat_plmDCA(tathp, N, q)
+    tatj = dca.sortjmat_plmDCA(tatjp, N, q)
+    tcah = dca.sorthmat_plmDCA(tcahp, N, q)
+    tcaj = dca.sortjmat_plmDCA(tcajp, N, q)
+    tgch = dca.sorthmat_plmDCA(tgchp, N, q)
+    tgcj = dca.sortjmat_plmDCA(tgcjp, N, q)
+    ttgh = dca.sorthmat_plmDCA(ttghp, N, q)
+    ttgj = dca.sortjmat_plmDCA(ttgjp, N, q)
+
+    JmatL = [aaaj, accj, aggj, attj, cacj, ccgj, ctaj, gagj, gctj, gtcj, tatj, tcaj, tgcj, ttgj]
+    HmatL = [aaah, acch, aggh, atth, cach, ccgh, ctah, gagh, gcth, gtch, tath, tcah, tgch, ttgh]
+
+    return JmatL, HmatL
+
+nameL = ['aaa', 'acc', 'agg', 'att', 'cac', 'ccg', 'cta', 'gag', 'gct', 'gtc', 'tat', 'tca', 'tgc', 'ttg']
+nameD = {'aaa':1, 'acc':2, 'agg':3, 'att':4, 'cac':5, 'ccg':6, 'cta':7, 'gag':8, 'gct':9, 'gtc':10, 'tat':11, 'tca':12, 'tgc':13, 'ttg':14}
+
+JmatMaster = []
+
+seqMaster = []
+Nlist = []
+
+clusters= [1, 3, 4, 5, 7, 8, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 24, 25, 29, 30, 31, 32, 34, 37,
+           38, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+for clust in clusters:
+    seqL, nL = (import_allseqpaths_cluster(clust))
+    Nlist.append(nL)
+    seqMaster.append(seqL)
+# for xid, x in enumerate(nameL):
+#     J = JmatL[xid]
+#     H = HmatL[xid]
+#     datax = []
+#     dataE = []
+#     for yid, y in enumerate(seqL):
+#         seqs = dca.Fasta_Read_SeqOnly(y)
+#         nrgs = []
+#         for seq in seqs:
+#             dataE.append(dca.Calc_Energy_TCR(seq, J, H, N))
+#             datax.append(nameD[nameL[yid]])
+#     fig, ax = plt.subplots()
+#     ax.scatter(datax, dataE)
+#     ax.title.set_text(x + ' HJ Comparison')
+#     ax.set_xticks(np.arange(1,15,1))
+#     ax.set_xticklabels(nameL)
+#     ax.set_ylabel('Energy')
+#     ax.set_xlabel('Families')
+#     plt.savefig(cpath+str(cid)+str(x)+'indcomp.png', dpi=600)
+#     plt.close()
+
+viridis = cm.get_cmap('viridis',len(clusters))
+for cid, clust in enumerate(clusters):
+    if clust == 50: ## All HJs we have currently
+        break
+    # Open Folder for Cluster Analysis
+    jmatlist, hmatlist = import_allHJ_from_cluster(clust)
+    os.mkdir(apath + 'Clust' + str(clust))
+    clpath = apath + 'Clust' + str(clust)  + '/'
+    filelist = [clpath + str(clust) + nameL[x] + '.png' for x in range(len(nameL))]
+    for fid, jmat in enumerate(jmatlist):
+        J = jmat
+        H = hmatlist[fid]
+        # Calculate All sequences/ All Clusters mean energies
+        plotdata = np.full((len(clusters), len(nameL)), 0.0)
+        stddata = np.full((len(clusters), len(nameL)), 0.0)
+        mindata = np.full((len(clusters), len(nameL)), 0.0)
+        maxdata = np.full((len(clusters), len(nameL)), 0.0)
+        for sfid, seqL in enumerate(seqMaster): #iterates through clusters
+            for sid, seqF in enumerate(seqL): #iterates through families
+                plotdata[sfid, sid], stddata[sfid, sid], mindata[sfid, sid], maxdata[sfid, sid] = dca.Stats_Energy_Seqs(seqF, J, H, Nlist[cid])
+        allx, ally, allz = [], [], []
+        statfile = clpath + nameL[fid] + '.stats'
+        dca.write_stat_file_TCR(statfile, clusters, nameL, plotdata, stddata, mindata, maxdata)
+        fig = plt.figure(figsize=(5, 15))
+        ax = fig.add_subplot(111)
+        for i in range(14): #iterate through families
+            cdata = list(plotdata[:, i])
+            allz += clusters
+            if i == 0:
+                for aid, cluste in enumerate(clusters):
+                    ax.annotate(cluste, (1, cdata[aid]))
+            elif i == 13:
+                for aid, cluste in enumerate(clusters):
+                    ax.annotate(cluste, (14, cdata[aid]))
+            pdata = [i+1 for x in cdata]
+            allx += pdata
+            ally += cdata
+        ax.scatter(allx, ally, c=allz, s=10)
+        for ccid, cclust in enumerate(clusters):
+            x = np.arange(1, 15, 1)
+            y = plotdata[ccid, :]
+            col = (cclust - min(clusters))/(max(clusters) - min(clusters))
+            ax.plot(x,y,c=viridis(col))
+        ax.title.set_text(nameL[fid] + ' HJ Comparison')
+        ax.set_xticks(np.arange(1,15,1))
+        ax.set_xticklabels(nameL)
+        ax.set_ylabel('Energy')
+        ax.set_xlabel('Families')
+        plt.savefig(filelist[fid], dpi=600)
+        plt.close()
+
+
+# WEBLOGOS
+ubuntpath = "/home/jonah/Dropbox (ASU)/"
+# droppath = "LabFolders/fernando_tcr_cluster/Data_with_cluster_id/FullSeq/"
+droppath = "Projects/DCA/GenSeqs/"
+fullpath = ubuntpath + droppath
+blpath = "/home/jonah/bl-dca/"
+plmpath = ubuntpath + droppath
+'''
+for clust in clusters:
+    clustid = str(int(clust))
+    clustpath = fullpath + 'Clust' + clustid
+
+    # input files
+    afasta = clustpath + '/afam.fasta'
+    cfasta = clustpath + '/cfam.fasta'
+    gfasta = clustpath + '/gfam.fasta'
+    tfasta = clustpath + '/tfam.fasta'
+    fullfasta = clustpath + '/full.fasta'
+
+    # output files
+    aout = clustpath + '/asl.png'
+    cout = clustpath + '/csl.png'
+    gout = clustpath + '/gsl.png'
+    tout = clustpath + '/tsl.png'
+    fullout = clustpath + '/fsl.png'
+
+
+
+    sp.check_call(['weblogo --errorbars NO --resolution 600 -F png < ' + cfasta + ' > ' + cout], stdout=sp.DEVNULL, shell=True)
+    sp.check_call(['weblogo --errorbars NO --resolution 600 -F png < ' + gfasta + ' > ' + gout], stdout=sp.DEVNULL, shell=True)
+    sp.check_call(['weblogo --errorbars NO --resolution 600 -F png < ' + tfasta + ' > ' + tout], stdout=sp.DEVNULL, shell=True)
+    sp.check_call(['weblogo --errorbars NO --resolution 600 -F png < ' + fullfasta + ' > ' + fullout], stdout=sp.DEVNULL, shell=True)
+'''
+'''
+# input files
+in5 = fullpath + '/5thgs.txt'
+in6 = fullpath + '/6thgs.txt'
+in7 = fullpath + '/7thgs.txt'
+in8 = fullpath + '/8thgs.txt'
+out5 = fullpath + '/5sl.png'
+out6 = fullpath + '/6sl.png'
+out7 = fullpath + '/7sl.png'
+out8 = fullpath + '/8sl.png'
+'''
+
+# SEL SEQS
+sseqpath = '/home/jonah/Desktop/Current/v4/8selseqs.txt'
+
+cutoff = 89
+actualhighestscoring = 'AGGGATGATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
+ssels = []
+seqs = dca.Fasta_Read_SeqOnly(sseqpath)
+print(seqs)
+for xid, x in enumerate(seqs):
+    if dca.Calc_Energy(seqs[xid], J, H) > cutoff:
+        ssels.append(seqs[xid])
+
+# Get rid of any duplicate Seqs
+fseqs = dca.prune_alignment(ssels, 1.0)
+afseqs = []
+nrgs, simm = [], []
+for x in fseqs:
+    tmpa, simscore, tmpb = dca.ensemble_checker(allseqpath, x)[0]
+    if simscore != 1.0:
+        afseqs.append(x)
+        simm.append(simscore)
+
+for x in afseqs:
+    nrgs.append(dca.Calc_Energy(x, J, H))
+    # simm.append(dca.sim_score(actualhighestscoring, x))
+
+out = '/home/jonah/Desktop/Current/v4/8gbposs.txt'
+o = open(out, 'w')
+for xid, x in enumerate(afseqs):
+    print(x, simm[xid], nrgs[xid], file = o)
+o.close()
