@@ -2069,6 +2069,91 @@ def Raw_wRscore(J, H, outpath, infile):
     plt.close()
 
 
+def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
+    colors = ['g', 'm', 'c', 'b', 'y']
+    title = 'Affinity vs Energy'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+    oHa = 0
+    oAff = set()
+    apis = []
+    data = []
+    for i in infile:
+        titles, seqs = Fasta_Read_Aff(i)
+        energies = []
+        for x in seqs:
+            energies.append(Calc_Energy(x, J, H))
+        affs = list(set(titles))
+        oAff.update(affs)
+        print(oAff)
+        api = list(zip(titles, energies))
+        apis += api
+        data.append(api)
+    for aid, ai in enumerate(data):
+        avg = []
+        err = []
+        thaff = 0
+        for aff in oAff:
+            if aff > oHa: oHa = aff
+            if aff > thaff: thaff = aff
+            yvals = np.array([y for (x, y) in ai if x == aff])
+            yavg = yvals.mean()
+            yerr = np.std(yvals)
+            avg.append(yavg)
+            err.append(yerr)
+        plt.errorbar(x, avg, err, linestyle='None', marker='^', c=colors[aid])
+        x = list(set([x for (x, y) in data[aid]]))
+        x.sort()
+        linreg = stats.linregress(x, avg)
+        xl = np.linspace(0, thaff, 100)
+        plt.plot(xl, xl * linreg[0] + linreg[1], c=colors[aid])
+    plt.xlabel('R-Score: ' + str(linreg[2]))
+    plt.ylabel('Energy')
+    plt.suptitle(title)
+    plt.savefig(outpath, dpi=600)
+
+def Diff_Raw_wRscore(J, H, outpath, labels, *infile):
+    colors = ['g', 'm', 'c', 'b', 'y']
+    oHa = 0
+    oAff = set()
+    apis = []
+    data = []
+    for i in infile:
+        titles, seqs = Fasta_Read_Aff(i)
+        energies = []
+        for x in seqs:
+            energies.append(Calc_Energy(x, J, H))
+        affs = list(set(titles))
+        oAff.update(affs)
+        print(oAff)
+        api = list(zip(titles, energies))
+        apis += api
+        data.append(api)
+    datax = []
+    datae = []
+    for x in oAff:
+        if x > oHa: oHa = x
+        prospects = [nrg for (aff, nrg) in apis if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    xl = np.linspace(0, oHa, 100)
+    plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
+    cutoff = max([y for x, y in apis if x == 1])
+    plt.plot(xl, [cutoff for i in xl], ':b')
+    for xid, i in enumerate(data):
+        titles, energies = zip(*i)
+        plt.scatter(titles, energies, mfc=colors[xid], label=labels[xid])
+    plt.ylabel('Energy')
+    plt.xlabel('R Score: ' + str(linreg[2]))
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=2, mode="expand", borderaxespad=0.)
+    plt.savefig(outpath, dpi=600)
+    print("Cutoff",cutoff)
+    plt.close()
+
+
 def Raw_wRscore_subplot(subplot, J, H, infile):
     titles, seqs = Fasta_Read_Aff(infile)
     energies = []
@@ -2087,12 +2172,12 @@ def Raw_wRscore_subplot(subplot, J, H, infile):
     linreg = stats.linregress(datax, datae)
     xl = np.linspace(0, highestaff, 100)
     subplot.plot(xl, xl * linreg[0] + linreg[1], ':r')
-    cutoff = max([y for x, y in api if x == 1])
-    subplot.plot(xl, [cutoff for i in xl], ':b')
+    #cutoff = max([y for x, y in api if x == 1])
+    #subplot.plot(xl, [cutoff for i in xl], ':b')
     subplot.scatter(titles, energies)
     subplot.set_ylabel('Energy')
     subplot.set_xlabel('R Score: ' + str(linreg[2]))
-    print("Cutoff", cutoff)
+    #print("Cutoff", cutoff)
 
 
 
@@ -2236,6 +2321,42 @@ class GenerSeq:
                     print(str((i / self._steps) * 100) + ' Percent Done')
             else:
                 self._seq = copy.deepcopy(oldseq)
+        out.close()
+
+    def run_adaptive_sampling_wT(self, J, h, outpath, outTempPlot):
+        total, acc = 0, 0
+        xdata, tdata = [], []
+        out = open(outpath, 'w')
+        oldene = self.calculate_energy(J, h)
+        oldseq = copy.deepcopy(self._seq)
+        for i in range(self._steps):
+            total += 1
+            self.mutate_seq()
+            newene = self.calculate_energy(J, h)
+            p = math.exp(self._beta * (newene - oldene))
+            if .3 < acc / total < .8:
+                continue
+            elif acc / total < 0.3:
+                self._T *= 1.05
+            elif acc / total > .8:
+                self._T *= 0.95
+            if random.random() < p:
+                acc += 1
+                # accept move
+                oldene = newene
+                oldseq = copy.deepcopy(self._seq)
+                if i % self._out_after:
+                    if ''.join(self._seq) not in self._history:
+                        xdata.append(i)
+                        tdata.append(self._T)
+                        self._history.append(''.join(self._seq))
+                        print('>' + str(i) + '-' + str(newene), file=out)
+                        print(''.join(self._seq), file=out)
+                    print(str((i / self._steps) * 100) + ' Percent Done')
+            else:
+                self._seq = copy.deepcopy(oldseq)
+        plt.plot(xdata, tdata, c='r')
+        plt.savefig(outTempPlot, dpi=400)
         out.close()
 
     def run_sampling(self, J, h, outpath):

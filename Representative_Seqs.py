@@ -254,13 +254,13 @@ if __name__ == '__main__':
     aff90 = []
     for seq in seq90:
         ai = seqs.index(seq)
-        aff90.append(ai)
+        aff90.append(affs[ai])
 
-    o = open(out10, 'w')
-    for iid, i in enumerate(aff10):
-        print('>' + 'seq' + str(iid) + '-' + str(i), file=o)
-        print(seq10[iid], file=o)
-    o.close()
+    # o = open(out10, 'w')
+    # for iid, i in enumerate(aff10):
+    #     print('>' + 'seq' + str(iid) + '-' + str(i), file=o)
+    #     print(seq10[iid], file=o)
+    # o.close()
 
     x = open(out90, 'w')
     for iid, i in enumerate(aff90):

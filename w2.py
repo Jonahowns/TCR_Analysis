@@ -61,14 +61,15 @@ JF = Jsel
 
 H = 2*gH
 
-bs = 'AGGGATGATGTGTGGTAGGCCTAGGGTGGGGAGGGTGGTG'
-mutt = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGTGGGTGGGGTG'
-mut3 = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGGGAGTGTGGTG'
+dca.mc_analysis_plot('/home/jonah/Desktop/Current/12gba.txt', allseqpath, N, Jsel, H, '/home/jonah/Desktop/Current/mcav2.png')
+# bs = 'AGGGATGATGTGTGGTAGGCCTAGGGTGGGGAGGGTGGTG'
+# mutt = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGTGGGTGGGGTG'
+# mut3 = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGGGAGTGTGGTG'
 
-print(dca.Calc_Energy(bs, Jsel, H), dca.Calc_Energy(mutt, Jsel, H), dca.Calc_Energy(mut3, Jsel, H))
+# print(dca.Calc_Energy(bs, Jsel, H), dca.Calc_Energy(mutt, Jsel, H), dca.Calc_Energy(mut3, Jsel, H))
 
-results = dca.seq_breakdown_by_aff(allseqpath, Jsel, H, 1)
-print(results)
+# results = dca.seq_breakdown_by_aff(allseqpath, Jsel, H, 1)
+# print(results)
 
 # z = mp.Queue()
 # p1 = mp.Process(target=(dca.Jnorm_finder), args=(gJ, N, q, 300, 305, 1, allseqpath, z))

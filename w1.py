@@ -6,7 +6,8 @@ import multiprocessing as mp
 upath = "/home/jonah/Dropbox (ASU)/"
 droppathv3 = "Projects/DCA/v3/"
 v3path = upath + droppathv3
-
+cpath = "/home/jonah/Desktop/Current/"
+tenpath = cpath + 'v4/10percent/'
 
 # corrfile = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.out'
 # N = 20
@@ -27,64 +28,64 @@ def mix_2comp_H(H1, H2, N, q):
 
 N = 40
 q = 5
-j1p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs1.j'
-j2p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.j'
-h1p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs1.h'
-h2p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.h'
-J1 = dca.sortjmat_plmDCA(j1p, 20, 5)
-J2 = dca.sortjmat_plmDCA(j2p, 20, 5)
-H1 = dca.sorthmat_plmDCA(h1p, 20, 5)
-H2 = dca.sorthmat_plmDCA(h2p, 20, 5)
-
-
-Jmix = mix_2comp_J(J1, J2, N, q)
-Hmix = mix_2comp_H(H1, H2, N , q)
-
-#OG
 fam = 8
-bJp = v3path + str(fam) + 'ba.j'
-bHp = v3path + str(fam) + 'ba.h'
-gHp = v3path + str(fam) + 'go.h'
-gJp = v3path + str(fam) + 'go.j'
-bJ = dca.sortjmat_plmDCA(bJp, N, q)
-bH = dca.sorthmat_plmDCA(bHp, N, q)
-gH = dca.sorthmat_plmDCA(gHp, N, q)
-gJ = dca.sortjmat_plmDCA(gJp, N, q)
+#Paths
 
-cpath = "/home/jonah/Desktop/Current/"
+# Goodbinders
+j901p = tenpath + 's901.j'
+h901p = tenpath + 's901.h'
+j902p = tenpath + 's902.j'
+h902p = tenpath + 's902.h'
+j900p = tenpath + 's900.j'
+h900p = tenpath + 's900.h'
+j901 = dca.sortjmat_plmDCA(j901p, N, q)
+j902 = dca.sortjmat_plmDCA(j902p, N, q)
+h901 = dca.sorthmat_plmDCA(h901p, N, q)
+h902 = dca.sorthmat_plmDCA(h902p, N, q)
+j900 = dca.sortjmat_plmDCA(j900p, N, q)
+h900 = dca.sorthmat_plmDCA(h900p, N, q)
+# gHp = v3path + str(fam) + 'go.h'
+# gJp = v3path + str(fam) + 'go.j'
+# gH = dca.sorthmat_plmDCA(gHp, N, q)
+# gJ = dca.sortjmat_plmDCA(gJp, N, q)
+
+J = dca.TopJNorms_Jmatrix(j901, N, q, 332)[0]
+H = 2*h901
+
 allseqpath = cpath + str(fam) + 'all.txt'
+s10p = tenpath + 's10.txt'
+s90p = tenpath + 's90.txt'
 
-Jsel, vals, cut = dca.TopJNorms_Jmatrix(gJ, N, q, 305)
-bJsel, val, cut2 = dca.TopJNorms_Jmatrix(Jmix, N, q, 245)
 
-JF = Jsel
+sseqpath = '/home/jonah/Desktop/Current/v4/8v4poss.txt'
 
-H = 2*gH
+cutoff = 83
+actualhighestscoring = 'AGGGATGATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
+ssels = []
+seqs = dca.Fasta_Read_SeqOnly(sseqpath)
+print(seqs)
+for xid, x in enumerate(seqs):
+    if dca.Calc_Energy(seqs[xid], J, H) > cutoff:
+        ssels.append(seqs[xid])
 
-bs = 'AGGGATGATGTGTGGTAGGCCTAGGGTGGGGAGGGTGGTG'
-mutt = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGTGGGTGGGGTG'
-mut3 = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGGGAGTGTGGTG'
+# Get rid of any duplicate Seqs
+fseqs = dca.prune_alignment(ssels, 1.0)
+afseqs = []
+nrgs, simm = [], []
+for x in fseqs:
+    tmpa, simscore, tmpb = dca.ensemble_checker(allseqpath, x)[0]
+    if simscore != 1.0:
+        afseqs.append(x)
+        simm.append(simscore)
 
-print(dca.Calc_Energy(bs, Jsel, H), dca.Calc_Energy(mutt, Jsel, H), dca.Calc_Energy(mut3, Jsel, H))
+for x in afseqs:
+    nrgs.append(dca.Calc_Energy(x, J, H))
+    # simm.append(dca.sim_score(actualhighestscoring, x))
 
-results = dca.seq_breakdown_by_aff(allseqpath, Jsel, H, 1)
-print(results)
-
-# z = mp.Queue()
-# p1 = mp.Process(target=(dca.Jnorm_finder), args=(gJ, N, q, 300, 305, 1, allseqpath, z))
-# p2 = mp.Process(target=(dca.Jnorm_finder), args=(gJ, N, q, 305, 310, 1, allseqpath, z))
-# p3 = mp.Process(target=(dca.Jnorm_finder_bJ), args=(Jmix, N, q, 230, 250, 5, allseqpath, z))
-# p4 = mp.Process(target=(dca.Jnorm_finder_bJ), args=(Jmix, N, q, 200, 250, 10, allseqpath, z))
-
-# p1.start()
-# p2.start()
-# p3.start()
-# p4.start()
-# results = []
-# r1, r2, r3 = z.get(), z.get(), z.get()
-# p1.join()
-# p2.join()
-# p3.join()
-# print(r1, r2, r3)
+out = '/home/jonah/Desktop/Current/v4/n332gbrelaxed.txt'
+o = open(out, 'w')
+for xid, x in enumerate(afseqs):
+    print(x, simm[xid], nrgs[xid], file=o)
+o.close()
 
 
