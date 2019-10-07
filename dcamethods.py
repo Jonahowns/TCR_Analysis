@@ -544,6 +544,33 @@ def Point_mutation_better_binder_checker(seq, J, H):
                 print(iid+1, i, 'to', y)
         tseq[iid] = i
 
+def TwoMutation_Bad_binder_checker(seq, J, H, allseqpath):
+    startingE = Calc_Energy(seq, J, H)
+    tseq = list(copy.deepcopy(seq))
+    results = []
+    for iid, i in enumerate(tseq):
+        alternatives = [x for x in nucs if x != i]
+        altseqs = []
+        for an in alternatives:
+            tseq[iid] = an
+            altseqs.append(copy.deepcopy(tseq))
+        for altseq in altseqs:
+            for yid, y in enumerate(altseq):
+                alt2 = [x for x in nucs if x != y]
+                for j in alt2:
+                    altseq[yid] = j
+                    tenergy = Calc_Energy(altseq, J, H)
+                    # tmpa, simscore, tmpb = ensemble_checker(allseqpath, altseq)[0]
+                    # if simscore != 0.95:
+                    results.append((''.join(altseq), tenergy))
+                altseq[yid] = y
+        tseq[iid] = i
+        results.sort(key=lambda tup: tup[1])
+        highest = results[1:5]
+        lowest = results[-5:-1]
+        return highest, lowest
+
+
 def Weighting_Positions_highEseq(seq, J, H):
     tseq = list(copy.deepcopy(seq))
     avgs, score = [], []
@@ -2077,6 +2104,7 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
             title = value
     oHa = 0
     oAff = set()
+    adata = []
     apis = []
     data = []
     for i in infile:
@@ -2085,6 +2113,7 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
         for x in seqs:
             energies.append(Calc_Energy(x, J, H))
         affs = list(set(titles))
+        adata.append(affs)
         oAff.update(affs)
         print(oAff)
         api = list(zip(titles, energies))
@@ -2094,7 +2123,7 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
         avg = []
         err = []
         thaff = 0
-        for aff in oAff:
+        for aff in adata[aid]:
             if aff > oHa: oHa = aff
             if aff > thaff: thaff = aff
             yvals = np.array([y for (x, y) in ai if x == aff])
@@ -2102,16 +2131,19 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
             yerr = np.std(yvals)
             avg.append(yavg)
             err.append(yerr)
-        plt.errorbar(x, avg, err, linestyle='None', marker='^', c=colors[aid])
-        x = list(set([x for (x, y) in data[aid]]))
-        x.sort()
-        linreg = stats.linregress(x, avg)
-        xl = np.linspace(0, thaff, 100)
-        plt.plot(xl, xl * linreg[0] + linreg[1], c=colors[aid])
-    plt.xlabel('R-Score: ' + str(linreg[2]))
+        xd = [x + .2*aid for x in adata[aid]]
+        plt.errorbar(xd, avg, err, linestyle='None', marker='^', label=labels[aid])
+        # x = list(set([x for (x, y) in data[aid]]))
+        # x.sort()
+        # linreg = stats.linregress(x, avg)
+        # xl = np.linspace(0, thaff, 100)
+        # plt.plot(xl, xl * linreg[0] + linreg[1], c=colors[aid])
+    plt.xlabel('Avg Diff Plot')
     plt.ylabel('Energy')
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', ncol=2, mode="expand", borderaxespad=0.)
     plt.suptitle(title)
     plt.savefig(outpath, dpi=600)
+
 
 def Diff_Raw_wRscore(J, H, outpath, labels, *infile):
     colors = ['g', 'm', 'c', 'b', 'y']
@@ -2144,7 +2176,7 @@ def Diff_Raw_wRscore(J, H, outpath, labels, *infile):
     plt.plot(xl, [cutoff for i in xl], ':b')
     for xid, i in enumerate(data):
         titles, energies = zip(*i)
-        plt.scatter(titles, energies, mfc=colors[xid], label=labels[xid])
+        plt.scatter(titles, energies, c=colors[xid], label=labels[xid])
     plt.ylabel('Energy')
     plt.xlabel('R Score: ' + str(linreg[2]))
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
@@ -2461,3 +2493,29 @@ def mc_analysis_plot(mcfile, ensemblefile, N, J, H, out):
     ax[1].set_xlabel('Seq')
     plt.savefig(out, dpi=400)
     plt.close()
+
+
+def find_closest_seqs(seq, ensemblefile, N):
+    affs, seqs = Fasta_Read_Aff(ensemblefile)
+    sl = list(rna2dna(seq))
+    bs, gs = 0, 0
+    for sid, es in enumerate(seqs):
+        el = list(es)
+        tmp = 0
+        if affs[sid] == 1:
+            for i in range(N):
+                if el[i] == sl[i]:
+                    tmp += 1
+            if tmp > bs:
+                cbs = es
+                bs = tmp
+        elif affs[sid] > 1:
+            for i in range(N):
+                if el[i] == sl[i]:
+                    tmp += 1
+            if tmp > gs:
+                cgs = es
+                gs = tmp
+        else:
+            print(affs[sid])
+    return cbs, cgs

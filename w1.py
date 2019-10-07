@@ -49,43 +49,65 @@ h900 = dca.sorthmat_plmDCA(h900p, N, q)
 # gH = dca.sorthmat_plmDCA(gHp, N, q)
 # gJ = dca.sortjmat_plmDCA(gJp, N, q)
 
-J = dca.TopJNorms_Jmatrix(j901, N, q, 332)[0]
+J, vals, cutoff = dca.TopJNorms_Jmatrix(j901, N, q, 332)
 H = 2*h901
 
 allseqpath = cpath + str(fam) + 'all.txt'
 s10p = tenpath + 's10.txt'
 s90p = tenpath + 's90.txt'
 
+jdisp = dca.FullJ_disp(J, N, q)
 
-sseqpath = '/home/jonah/Desktop/Current/v4/8v4poss.txt'
+# fig, ax = plt.subplots(1)
+# dca.Plot_Seq_Aff_v_E(J, H, '/home/jonah/Desktop/aptfigs/avgHw.png', allseqpath)
+# dca.Fig_Distribution_w_Cutoff(ax, 'Distribution of Norms J Matrix', vals, cutoff)
+# dca.Fig_FullJ(ax, 'Initial J', jdisp, N, q)
+# dca.Fig_FullH(ax, 'Iniitial H', h901, N, q)
+# plt.savefig('/home/jonah/Desktop/aptfigs/distJ.png', dpi=400)
+actualhighestscoring = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGTTGGTG'
 
-cutoff = 83
-actualhighestscoring = 'AGGGATGATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
-ssels = []
-seqs = dca.Fasta_Read_SeqOnly(sseqpath)
-print(seqs)
-for xid, x in enumerate(seqs):
-    if dca.Calc_Energy(seqs[xid], J, H) > cutoff:
-        ssels.append(seqs[xid])
+high, low = dca.TwoMutation_Bad_binder_checker(actualhighestscoring, J, H, allseqpath)
+print(high)
+# print(low)
+s1 = 'CGGGATGATGTGTGGTAGGCCTATCATGGGTAGGGTGGTG'
+s2 = 'UGGGATGATGTGTGGTAGCCCTATGATGGGTAGGGTGGTG'
+s3 = 'UGGGATCATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
+s4 = 'UGGGATGATGTGTGGTAGGCCTATAATGGGTAGGGTGGTG'
 
+# results = dca.ensemble_checker(allseqpath, s1, s2, s3, s4)
+# print(results)
+
+# b, g = dca.find_closest_seqs('AGGGAUGAUGUGUAUGAUGCCUAGGUUGGGUAGGGUGGUG', allseqpath, N)
+# print(dca.Calc_Energy(b, J, H), dca.Calc_Energy(g, J, H))
+# sseqpath = '/home/jonah/Desktop/Current/v4/8v4poss.txt'
+
+# cutoff = 83
+# actualhighestscoring = 'AGGGATGATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
+# ssels = []
+# seqs = dca.Fasta_Read_SeqOnly(sseqpath)
+# print(seqs)
+# for xid, x in enumerate(seqs):
+#     if dca.Calc_Energy(seqs[xid], J, H) > cutoff:
+#         ssels.append(seqs[xid])
+#
 # Get rid of any duplicate Seqs
-fseqs = dca.prune_alignment(ssels, 1.0)
-afseqs = []
-nrgs, simm = [], []
-for x in fseqs:
-    tmpa, simscore, tmpb = dca.ensemble_checker(allseqpath, x)[0]
-    if simscore != 1.0:
-        afseqs.append(x)
-        simm.append(simscore)
-
-for x in afseqs:
-    nrgs.append(dca.Calc_Energy(x, J, H))
-    # simm.append(dca.sim_score(actualhighestscoring, x))
-
-out = '/home/jonah/Desktop/Current/v4/n332gbrelaxed.txt'
-o = open(out, 'w')
-for xid, x in enumerate(afseqs):
-    print(x, simm[xid], nrgs[xid], file=o)
-o.close()
+# fseqs = dca.prune_alignment(ssels, 1.0)
+# afseqs = []
+# nrgs, simm = [], []
+# for x in fseqs:
+#     tmpa, simscore, tmpb = dca.ensemble_checker(allseqpath, x)[0]
+#     if simscore != 1.0:
+#         afseqs.append(x)
+#         simm.append(simscore)
+#
+# for x in afseqs:
+#     nrgs.append(dca.Calc_Energy(x, J, H))
+#     simm.append(dca.sim_score(actualhighestscoring, x))
+#
+# out = '/home/jonah/Desktop/Current/v4/n332gbrelaxed.txt'
+# o = open(out, 'w')
+# for xid, x in enumerate(afseqs):
+#     print(x, simm[xid], nrgs[xid], file=o)
+# o.close()
 
 
