@@ -20,6 +20,7 @@ rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4, 'T': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
 dna = ['-', 'A', 'C', 'G', 'T']
 nucs = ['A', 'C', 'G', 'U']
+nucd = ['A', 'C', 'G', 'T']
 nuc_to_id = {'A': 1, 'C': 2, 'G': 3, 'T': 4, 'U': 4}
 base_flip_rna = {'A': 'U', 'U': 'A', 'C': 'G', 'G': 'C'}
 
@@ -286,6 +287,31 @@ def sortjmat_plmDCA(file, N, q):
     #normed = Normalize_JMatrix(fullmatrix, N, q)
     return fullmatrix
 
+def sort_2d_gen_matrix(file, x, y):
+    o = open(file, 'r')
+    filled = 0
+    fullmatrix = np.full((x, y), 0.0)
+    for line in o:
+        data = line.split(',')
+        fullmatrix[int(data[0]), int(data[1])] = float(data[2].rstrip())
+        if float(data[2].rstrip()) > 0:
+            filled += 1
+    o.close()
+    print(filled)
+    return fullmatrix
+
+def sort_4d_gen_matrix(file, x, y, w, z):
+    o = open(file, 'r')
+    filled = 0
+    fullmatrix = np.full((x, y, w, z), 0.0)
+    for line in o:
+        data = line.split(',')
+        fullmatrix[int(data[0]), int(data[1]), int(data[2]), int(data[3])] = float(data[4].rstrip())
+        if float(data[4].rstrip()) > 0:
+            filled += 1
+    o.close()
+    print(filled)
+    return fullmatrix
 
 def sorthmat_blDCA(file, N, q):
     o = open(file, 'r')
@@ -402,7 +428,18 @@ def FullJ_disp(J, N, q):
                         Jdisp[i * q + k, j * q + l] = 0.0
     return Jdisp
 
-
+def PortionJ_disp(J, N, q, si, ei, sj, ej):
+    idim, jdim = ei - si, ej - sj
+    Jdisp = np.full(((idim) * q, (jdim) * q), 0.0)
+    for i in range(si, ei):
+        for j in range(sj, ej):
+            for k in range(q):
+                for l in range(q):
+                    if J[i, j, k, l] != 0.0:
+                        Jdisp[(i-si) * q + k, (j-sj) * q + l] = J[i, j, k, l]
+                    else:
+                        Jdisp[(i-si) * q + k, (j-sj) * q + l] = 0.0
+    return Jdisp
 # Returns J Matrix with H values added
 def HJ_Mutant(J, H, N, q):
     mutt = copy.deepcopy(J)
@@ -499,6 +536,125 @@ def Fasta_Read_Aff(fastafile):
             seqs.append(line.rstrip())
     o.close()
     return titles, seqs
+
+
+def classify_seq(seql):
+    if ''.join(seql[0:4]) == 'AGGG' and ''.join(seql[5:10]) == 'TGATG' and ''.join(seql[11:20]) == 'GTGGTAGGC':
+        sid = 0
+    elif ''.join(seql[0:8]) == 'AGGGTAGG' and ''.join(seql[9:20]) == 'GTGGATGATGC':
+        sid = 1
+    elif ''.join(seql[0:6]) == 'TAGGTT' and ''.join(seql[7:20]) == 'TGGGTAGGGTGGT':
+        sid = 2
+    elif ''.join(seql[1:5]) == 'TAGG' and ''.join(seql[6:19]) == 'TGGGTAGGGTGGT':
+        sid = 3
+    else:
+        sid = 4
+    return sid
+
+def classify_fullseq(seql):
+    lseq = seql[0:20]
+    rseq = seql[20:40]
+    lid, rid = classify_seq(lseq), classify_seq(rseq)
+    return lid, rid
+
+
+def Fasta_Read_Aff_fams(fastafile):
+    o = open(fastafile)
+    titles = []
+    lseqs, rseqs = [[], [], [], [], []], [[], [], [], [], []]
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            aff = float(line.rstrip().split('-')[1])
+            titles.append(aff)
+        else:
+            bseq = list(line.rstrip())
+            if len(bseq) == 40 and aff > 1:
+                lid, rid = classify_fullseq(bseq)
+                # lseq = bseq[0:20]
+                # rseq = bseq[20:40]
+                # lid, rid = classify_seq(lseq), classify_seq(rseq)
+                if lid == 3 and rid == 3:
+                    seqs.append((''.join(bseq), aff))
+                # lseqs[lid].append((''.join(lseq), aff))
+                # rseqs[rid].append((''.join(rseq), aff))
+    o.close()
+    # return lseqs, rseqs
+    return seqs
+
+def write_fams(outp, fastafile):
+    lseqs, rseqs = Fasta_Read_Aff_fams(fastafile)
+    outlprefix = ['la.txt', 'lb.txt', 'lc.txt', 'ld.txt', 'le.txt']
+    outrprefix = ['ra.txt', 'rb.txt', 'rc.txt', 'rd.txt', 're.txt']
+    outl = [open(outp + x, 'w') for x in outlprefix]
+    outr = [open(outp + x, 'w') for x in outrprefix]
+    for i in range(5):
+        count = 0
+        for s, a in lseqs[i]:
+            count += 1
+            print('>seq', count, '-', a, sep='', file=outl[i])
+            print(s, file=outl[i])
+        count = 0
+        for s, a in rseqs[i]:
+            count += 1
+            print('>seq', count, '-', a, sep='', file=outr[i])
+            print(s, file=outr[i])
+        outl[i].close()
+        outr[i].close()
+
+
+
+
+
+def Fasta_Read_GB(fastafile):
+    baffs, bseqs = [], []
+    affs, seqs = Fasta_Read_Aff(fastafile)
+    for xid, aff in enumerate(affs):
+        if aff != 1:
+            baffs.append(aff)
+            bseqs.append(seqs[xid])
+    return baffs, bseqs
+
+def Fasta_Read_BB(fastafile):
+    baffs, bseqs = [], []
+    affs, seqs = Fasta_Read_Aff(fastafile)
+    for xid, aff in enumerate(affs):
+        if aff == 1:
+            baffs.append(aff)
+            bseqs.append(seqs[xid])
+    return baffs, bseqs
+
+
+def Fasta_Read_Aff_wE_above80(fastafile, cutoff, J, H):
+    o = open(fastafile)
+    titles = []
+    seqs = []
+    for line in o:
+        if line.startswith('>'):
+            titles.append(float(line.rstrip().split('-')[1]))
+        else:
+            e = Calc_Energy(line.rstrip(), J, H)
+            if e > cutoff:
+                seqs.append(line.rstrip())
+            else:
+                del titles[-1]
+    o.close()
+    return titles, seqs
+
+
+def Fasta_Read_MC(fastafile):
+    o = open(fastafile)
+    energies = []
+    seqs = []
+    for line in o:
+        if line.startswith('s'):
+            energies.append(float(line.rstrip().split('-')[1]))
+        else:
+            seqs.append(line.rstrip())
+    o.close()
+    return energies, seqs
+
+
 
 
 def Fasta_Read_SeqOnly(fastafile):
@@ -714,15 +870,26 @@ def TopX_JNorms(J, N, x, **kwargs):
             if jnorm[i, j] != 0.0:
                 vals.append((i, j, jnorm[i, j]))  # 0, 0 -> 1, 2
                 jvals.append(jnorm[i, j])
-    tot = (N*(N-1)/2)
-    tval = np.percentile(jnorm, (tot - x)/tot*100)
     vals.sort(key=lambda tup: tup[2])
     ind = int(-x)
-    top10 = vals[ind:-1]
+    top10 = vals[ind:]
+    top10.reverse()
+    tval = top10[-1][2]
     if dist:
         return top10, jvals, tval
     else:
         return top10
+
+
+def Strip_nearest_neighbors(jmat, N, q):
+    for x in range(N-1):
+        for y in range(N-1):
+            for k in range(q):
+                for l in range(q):
+                    if abs(x - y) > 2:
+                        continue
+                    else:
+                        jmat[x, y, k, l] = 0.0
 
 
 def TopX_Pos_JNorms(J, N, q, x):
@@ -1026,7 +1193,7 @@ def Fig_IndJij(subplot, J, x, y, id, **kwargs):
     type = 'rna'
     cbar = False
     lw = 0.1
-    title = 'Jij ID: ' + str(id) + ' ' + 'Pair: ' + str(x + 1) + ' and ' + str(y + 2)
+    title = 'p: ' + str(x + 1) + ' and p: ' + str(y + 2)
     for key, value in kwargs.items():
         if key == 'vmax':
             vmg = value
@@ -1109,6 +1276,23 @@ def Top10norms_figure_RNA(id, J, N, OutPath):
     fig.suptitle('Highest Jij Norms ID: ' + str(id))
     plt.savefig(OutPath + str(id) + 'JNormt10.png', dpi=600)
 
+def Top10norms_figure_DNA(id, J, N, OutPath):
+    # Get Indices of top 10 norms
+    jx = TopX_JNorms(J, N, 20)
+    fig, ax = plt.subplots(2, 5, constrained_layout=True)
+    for i in range(10):
+        x, y, z = jx[i]
+        j = i % 5
+        k = 0
+        if i == 0:
+            Fig_IndJij(ax[k, j], J, x, y, id, vmin=-0.5, vmax=.5, type='dna', cbar=False)
+        else:
+            if i > 4:
+                k = 1
+            Fig_IndJij(ax[k, j], J, x, y, id, vmin=-0.5, vmax=.5, type='dna')
+
+    fig.suptitle('Highest Jij Norms ID: ' + str(id))
+    plt.savefig(OutPath + str(id) + 'JNormt10.png', dpi=600)
 
 # Can input multiple fasta files and it will combine all seqs, and plot their energies according to provided J and H
 # keyword argument is title
@@ -1189,6 +1373,14 @@ def ensemble_checker(seqfile, *seqs):
                 msseq = eseq
         results.append((tseq, highest_sim_score, msseq))
     return results
+
+def get_affinity(seqfile, seq):
+    eaffs, eseqs = Fasta_Read_Aff(seqfile)
+    results = []
+    tseq = rna2dna(seq)
+    id = eseqs.index(tseq)
+    return eaffs[id]
+
 
 
 def Jnorm_finder(J, N, q, sn, en, step, seqfile, z):
@@ -2030,7 +2222,7 @@ def Raw_Aff_v_E(J, H, title, outpath, infile):
     energies = []
     for x in seqs:
         energies.append(Calc_Energy(x, J, H))
-    plt.scatter(titles, energies)
+    plt.scatter(titles, energies, color='r', s=0.5)
     plt.title(title)
     plt.ylabel('Energy')
     plt.xlabel('Affinity')
@@ -2088,7 +2280,7 @@ def Raw_wRscore(J, H, outpath, infile):
     plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
     cutoff = max([y for x, y in api if x == 1])
     plt.plot(xl, [cutoff for i in xl], ':b')
-    plt.scatter(titles, energies)
+    plt.scatter(titles, energies, color='r', s=0.5)
     plt.ylabel('Energy')
     plt.xlabel('R Score: ' + str(linreg[2]))
     plt.savefig(outpath, dpi=600)
@@ -2514,8 +2706,209 @@ def find_closest_seqs(seq, ensemblefile, N):
                 if el[i] == sl[i]:
                     tmp += 1
             if tmp > gs:
+                ga = affs[sid]
                 cgs = es
                 gs = tmp
         else:
             print(affs[sid])
-    return cbs, cgs
+    gd, bd = dis_seqs(sl, cgs), dis_seqs(sl, cbs)
+    return cbs, cgs, bd, gd, ga
+
+
+def avg_mut_energy(seq, mutnum, seqnum, N, J, H):
+    sseq = list(seq)
+    es = []
+    for x in range(seqnum):
+        tseq = copy.deepcopy(sseq)
+        for i in range(mutnum):
+            pos = np.random.choice(range(len(tseq)))
+            tseq[pos] = np.random.choice(nucd)
+        es.append(Calc_Energy(tseq, J, H))
+    return mean(es), np.std(es)
+
+
+
+
+
+def analyze_MC_seqs(cutoff, ensemblefile, N, J, H, epath, mutpath, *outfiles):
+    eaffs, eseqs = Fasta_Read_Aff_wE_above80(ensemblefile, 80.0, J, H)
+    mseqs, mes, info = [], [], []
+    fseqs, fes = [], []
+    ef = open(epath, 'w+')
+    mf = open(mutpath, 'w+')
+    for oid, out in enumerate(outfiles):
+        tes, tseqs = Fasta_Read_MC(out)
+        for xid, x in enumerate(tes):
+            if x > cutoff:
+                mes.append(tes[xid])
+                mseqs.append(tseqs[xid])
+        if oid > 0:
+            mes, mseqs = prune_alignment(mseqs, 1.0, mes)
+    removed = 0
+    for sid, seq in enumerate(mseqs):
+        if sid % 10 == 0:
+            print('seq', sid)
+        present = [x for x in eseqs if x == seq]
+        if not present:
+            fseqs.append(seq)
+            fes.append(mes[sid])
+        else:
+            removed += 1
+    print('Removed', removed, 'Sequences')
+    for sid, seq in enumerate(fseqs):
+        sl = list(seq)
+        rm = False
+        bs, gs = 0, 0
+        cbs, gbs = "A", "A"
+        for esid, es in enumerate(eseqs):
+            el = list(es)
+            gtmp, btmp = 0, 0
+            if eaffs[esid] == 1:
+                for i in range(N):
+                    if el[i] == sl[i]:
+                        btmp += 1
+                if btmp == N:
+                    rm = True
+                if btmp > bs:
+                    cbs = es
+                    bs = btmp
+            elif eaffs[esid] > 1:
+                for i in range(N):
+                    if el[i] == sl[i]:
+                        gtmp += 1
+                if gtmp == N:
+                    rm = True
+                if gtmp > gs:
+                    cgs = es
+                    gs = gtmp
+        print('seq', sid, flush=True)
+        if rm == True:
+            continue
+        else:
+            if gs > bs:
+                muts = N - gs
+                info.append((seq, fes[sid], muts, '*' + cgs, cbs))
+            elif bs > gs:
+                muts = N - bs
+                info.append((seq, fes[sid], muts, cgs, '*' + cbs))
+            else:
+                muts = N - gs
+                info.append((seq, fes[sid], muts, '*' + cgs, cbs))
+    eorder = copy.deepcopy(info)
+    eorder.sort(key=lambda tup: tup[1])
+    info.sort(key=lambda tup: tup[2])
+    for s, e, m, gs, bs in eorder:
+        print(s, e, m, gs, bs, file=ef)
+    for s, e, m, gs, bs in info:
+        print(s, e, m, gs, bs, file=mf)
+    ef.close()
+    mf.close()
+
+
+def dis_seqs(seq1, seq2):
+    d = 0
+    u = zip(seq1, seq2)
+    for i, j in u:
+        if i != j:
+            d += 1
+    return d
+
+def diffs_seqs(seq1, seq2, affinity=0):
+    diff = []
+    u = zip(seq1, seq2)
+    for pos, val in enumerate(u):
+        i, j = val
+        if i != j:
+            if affinity == 0:
+                diff.append((pos+1, j))
+            else:
+                char = str(affinity) + j
+                diff.append((pos + 1, char))
+    return diff
+
+def sort_diffs(totaldiffs, N):
+    adiff = ['' for x in range(N)]
+    td = []
+    for diff in totaldiffs:
+        for x, m in diff:
+            adiff[x-1] += m
+    for aid, a in enumerate(adiff):
+        td.append((aid+1, a))
+    return td
+
+
+def local_env(seq, ensemblefile, basesaway, N):
+    eaffs, eseqs = Fasta_Read_Aff(ensemblefile)
+    blseqs, glseqs, tgd, tbd = [], [], [], []
+    g1, b1, g2, b2, g3, b3 = [], [], [], [], [], []
+    bad_muts, good_muts, neut = [], [], []
+    for eid, es in enumerate(eseqs):
+        d = dis_seqs(seq, es)
+        aff = eaffs[eid]
+        if d > basesaway:
+            continue
+        else:
+            if d ==1:
+                if eaffs[eid] == 1:
+                    b1.append(es)
+                else:
+                    g1.append((aff, es))
+            if d == 2:
+                if eaffs[eid] == 1:
+                    b2.append(es)
+                else:
+                    g2.append((aff, es))
+            if d == 3:
+                if eaffs[eid] == 1:
+                    b3.append(es)
+                else:
+                    g3.append(es)
+    for b in b1:
+        bad_muts.append(diffs_seqs(seq, b))
+    for aff, g in g1:
+        good_muts.append(diffs_seqs(seq, g, aff))
+    for b in b2:
+        d = diffs_seqs(seq, b)
+        comm = [x for x in d if x in bad_muts]
+        if comm:
+            d.remove(comm[0])
+            neut.append(d)
+        else:
+            tbd.append(d)
+    for aff, g in g2:
+        d = diffs_seqs(seq, g, aff)
+        comm = [x for x in d if x in good_muts]
+        if comm:
+            d.remove(comm[0])
+            neut.append(d)
+        else:
+            tgd.append(d)
+    gd1 = sort_diffs(good_muts, N)
+    bd1 = sort_diffs(bad_muts, N)
+    gd2 = sort_diffs(tgd, N)
+    bd2 = sort_diffs(tbd, N)
+    return gd1, gd2, bd1, bd2
+
+
+def avgdis_ensemble(seq, ensemblefile):
+    eaffs, eseqs = Fasta_Read_Aff(ensemblefile)
+    td = 0
+    for es in eseqs:
+        td += dis_seqs(seq, es)
+    return td / len(eseqs)
+
+
+def avgdis_gb(seq, ensemblefile):
+    gaffs, gseqs = Fasta_Read_GB(ensemblefile)
+    td = 0
+    for gs in gseqs:
+        td += dis_seqs(seq, gs)
+    return td / len(gseqs)
+
+
+def avgdis_bb(seq, ensemblefile):
+    baffs, bseqs = Fasta_Read_BB(ensemblefile)
+    td = 0
+    for bs in bseqs:
+        td += dis_seqs(seq, bs)
+    return td/len(bseqs)

@@ -817,3 +817,36 @@ o = open(out, 'w')
 for xid, x in enumerate(afseqs):
     print(x, simm[xid], nrgs[xid], file = o)
 o.close()
+
+
+
+import dcamethods as dca
+
+fam = 8
+cpath = "/home/jonah/Desktop/Current/"
+allseqpath = cpath + str(fam) + 'all.txt'
+
+infile = '/home/jonah/Desktop/Current/aptamerfinal/figs/t3k.txt'
+out = '/home/jonah/Desktop/Current/aptamerfinal/figs/hb1poss3k.txt'
+
+
+hb = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
+i = open(infile, 'r')
+o = open(out, 'w')
+count=1
+for line in i:
+    data = line.split()
+    seq, energy, mut_num = data[0], data[1], data[2]
+    if data[3] == '*'+hb:
+        count+=1
+        de, db, dg = dca.avgdis_ensemble(seq, allseqpath), dca.avgdis_bb(seq, allseqpath), dca.avgdis_gb(seq, allseqpath)
+        mut_loc = dca.diffs_seqs(hb, seq)
+        print('Seq', count, ':', seq, file=o)
+        print('        1   5    10   15   20   25   30   35    ', file=o)
+        print('Energy', energy, 'Mutation#', mut_num, 'Mut_Loc:',mut_loc, file=o)
+        print("Avg_Ensemble:", de, 'Avg_dist_bb', db, "Avg_dist_gb", dg, file=o)
+        print('\n', file=o)
+i.close()
+o.close()
+
+

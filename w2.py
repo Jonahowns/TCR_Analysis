@@ -6,7 +6,8 @@ import multiprocessing as mp
 upath = "/home/jonah/Dropbox (ASU)/"
 droppathv3 = "Projects/DCA/v3/"
 v3path = upath + droppathv3
-
+cpath = "/home/jonah/Desktop/Current/"
+tenpath = cpath + 'v4/10percent/'
 
 # corrfile = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.out'
 # N = 20
@@ -27,41 +28,40 @@ def mix_2comp_H(H1, H2, N, q):
 
 N = 40
 q = 5
-j1p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs1.j'
-j2p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.j'
-h1p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs1.h'
-h2p = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.h'
-J1 = dca.sortjmat_plmDCA(j1p, 20, 5)
-J2 = dca.sortjmat_plmDCA(j2p, 20, 5)
-H1 = dca.sorthmat_plmDCA(h1p, 20, 5)
-H2 = dca.sorthmat_plmDCA(h2p, 20, 5)
-
-
-Jmix = mix_2comp_J(J1, J2, N, q)
-Hmix = mix_2comp_H(H1, H2, N , q)
-
-#OG
 fam = 8
-bJp = v3path + str(fam) + 'ba.j'
-bHp = v3path + str(fam) + 'ba.h'
-gHp = v3path + str(fam) + 'go.h'
-gJp = v3path + str(fam) + 'go.j'
-bJ = dca.sortjmat_plmDCA(bJp, N, q)
-bH = dca.sorthmat_plmDCA(bHp, N, q)
-gH = dca.sorthmat_plmDCA(gHp, N, q)
-gJ = dca.sortjmat_plmDCA(gJp, N, q)
-
-cpath = "/home/jonah/Desktop/Current/"
+j901p = tenpath + 's901.j'
+h901p = tenpath + 's901.h'
+j901 = dca.sortjmat_plmDCA(j901p, N, q)
+h901 = dca.sorthmat_plmDCA(h901p, N, q)
+#OG
 allseqpath = cpath + str(fam) + 'all.txt'
 
-Jsel, vals, cut = dca.TopJNorms_Jmatrix(gJ, N, q, 305)
-bJsel, val, cut2 = dca.TopJNorms_Jmatrix(Jmix, N, q, 245)
+J, vals, co = dca.TopJNorms_Jmatrix(j901, N, q, 329)
+H = 2*h901
+eH = np.full((N, q), 0.0)
+jdisp = dca.FullJ_disp(J, N, q)
+# dca.Raw_wRscore(J, H, '/home/jonah/Desktop/Current/aptamerfinal/figs/v5allseqsepwr.png', allseqpath)
+# plt.close()
+# dca.Raw_Aff_v_E(J, H, 'Family 8 Sequences', '/home/jonah/Desktop/Current/aptamerfinal/figs/v5allseqsep.png', allseqpath)
+# plt.close()
+# fig, ax = plt.subplots(1)
+# dca.Fig_FullJ(ax, 'Norm J', jdisp, N, q)
+# plt.savefig('/home/jonah/Desktop/Current/aptamerfinal/figs/v5JNorm.png', dpi=600)
+# plt.close()
+fig1, ax1 = plt.subplots(1)
+dca.Fig_Distribution_w_Cutoff(ax1, 'J Norm Distribution', vals, co)
+plt.savefig('/home/jonah/Desktop/Current/aptamerfinal/figs/v5JNormdist.png')
+plt.close()
+# dca.Top10norms_figure_DNA('Top 10 Norms Family 8', J, N, '/home/jonah/Desktop/Current/aptamerfinal/figs/v5top10.png')
+# plt.close()
 
-JF = Jsel
 
-H = 2*gH
+# bJsel, val, cut2 = dca.TopJNorms_Jmatrix(Jmix, N, q, 245)
 
-dca.mc_analysis_plot('/home/jonah/Desktop/Current/12gba.txt', allseqpath, N, Jsel, H, '/home/jonah/Desktop/Current/mcav2.png')
+
+
+
+# dca.mc_analysis_plot('/home/jonah/Desktop/Current/12gba.txt', allseqpath, N, Jsel, H, '/home/jonah/Desktop/Current/mcav2.png')
 # bs = 'AGGGATGATGTGTGGTAGGCCTAGGGTGGGGAGGGTGGTG'
 # mutt = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGTGGGTGGGGTG'
 # mut3 = 'AGGGATGATGTGTGGTAGGCGTAGGGTGGGGAGTGTGGTG'
