@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 
 upath = "/home/jonah/Dropbox (ASU)/"
-droppathv3 = "Projects/DCA/v3/"
-v3path = upath + droppathv3
+droppathv3 = "Projects/DCA/ThrombinAptamers/v4/10percent/"
+apath = upath + "Projects/DCA/ThrombinAptamers/v3/"
+vpath = upath + droppathv3
 cpath = "/home/jonah/Desktop/Current/"
-tenpath = cpath + 'v4/10percent/'
-spath = cpath + 'v4/byfam/'
+# tenpath = cpath + 'v4/10percent/'
+# spath = cpath + 'v4/byfam/'
 
 # corrfile = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.out'
 # N = 20
@@ -33,12 +34,12 @@ fam = 8
 #Paths
 
 # Goodbinders
-j901p = tenpath + 's901.j'
-h901p = tenpath + 's901.h'
-j902p = tenpath + 's902.j'
-h902p = tenpath + 's902.h'
-j900p = tenpath + 's900.j'
-h900p = tenpath + 's900.h'
+j901p = vpath + 's901.j'
+h901p = vpath + 's901.h'
+j902p = vpath + 's902.j'
+h902p = vpath + 's902.h'
+j900p = vpath + 's900.j'
+h900p = vpath + 's900.h'
 j901 = dca.sortjmat_plmDCA(j901p, N, q)
 j902 = dca.sortjmat_plmDCA(j902p, N, q)
 h901 = dca.sorthmat_plmDCA(h901p, N, q)
@@ -47,22 +48,7 @@ j900 = dca.sortjmat_plmDCA(j900p, N, q)
 h900 = dca.sorthmat_plmDCA(h900p, N, q)
 H = 2*h901
 J = dca.TopJNorms_Jmatrix(j901, N, q, 329)[0]
-Jnfp = spath + 'hbnf.j'
-Hnfp = spath + 'hbnf.h'
-adjp = spath + 'ad.j'
-adhp = spath + 'ad.h'
-ddjp = spath + 'dd.j'
-ddhp = spath + 'dd.h'
-bdjp = spath + 'bd.j'
-bdhp = spath + 'bd.h'
-adj = dca.sortjmat_plmDCA(adjp, N, q)
-adh = dca.sorthmat_plmDCA(adhp, N, q)
-bdj = dca.sortjmat_plmDCA(bdjp, N, q)
-bdh = dca.sorthmat_plmDCA(bdhp, N, q)
-ddj = dca.sortjmat_plmDCA(ddjp, N, q)
-ddh = dca.sorthmat_plmDCA(ddhp, N, q)
-jnf = dca.sortjmat_plmDCA(Jnfp, N, q)
-hnf = dca.sorthmat_plmDCA(Hnfp, N, q)
+
 
 # fig, ax = plt.subplots(1, 3)
 # addisp = dca.FullJ_disp(adj, N, q)
@@ -81,9 +67,52 @@ f3 = 'AGGGTAGGTGTGGAGTAGGCCTAGGATGGGTAGGGTGGTG'
 f4 = 'AGGGTAGATGTGTAGGATGCCTAGGATGGGTAGGGTGGTG'
 
 f5 = 'AGGGATGATGTGGATTAGGCCTAGGATGGGTAGGGTGGTG'
-f6 = 'AGGGATGATGTGTTGGAGGCCTAGGATGGGTAGGGTGGTG'
-f7 = 'AGGGAAGATGTGGGGTAGGCCTAGGATGGGTAGGGTGGTG'
 
+
+r1 = 'GGGGATGGGGGGGTGGAGGACTAGGTTGGGTAGGGTGGTG'
+r2 = 'AGGGTAGGAGTGGATGATGCGTAGGTTGGGTAGGGTGGTC'
+r3 = 'GTAGGATGGGTAGGGTGGTCAGGGATGATGTGTGGTAGGC'
+r4 = 'AGGGATGATGTGTGGTAGGCGCGGGCGGTACGTGGGTGTG'
+h1 = 'AGGGATGGGGTGGTGGAGGCCTAGGTTGGGTAGGGTGGTG'
+h2 = 'AGGGTAGGTGTGGATGATGCCTAGGTTGGGTAGGGTGGTG'
+h3 = 'CTAGGATGGGTAGGGTGGTGAGGGTTGATGTGTGGTAGGC'
+h4 = 'AGGGATGATGTGTGGTAGGCGGGGTCGGTACGTGGGTGGG'
+l1 = 'GGCUATGGGGGGGTGGAGGACTAGGTTGGGTAGGGTCGTG'
+l2 = 'AGTTTAGGAGTGGATGATGCGTAGCTTGGGTAGGGTGGTC'
+l3 = 'GTCGGACGGGTAGGGCGGTCAGGGATGATGTGTGGTAGGC'
+l4 = 'AGGGATCATGTGTGGCCGGCGCGGGCGGTACGTGGGTGTG'
+
+allseqpath = apath + str(fam) + 'all.txt'
+# print(dca.Calc_Energy(h2, J, H))
+# baf, beq = dca.Fasta_Read_BB(allseqpath)
+# results = []
+# selseqs = []
+# for i in range(10):
+#     sels = np.random.choice(range(len(beq)))
+#     selseqs.append(beq[sels])
+# for x in selseqs:
+#     print(x, 'E=', round(dca.Calc_Energy(x, J, H), 2))
+#     a, s = dca.avg_mut_energy(x, 3, 10000, N, J, H)
+#     print('3 Mutations: avg=', a, 'std=', s)
+#     l, h = dca.ThreeMutation_checker(x, J, H)
+#     print('Highest:', h[-1][0], 'E=', h[-1][1])
+#     print('Lowest:', l[0][0], 'E=', l[0][1])
+# all7 = apath + '7all.txt'
+# gseqs = [f1, f2, f3, f4, f5]
+# hiseqs = [f1, f2]
+# rseqs = [r1, r2, r3, r4]
+# hseqs = [h1, h2, h3, h4]
+# lseqs = [l1, l2, l3, l4]
+# for x in gseqs:
+#     print(round(dca.avgdis_bb(x, allseqpath), 2))
+# for x in rseqs:
+#     h, l = dca.ThreeMutation_checker(x, J, H)
+#     print(h, l)
+# for x in hiseqs:
+#     print(dca.ThreeMutation_checker(x, J, H))
+
+# dca.Raw_wRscore(J, H, '/home/jonah/Desktop/fam7scoring.png', all7)
+# dca.Plot_Seq_Aff_v_E(J, H, '/home/jonah/Desktop/fam7avg.png', all7)
 f8 = 'AGGGTAGGTGTGGATTATGCCTAGGATGGGTAGGGTGGTG'
 f9 = 'AGGGTAGGTGTGGATTATGCCTAGGATGGGTAGGGTGGTT'
 f10 = 'CGGGTAGGTGTGGATTATGCCTAGCATGGGTAGGGTGGTG'
@@ -97,14 +126,56 @@ f13 = 'TGGGATGATGTGTGGTAGGCCTAGCATGGGTAGGGTGGTG'
 
 # 17G - 87.53
 
+b1 = 'GGGGGTTGGGCGGGATGGGCTTGGGTGGTGTAGGTTGGCG'
+b2 = 'GCGGGTTGGGCAGGATCAGCTTGGGTGGTGCAGGTTCGCG'
+# bs = [b1, b2]
+# for x in bs:
+#     print(dca.ensemble_checker(allseqpath, x))
+t = 'AGGGATGATGTGGATGACGCCTAGGATGGGTAGGGTGGTG'
+m = 'AGGGATGATGTGTGGTAGGCGTAGGATGGGTAGGGTGGTC'
+m2 = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
 
+p2 = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTGGTGGGGTG'
+p1 =   'AGGGATGATGTGTGGTAGGCGTAGGATGGGTGGGGTGGGA'
+pmix = 'AGGGATGATGGTTGGTAGGCGTAGGATGGGTAGGGTGGTA'
+#       1   5    10   15   20   25   30   35
+# pos = dca.all_mut_possibilities(list(p2))
+# results = []
+# for x in pos:
+#     if dca.ensemble_checker(allseqpath, x)[0][1] == 0.925:
+rg = 'GGGGATGGGGGGGTGGAGGACTAGGTTGGGTAGGGTGGTG'
+lg = 'GGCUATGGGGGGGTGGAGGACTAGGTTGGGTAGGGTCGTG'
+rb = 'GCGGGTTGGGCAGGATGGGCTTGGGTGGTGCAGGTTGGCG'
+lb = 'GCGGGTTGGGCAGGATCAGCTTGGGTGGTGCAGGTTCGCG'
+ub = 'GGGGGTTGGGCGGGATGGGCTTGGGTGGTGTAGGTTGGCG'
 
-allseqpath = cpath + str(fam) + 'all.txt'
+cl ='AGGGTGGGAGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
+# r = dca.find_closest_seqs('AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG', allseqpath, N)
+# print(r)
+print(dca.mut_loc(cl, 'AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG'))
+# print(dca.Calc_Energy(pmix, J, H))
+# print(dca.mut_loc(rg, lg))
+# print(dca.mut_loc(rb, lb))
+# print(dca.mut_loc(rb, ub))
+#         results.append((x, e))
+# results.sort(key=lambda tup: tup[1])
+# interest = results[-10:]
+# for x in interest:
+#     print(x)
+#     print(dca.mut_loc(p2, x[0]))
 
 # r= dca.ensemble_checker(allseqpath, 'AGGGATGATGTGTGGTAGGCTAGGGTTGGTGTGGGTGGCG')
 # print(r)
-results = dca.find_closest_seqs('CGGGATGGGGTGAGGTAGGCATAGGATGGGTAGGGTGGTT', allseqpath, N)
-print(results)
+
+# s, e = dca.rand_mut('GTAGGATGGGTAGGGTGGTCAGGGATGATGTGTGGTAGGC', 2, J, H)
+# print(s,'E=', round(e,2))
+
+
+# print(dca.Calc_Energy('AGGGATGATGTGTGGTAGGCGCGGGCGGTACGTGGGTGTG', J, H))
+# for i in range(6, 7):
+#     e, s = dca.avg_mut_energy('AGGGATGATGTGTGGTAGGCGCGGGCGGTACGTGGGTGT', i, 100000, N, J, H)
+#     print('E=', round(e, 2), 'std=', round(s, 2))
+
 # print(dca.avg_mut_energy('AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG', 4, 100000, N, J, H))
 # print(dca.avg_mut_energy('AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG', 5, 100000, N, J, H))
 # print(dca.avg_mut_energy('AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGGTGGTG', 6, 100000, N, J, H))

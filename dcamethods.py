@@ -537,6 +537,14 @@ def Fasta_Read_Aff(fastafile):
     o.close()
     return titles, seqs
 
+def Fasta_Read_Aff_wC(fastafile, affc):
+    baffs, bseqs = [], []
+    affs, seqs = Fasta_Read_Aff(fastafile)
+    for xid, aff in enumerate(affs):
+        if aff >= affc and len(seqs[xid]) == 40:
+            baffs.append(aff)
+            bseqs.append(seqs[xid])
+    return baffs, bseqs
 
 def classify_seq(seql):
     if ''.join(seql[0:4]) == 'AGGG' and ''.join(seql[5:10]) == 'TGATG' and ''.join(seql[11:20]) == 'GTGGTAGGC':
@@ -2912,3 +2920,103 @@ def avgdis_bb(seq, ensemblefile):
     for bs in bseqs:
         td += dis_seqs(seq, bs)
     return td/len(bseqs)
+
+def rand_mut(seq, numofmuts, J, H):
+    tseq = list(seq)
+    for x in range(numofmuts):
+        pos = np.random.choice(range(len(tseq)))
+        tseq[pos] = np.random.choice(nucd)
+    E = Calc_Energy(''.join(tseq), J, H)
+    return ''.join(tseq), E
+
+def all_mut_possibilities(seql):
+    allpos = []
+    for iid, i in enumerate(seql):
+        alternatives = [x for x in nucd if x != i]
+        for an in alternatives:
+            seql[iid] = an
+            allpos.append(copy.deepcopy(seql))
+        seql[iid] = i
+    return allpos
+
+def ThreeMutation_checker(seq, J, H):
+    tseq = list(copy.deepcopy(seq))
+    results = []
+    alts = all_mut_possibilities(tseq)
+    alt2 = []
+    for x in alts:
+        alt2 += all_mut_possibilities(x)
+    alt3 = []
+    for x in alt2:
+        alt3 += all_mut_possibilities(x)
+    for x in alt3:
+        if dis_seqs(x, seq) == 3:
+            results.append((''.join(x), Calc_Energy(x, J, H)))
+    results.sort(key=lambda tup: tup[1])
+    highest = results[:5]
+    lowest = results[-5:]
+    return highest, lowest
+
+def score_dist(ensemblefile, J, H, path):
+    eaffs, eseqs = Fasta_Read_Aff(ensemblefile)
+    affs = set(eaffs)
+    pas, pes, alle = [], [], []
+    for a in affs:
+        es = []
+        for xid, x in enumerate(eseqs):
+            if eaffs[xid] == a:
+                es.append(Calc_Energy(x, J, H))
+        alle += es
+        pas.append(a)
+        pes.append(mean(es))
+    fig, ax = plt.subplots()
+    deN = gaussian_kde(alle)
+    xd1 = np.linspace(min(alle), max(alle), 100)
+    ax.plot(xd1, deN(xd1), color='r')
+    ax.plot(alle, [0.00] * len(alle), '|', color='k')
+    cs = ['b', 'g', 'c', 'm', 'y']
+    for i in range(len(pas)):
+        if i == 0:
+            ax.axvline(x=pes[i], c='k', lw=0.5)
+        else:
+            ax.axvline(x=pes[i], c=cs[i % 5], lw=0.5)
+        plt.text(pes[i] + 0.1, 0.002 + (i % 10 * 0.005), str(pas[i]), rotation=90, c=cs[i % 5])
+        plt.text(20, .054 - i*0.002, str(pas[i]) + ': ' + str(round(pes[i], 2)), c=cs[i % 5])
+    ax.set_xlabel('Energy')
+    ax.grid(True)
+    ax.title.set_text('Score Distribution')
+    ax.title.set_size(fontsize=10)
+    plt.savefig(path, dpi=600)
+
+
+def mut_loc(mseq, tseq):
+    u = zip(mseq, tseq)
+    d = []
+    for xid, x in enumerate(u):
+        i, j = x
+        if i != j:
+            d.append((xid+1, str(j)))
+    return d
+
+#def mutation_checker(seq, J, H, mutnum, seqfile):
+    # tseq = list(copy.deepcopy(seq))
+    # tmp, results = [], []
+    # for x in range(mutnum):
+    #     if x == 0:
+    #         alts = all_mut_possibilities(tseq)
+    #     else:
+    #         for x in alts:
+    #             tmp += all_mut_possibilities(x)
+    #             if x != mutnum-1:
+    #                 alts = tmp
+    #             else:
+    #                 for x in tmp:
+    #                     if dis_seqs(x, seq) == 3:
+    #                         results.append((''.join(x), Calc_Energy(x, J, H)))
+    # results.sort(key=lambda tup: tup[1])
+    # lowest, le = results[0][0], results[0][1]
+    # highest, he = results[-1][0], results[-1][1]
+    # la = ensemble_checker(seqfile, lowest)
+    # ha = ensemble_checker(seqfile, highest)
+    # return la, le, ha, he
+
