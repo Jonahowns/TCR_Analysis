@@ -61,6 +61,6 @@ def data_prop(affs, seqs):
 
 a_s, s_s = read_gfile_alldata(r15p)
 data_prop(a_s, s_s)
-# X_train, X_test, Y_train, Y_test = train_test_split(s_s, a_s, test_size=0.2, random_state=0)
+X_train, X_test, Y_train, Y_test = train_test_split(s_s, a_s, test_size=0.2, random_state=0)
 
 
