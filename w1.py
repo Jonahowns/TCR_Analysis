@@ -84,19 +84,34 @@ l4 = 'AGGGATCATGTGTGGCCGGCGCGGGCGGTACGTGGGTGTG'
 
 allseqpath = apath + str(fam) + 'all.txt'
 # print(dca.Calc_Energy(h2, J, H))
-# baf, beq = dca.Fasta_Read_BB(allseqpath)
+baf, beq = dca.Fasta_Read_GB(allseqpath)
 # results = []
-# selseqs = []
+selseqs = []
+sela = []
 # for i in range(10):
 #     sels = np.random.choice(range(len(beq)))
 #     selseqs.append(beq[sels])
-# for x in selseqs:
-#     print(x, 'E=', round(dca.Calc_Energy(x, J, H), 2))
-#     a, s = dca.avg_mut_energy(x, 3, 10000, N, J, H)
-#     print('3 Mutations: avg=', a, 'std=', s)
-#     l, h = dca.ThreeMutation_checker(x, J, H)
-#     print('Highest:', h[-1][0], 'E=', h[-1][1])
-#     print('Lowest:', l[0][0], 'E=', l[0][1])
+#     sela.append(baf[sels])
+# for xid, x in enumerate(selseqs):
+#     print(x, 'E=', round(dca.Calc_Energy(x, J, H), 2), 'A =', sela[xid])
+    # a, s = dca.avg_mut_energy(x, 3, 10000, N, J, H)
+    # print('3 Mutations: avg=', a, 'std=', s)
+    # l, h = dca.ThreeMutation_checker(x, J, H)
+    # print('Highest:', h[-1][0], 'E=', h[-1][1])
+    # print('Lowest:', l[0][0], 'E=', l[0][1])
+x = 'GTAGGATGGGTAGGGTGGTCGTAGGATGGGTAGGGTGGTC'
+print(x, 'E=', round(dca.Calc_Energy(x, J, H), 2), 'A =', 10)
+# l, h = dca.ThreeMutation_checker(x, J, H)
+# print('Highest:', h[-1][0], 'E=', h[-1][1])
+# print('Lowest:', l[0][0], 'E=', l[0][1])
+
+hi = 'GTAGGATGGGTAGGGTGGTCCTAGGTTGGGTAGGGTGGTG'
+lo = 'GTAGGACGGGTAGGGCGGTCGTAGCATGGGTAGGGTGGTC'
+print(dca.Calc_Energy(lo, J, H))
+
+# r1, r2 = dca.ensemble_checker(allseqpath, hi), dca.ensemble_checker(allseqpath, lo)
+# print(r1, r2)
+# print(dca.mut_loc(x, lo))
 # all7 = apath + '7all.txt'
 # gseqs = [f1, f2, f3, f4, f5]
 # hiseqs = [f1, f2]
@@ -152,7 +167,7 @@ ub = 'GGGGGTTGGGCGGGATGGGCTTGGGTGGTGTAGGTTGGCG'
 cl ='AGGGTGGGAGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
 # r = dca.find_closest_seqs('AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG', allseqpath, N)
 # print(r)
-print(dca.mut_loc(cl, 'AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG'))
+# print(dca.mut_loc(cl, 'AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG'))
 # print(dca.Calc_Energy(pmix, J, H))
 # print(dca.mut_loc(rg, lg))
 # print(dca.mut_loc(rb, lb))
@@ -301,4 +316,16 @@ s4 = 'UGGGATGATGTGTGGTAGGCCTATAATGGGTAGGGTGGTG'
 #     print(x, simm[xid], nrgs[xid], file=o)
 # o.close()
 
-
+g1 = 'AGGGTAGGTGTGGGGTATGCCTAGGATGGGTAGGGTGGTG'
+g2 = 'AGGGATGATGTGTGGTAGGCGTAGGATGGGTGGGGTGGGA'
+g3 = 'AGGGTAGATGTGTAGGATGCCTAGGATGGGTAGGGTGGTG'
+g4 = 'AGGGATGATGGTTGGTAGGCGTAGGATGGGTAGGGTGGTA'
+g5 = 'AGGGATGATGTGGATTAGGCCTAGGATGGGTAGGGTGGTG'
+g6 = 'AGGGTGGGAGCGGGGGACGCCTAGGTTGGGTAGGGTGGTG'
+g7 = 'CGGGTAGGTGTGGATTATGCCTAGCATGGGTAGGGTGGTG'
+g9 = 'GTAGGACGGGTAGGGCGGTCGTAGCATGGGTAGGGTGGTC'
+g10 = 'GGGGGTTGGGCGGGATGGGCTTGGGTGGTGTAGGTTGGCG'
+g11 = 'GCGGGTTGGGCAGGATCAGCTTGGGTGGTGCAGGTTCGCG'
+gs = [g1, g2, g3, g4, g5, g6, g7, g9, g10, g11]
+for x in gs:
+    print('avg_dis_gb=', round(dca.avgdis_gb(x, allseqpath), 2), 'avg_dis_bb=', round(dca.avgdis_bb(x, allseqpath), 2))
