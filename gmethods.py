@@ -11,7 +11,7 @@ datap = "Projects/DCA/GuntherAptamers/Selex_Data/"
 datat = "Projects/DCA/ThrombinAptamers/"
 datao = "Projects/DCA/ThrombinAptamers/v4/split/"
 datarbm = "Projects/DCA/rbm_rna_v1/"
-analysisrbm = wpath + "LabFolders/Jonah_projects/RBM/"
+analysisrbm = upath + "LabFolders/Jonah_projects/RBM/"
 
 r15p = upath + datap + 'PAL_Anna_R15_counts.txt'
 r14p = upath + datap + 'PAL_Anna_R14_counts.txt'
@@ -29,6 +29,7 @@ def read_gfile_alldata(filep):
         seqs.append(seq)
     o.close()
     return affs, seqs
+
 
 def data_prop(affs, seqs):
     a2 = set(affs)
@@ -84,7 +85,6 @@ def prep_data(affs, seqs, loi, afcut):
     return faffs, fseqs
 
 
-
 def split_data(seqs, split_n):
     lhs, rhs = [], []
     for aid, a in enumerate(seqs):
@@ -93,64 +93,14 @@ def split_data(seqs, split_n):
         rhs.append(''.join(n[split_n:]))
     return lhs, rhs
 
-def likelihood_plot_rmb(affs, like, title, out):
-    plt.scatter(affs, like, c='r', s=0.2)
-    plt.title('Affinity vs. Likelihood :' + title)
-    plt.xlabel('Affinity')
-    plt.ylabel('Likelihood')
-    plt.savefig(out)
-    plt.close()
 
 
-def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath):
-    a_s = list(set(affs))
-    api = list(zip(affs, likeli))
-    highestaff = 1
-    datax, datae = [], []
-    for x in a_s:
-        if x > highestaff: highestaff = x
-        prospects = [l for (aff, l) in api if aff == x]
-        datax.append(x)
-        datae.append(max(prospects))
-    linreg = stats.linregress(datax, datae)
-    xl = np.linspace(0, highestaff, 100)
-    plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
-    cutoff = max([y for x, y in api if x == 1])
-    #plt.plot(xl, [cutoff for i in xl], ':b')
-    plt.scatter(affs, likeli, color='r', s=0.5)
-    plt.title(title)
-    plt.ylabel('Likelihood')
-    plt.xlabel('Affinity, Calc R Score: ' + str(linreg[2]))
-    plt.savefig(outpath, dpi=600)
-    plt.close()
 
-
-def read_likeli(filep):
-    o = open(filep)
-    ls = []
-    for line in o:
-        data = line.split()
-        interest = list(data[1])
-        del interest[0]
-        del interest[-1]
-        ls.append(float(''.join(interest)))
-    o.close()
-    return ls
-
-# a_s, s_s = dca.Fasta_Read_Aff(r7dnap)
-# ls, rs = split_data(s_s, 20)
-# data_prop(a_s, s_s)
+a_s, s_s = dca.Fasta_Read_Aff(r15p)
 
 # nas, nss = prep_data(a_s, s_s, 40, 100)
 # dca.write_fasta_aff(ls, a_s, upath+datao+'fam7_lh.txt')
 # dca.write_fasta_aff(rs, a_s, upath+datao+'fam7_rh.txt')
 
-afs, seqs = dca.Fasta_Read_Aff(wpath + datarbm + '8all.txt')
 
-lbmtitles = [str(x) + ' Hidden Nodes' for x in np.arange(10, 80, 10)]
-lbmouts = ['Lplot_' + str(x) + 'hiddenwR.png' for x in np.arange(10, 80, 10)]
-lbmins = [wpath + datarbm + str(x) + 'hidden_likelihoods.txt' for x in np.arange(10, 80, 10)]
-for i in range(len(lbmtitles)):
-    l = read_likeli(lbmins[i])
-    likelihood_plot_rmb_wRscore(afs, l, lbmtitles[i], analysisrbm+lbmouts[i])
 
