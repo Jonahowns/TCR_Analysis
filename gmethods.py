@@ -94,13 +94,73 @@ def split_data(seqs, split_n):
     return lhs, rhs
 
 
+def read_likeli(filep, seqs='no'):
+    o = open(filep)
+    ls, seq = [], []
+    for line in o:
+        data = line.split()
+        interest = float(data[1])
+        ls.append(interest)
+        if seqs == 'yes':
+            seq.append(str(data[0]))
+    o.close()
+    if seqs == 'yes':
+        return ls, seq
+    else:
+        return ls
 
 
-a_s, s_s = dca.Fasta_Read_Aff(r15p)
+def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath, cutoff='no'):
+    a_s = list(set(affs))
+    api = list(zip(affs, likeli))
+    highestaff = 1
+    datax, datae = [], []
+    for x in a_s:
+        if x > highestaff: highestaff = x
+        prospects = [l for (aff, l) in api if aff == x]
+        datax.append(x)
+        datae.append(max(prospects))
+    linreg = stats.linregress(datax, datae)
+    xl = np.linspace(0, highestaff, 100)
+    plt.plot(xl, xl * linreg[0] + linreg[1], ':r')
+    if cutoff == 'yes':
+        cutoff = max([y for x, y in api if x == 1])
+        plt.plot(xl, [cutoff for i in xl], ':b')
+    plt.scatter(affs, likeli, color='r', s=0.5)
+    plt.title(title)
+    plt.ylabel('Likelihood')
+    plt.xlabel('Affinity, Calc R Score: ' + str(linreg[2]))
+    plt.savefig(outpath, dpi=600)
+    plt.close()
+
+
+# a_s, s_s = dca.Fasta_Read_Aff(r15p)
 
 # nas, nss = prep_data(a_s, s_s, 40, 100)
 # dca.write_fasta_aff(ls, a_s, upath+datao+'fam7_lh.txt')
 # dca.write_fasta_aff(rs, a_s, upath+datao+'fam7_rh.txt')
 
 
+gouts = ['r15_g_' + str(i) + 'hidden.dat' for i in np.arange(10, 50, 10)]
+li = [str(x.split('.')[0]) + '_testlikeli.txt' for x in gouts]
+lic = [str(x.split('.')[0]) + '_trainlikeli.txt' for x in gouts]
+rbmout = ['Lplot_' + str(x.split('.')[0]) + '_test_wR.png' for x in gouts]
+lbmout = ['Lplot_' + str(x.split('.')[0]) + '_train_wR.png' for x in gouts]
+titlestest = [str(x.split('.')[0]) + '_test' for x in gouts]
+titlestrain = [str(x.split('.')[0]) + '_train' for x in gouts]
+train_affs, tseqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_training.txt')
+test_affs, t2seqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_test.txt')
 
+
+# print(t2seqs)
+for i in range(len(li)):
+    l_test, ltseqs = read_likeli(upath + datarbm+lic[i], seqs='yes')
+    l_train = read_likeli(upath + datarbm+li[i])
+    print(len(set(t2seqs)))
+    rltseqs = [dca.rna2dna(x) for x in ltseqs]
+    ras = list(set(t2seqs) - set(rltseqs))
+    print(ras)
+    print(len(l_test), len(l_train))
+    print(len(tseqs), len(t2seqs))
+    likelihood_plot_rmb_wRscore(train_affs, l_train, titlestrain, analysisrbm+lbmout[i])
+    likelihood_plot_rmb_wRscore(test_affs, l_test, titlestest, analysisrbm+rbmout[i])
