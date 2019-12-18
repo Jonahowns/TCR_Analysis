@@ -1,5 +1,6 @@
 import dcamethods as dca
 import matplotlib.pyplot as plt
+import random
 import numpy as np
 from scipy import stats
 # from sklearn.model_selection import train_test_split
@@ -72,10 +73,12 @@ def data_prop(affs, seqs):
         print('Length:', x, 'Number of Sequences', c)
 
 
-def prep_data(affs, seqs, loi, afcut):
+def prep_data(affs, seqs, loi, afcut, cutofftype='higher'):
     faffs, fseqs = [], []
     for sid, s in enumerate(seqs):
-        if affs[sid] < afcut:
+        if affs[sid] < afcut and cutofftype == 'higher':
+            continue
+        if affs[sid] > afcut and cutofftype == 'lower':
             continue
         if len(s) != loi:
             continue
@@ -133,6 +136,20 @@ def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath, cutoff='no'):
     plt.savefig(outpath, dpi=600)
     plt.close()
 
+a_s, s_s = read_gfile_alldata(r15p)
+a_pro, s_pro = prep_data(a_s, s_s, 40, 100, cutofftype='higher')
+a_all, s_all = prep_data(a_s, s_s, 40, 0, cutofftype='higher')
+b100_a, b100_s = prep_data(a_all, s_all, 40, 99, cutofftype='lower')
+rbad_a, rbad_s = [], []
+for i in range(3000):
+    r = random.randint(0, len(b100_s))
+    rbad_a.append(b100_a[r])
+    rbad_s.append(b100_s[r])
+
+X_train, X_test, Y_train, Y_test = train_test_split(s_pro, a_pro, test_size=0.1, random_state=0)
+X_test += rbad_s
+Y_test += rbad_a
+dca.write_fasta_aff(X_test, Y_test, wpath+datap+'r15_test.txt')
 
 # a_s, s_s = dca.Fasta_Read_Aff(r15p)
 
