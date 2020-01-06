@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from scipy import stats
-# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 
 
 upath = "/home/jonah/Dropbox (ASU)/"
 wpath = "C:/Users/Amber/Dropbox (ASU)/"
-datap = "Projects/DCA/GuntherAptamers/Selex_Data/"
+datap = "Projects/DCA/GunterAptamers/Selex_Data/"
 datat = "Projects/DCA/ThrombinAptamers/"
 datao = "Projects/DCA/ThrombinAptamers/v4/split/"
 datarbm = "Projects/DCA/rbm_rna_v1/"
@@ -141,15 +141,28 @@ a_pro, s_pro = prep_data(a_s, s_s, 40, 100, cutofftype='higher')
 a_all, s_all = prep_data(a_s, s_s, 40, 0, cutofftype='higher')
 b100_a, b100_s = prep_data(a_all, s_all, 40, 99, cutofftype='lower')
 rbad_a, rbad_s = [], []
+past = []
 for i in range(3000):
     r = random.randint(0, len(b100_s))
-    rbad_a.append(b100_a[r])
-    rbad_s.append(b100_s[r])
+    if r in past:
+        continue
+    else:
+        past.append(r)
+        if 'N' in b100_s[r]:
+            continue
+        else:
+            rbad_a.append(b100_a[r])
+            rbad_s.append(b100_s[r])
 
-X_train, X_test, Y_train, Y_test = train_test_split(s_pro, a_pro, test_size=0.1, random_state=0)
+X_train, X_sep, Y_train, Y_sep = train_test_split(s_pro, a_pro, test_size=0.2, random_state=0)
+X_test, X_ver, Y_test, Y_ver = train_test_split(X_sep, Y_sep, test_size=0.5, random_state=0)
 X_test += rbad_s
 Y_test += rbad_a
-dca.write_fasta_aff(X_test, Y_test, wpath+datap+'r15_test.txt')
+xcheck = set(X_test)
+if len(xcheck) == len(X_test):
+    dca.write_fasta_aff(X_test, Y_test, upath+datap+'r15_test.txt')
+dca.write_fasta_aff(X_train, Y_train, upath+datap+'r15_train.txt')
+dca.write_fasta_aff(X_ver, Y_ver, upath+datap+'r15_ver.txt')
 
 # a_s, s_s = dca.Fasta_Read_Aff(r15p)
 
@@ -158,26 +171,26 @@ dca.write_fasta_aff(X_test, Y_test, wpath+datap+'r15_test.txt')
 # dca.write_fasta_aff(rs, a_s, upath+datao+'fam7_rh.txt')
 
 
-gouts = ['r15_g_' + str(i) + 'hidden.dat' for i in np.arange(10, 50, 10)]
-li = [str(x.split('.')[0]) + '_testlikeli.txt' for x in gouts]
-lic = [str(x.split('.')[0]) + '_trainlikeli.txt' for x in gouts]
-rbmout = ['Lplot_' + str(x.split('.')[0]) + '_test_wR.png' for x in gouts]
-lbmout = ['Lplot_' + str(x.split('.')[0]) + '_train_wR.png' for x in gouts]
-titlestest = [str(x.split('.')[0]) + '_test' for x in gouts]
-titlestrain = [str(x.split('.')[0]) + '_train' for x in gouts]
-train_affs, tseqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_training.txt')
-test_affs, t2seqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_test.txt')
+# gouts = ['r15_g_' + str(i) + 'hidden.dat' for i in np.arange(10, 50, 10)]
+# li = [str(x.split('.')[0]) + '_testlikeli.txt' for x in gouts]
+# lic = [str(x.split('.')[0]) + '_trainlikeli.txt' for x in gouts]
+# rbmout = ['Lplot_' + str(x.split('.')[0]) + '_test_wR.png' for x in gouts]
+# lbmout = ['Lplot_' + str(x.split('.')[0]) + '_train_wR.png' for x in gouts]
+# titlestest = [str(x.split('.')[0]) + '_test' for x in gouts]
+# titlestrain = [str(x.split('.')[0]) + '_train' for x in gouts]
+# train_affs, tseqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_training.txt')
+# test_affs, t2seqs = dca.Fasta_Read_Aff(upath + datarbm + 'r15_test.txt')
 
 
 # print(t2seqs)
-for i in range(len(li)):
-    l_test, ltseqs = read_likeli(upath + datarbm+lic[i], seqs='yes')
-    l_train = read_likeli(upath + datarbm+li[i])
-    print(len(set(t2seqs)))
-    rltseqs = [dca.rna2dna(x) for x in ltseqs]
-    ras = list(set(t2seqs) - set(rltseqs))
-    print(ras)
-    print(len(l_test), len(l_train))
-    print(len(tseqs), len(t2seqs))
-    likelihood_plot_rmb_wRscore(train_affs, l_train, titlestrain, analysisrbm+lbmout[i])
-    likelihood_plot_rmb_wRscore(test_affs, l_test, titlestest, analysisrbm+rbmout[i])
+# for i in range(len(li)):
+#     l_test, ltseqs = read_likeli(upath + datarbm+lic[i], seqs='yes')
+#     l_train = read_likeli(upath + datarbm+li[i])
+#     print(len(set(t2seqs)))
+#     rltseqs = [dca.rna2dna(x) for x in ltseqs]
+#     ras = list(set(t2seqs) - set(rltseqs))
+#     print(ras)
+#     print(len(l_test), len(l_train))
+#     print(len(tseqs), len(t2seqs))
+#     likelihood_plot_rmb_wRscore(train_affs, l_train, titlestrain, analysisrbm+lbmout[i])
+#     likelihood_plot_rmb_wRscore(test_affs, l_test, titlestest, analysisrbm+rbmout[i])
