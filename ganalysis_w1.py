@@ -81,10 +81,10 @@ N, q = 40, 5
 r15j = dca.sortjmat_plmDCA(r15jp, N, q)
 r15h = dca.sorthmat_plmDCA(r15hp, N, q)
 
-r15jE = dca.TopJNorms_Jmatrix(r15j, N, q, 150)
+# r15jE, gvals, gdist = dca.TopJNorms_Jmatrix(r15j, N, q, 150)
 fig, ax = plt.subplots(1, 2)
-dca.Raw_wRscore_subplot(ax[0], r15jE, r15h, trainp)
-dca.Raw_wRscore_subplot(ax[1], r15jE, r15h, testp)
+dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainp)
+dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testp)
 plt.savefig(plmp + 'r15_train_vs_test.png', dpi=600)
 
 
