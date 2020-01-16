@@ -77,14 +77,59 @@ for train, test in all_likelis:
 
 r15hp = plmp + 'r15_train.h'
 r15jp = plmp + 'r15_train.j'
+
+cutoffs = ['c100', 'c300', 'c500', 'c1k']
+jps = [plmp + x + '_r15_train_s.j' for x in cutoffs]
+hps = [plmp + x + '_r15_train_s.h' for x in cutoffs]
+trainps = [plmp + 'r15_train_' + x +'.txt' for x in cutoffs]
+testps = [plmp + 'r15_test_' + x +'.txt' for x in cutoffs]
+trainws = [plmp + 'r15_weights2_' + x +'.txt' for x in cutoffs]
+outs = ['c100_s.png', 'c300_nw2.png', 'c500_nw2.png', 'c1k_nw2.png']
+
+'''
+affs, seqs = dca.Fasta_Read_Aff(trainps[0])
+weights = [(x/1000.)**2. for x in affs]
+alldata = list(zip(affs, weights, seqs))
+alldata.sort(key=lambda tup: tup[0])
+alldata.reverse()
+data_sep = list(zip(*alldata))
+saffs, sweights, sseqs = list(data_sep[0]), list(data_sep[1]), list(data_sep[2])
+wfile = plmp + 'r15c100_sorted_weights.txt'
+sfile = plmp + 'r15c100_sorted_train.txt'
+dca.write_fasta_aff(sseqs, saffs, sfile)
+w = open(wfile, 'w')
+for w8 in sweights:
+    print(round(w8, 2), file=w)
+w.close()
+'''
+
 N, q = 40, 5
-r15j = dca.sortjmat_plmDCA(r15jp, N, q)
-r15h = dca.sorthmat_plmDCA(r15hp, N, q)
+for i in range(1):
+    r15j = dca.sortjmat_plmDCA(jps[i], N, q)
+    r15h = dca.sorthmat_plmDCA(hps[i], N, q)
+    jdisp = dca.FullJ_disp(r15j, N, q)
+    fig, ax = plt.subplots(1, 2)
+    dca.Fig_FullJ(ax[0], 'c100', jdisp, N, q)
+    dca.Fig_FullH(ax[1], 'c100', r15h, N, q)
+    # dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainps[i])
+    # dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testps[i])
+    plt.savefig(plmp + 'c100_plmparameters.png', dpi=600)
+    plt.close()
+
+'''
+for i in range(4):
+    affs, seqs = dca.Fasta_Read_Aff(trainps[i])
+    weights = [(x/1000.)**2. for x in affs]
+    o = open(trainws[i], 'w')
+    for x in weights:
+        print(round(x, 2), file=o)
+    o.close()
+'''
 
 # r15jE, gvals, gdist = dca.TopJNorms_Jmatrix(r15j, N, q, 150)
-fig, ax = plt.subplots(1, 2)
-dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainp)
-dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testp)
-plt.savefig(plmp + 'r15_train_vs_test.png', dpi=600)
+# fig, ax = plt.subplots(1, 2)
+# dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainp)
+# dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testp)
+# plt.savefig(plmp + 'r15_train_vs_test.png', dpi=600)
 
 

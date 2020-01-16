@@ -137,32 +137,32 @@ def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath, cutoff='no'):
     plt.close()
 
 a_s, s_s = read_gfile_alldata(r15p)
-a_pro, s_pro = prep_data(a_s, s_s, 40, 100, cutofftype='higher')
+a_pro, s_pro = prep_data(a_s, s_s, 40, 1000, cutofftype='higher')
 a_all, s_all = prep_data(a_s, s_s, 40, 0, cutofftype='higher')
-b100_a, b100_s = prep_data(a_all, s_all, 40, 99, cutofftype='lower')
-rbad_a, rbad_s = [], []
-past = []
-for i in range(3000):
-    r = random.randint(0, len(b100_s))
-    if r in past:
-        continue
-    else:
-        past.append(r)
-        if 'N' in b100_s[r]:
-            continue
-        else:
-            rbad_a.append(b100_a[r])
-            rbad_s.append(b100_s[r])
+b100_a, b100_s = prep_data(a_all, s_all, 40, 10, cutofftype='lower')
+# rbad_a, rbad_s = [], []
+# past = []
+# for i in range(3000):
+#     r = random.randint(0, len(b100_s))
+#     if r in past:
+#         continue
+#     else:
+#         past.append(r)
+#         if 'N' in b100_s[r]:
+#             continue
+        # else:
+        #     rbad_a.append(b100_a[r])
+        #     rbad_s.append(b100_s[r])
 
-X_train, X_sep, Y_train, Y_sep = train_test_split(s_pro, a_pro, test_size=0.2, random_state=0)
-X_test, X_ver, Y_test, Y_ver = train_test_split(X_sep, Y_sep, test_size=0.5, random_state=0)
-X_test += rbad_s
-Y_test += rbad_a
-xcheck = set(X_test)
-if len(xcheck) == len(X_test):
-    dca.write_fasta_aff(X_test, Y_test, upath+datap+'r15_test.txt')
-dca.write_fasta_aff(X_train, Y_train, upath+datap+'r15_train.txt')
-dca.write_fasta_aff(X_ver, Y_ver, upath+datap+'r15_ver.txt')
+# X_train, X_sep, Y_train, Y_sep = train_test_split(s_pro, a_pro, test_size=0.2, random_state=0)
+# X_test, X_ver, Y_test, Y_ver = train_test_split(X_sep, Y_sep, test_size=0.5, random_state=0)
+# X_test += rbad_s
+# Y_test += rbad_a
+# xcheck = set(X_test)
+# if len(xcheck) == len(X_test):
+#     dca.write_fasta_aff(X_test, Y_test, upath+datap+'r15_test_c1k.txt')
+dca.write_fasta_aff(b100_s, b100_a, upath+datap+'r15_control.txt')
+# dca.write_fasta_aff(X_ver, Y_ver, upath+datap+'r15_ver_c1k.txt')
 
 # a_s, s_s = dca.Fasta_Read_Aff(r15p)
 
