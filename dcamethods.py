@@ -275,15 +275,16 @@ def sortjmat_blDCA(file, N, q):
 
 
 # Takes plmDCA J Matrix File and inputs the values into a N-1, N-1, q, q matrix
-def sortjmat_plmDCA(file, N, q):
+def sortjmat_plmDCA(file, N, q, gaps='no'):
     o = open(file, 'r')
     fullmatrix = np.full((N - 1, N - 1, q, q), 0.0)
     for line in o:
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 2, int(data[2]) - 1, int(data[3]) - 1] = float(data[4].rstrip())
     o.close()
-    fullmatrix[:, :, 0, :] = 0.0
-    fullmatrix[:, :, :, 0] = 0.0
+    if gaps == 'no':
+        fullmatrix[:, :, 0, :] = 0.0
+        fullmatrix[:, :, :, 0] = 0.0
     #normed = Normalize_JMatrix(fullmatrix, N, q)
     return fullmatrix
 
@@ -351,14 +352,15 @@ def Get_Nq_TCR(clustid):
 
 
 # Takes plmDCA H Matrix File and inputs the values into a N-1, q matrix
-def sorthmat_plmDCA(file, N, q):
+def sorthmat_plmDCA(file, N, q, gaps='no'):
     o = open(file, 'r')
     fullmatrix = np.full((N, q), 0.0)
     for line in o:
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
     o.close()
-    fullmatrix[:, 0] = 0.0
+    if gaps == 'no':
+        fullmatrix[:, 0] = 0.0
     return fullmatrix
 
 
