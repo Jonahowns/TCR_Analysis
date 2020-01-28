@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from scipy import stats
+import math
 
 
 upath = "/home/jonah/Dropbox (ASU)/"
@@ -47,44 +48,135 @@ def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath, cutoff='no'):
     plt.close()
 
 
+def adjust_plot_affinites(affs, offset=0):
+    a_s = max(list(set(affs)))
+    if a_s > 10000:
+        rangeEnd = math.ceil(a_s / 1000) * 1000
+        lr = 1000
+    elif a_s > 1000:
+        rangeEnd = math.ceil(a_s / 100) * 100
+        lr = 100
+    elif a_s > 100:
+        rangeEnd = math.ceil(a_s / 10) * 10
+        lr = 10
+    else:
+        rangeEnd = math.ceil(a_s)
+        lr = 1
+    plpoints = np.arange(0, rangeEnd, lr)
+    affadj = []
+    for x in affs:
+        adj = False
+        for pid, p in enumerate(plpoints):
+            if adj:
+                break
+            if x < p and x > plpoints[pid - 1]:
+                na = plpoints[pid - 1]
+                affadj.append(na + offset)
+                adj = True
+    return affadj, lr
+
+
+def Diff_Avg_RBM(outpath, labels, *infile, **kwargs):
+    colors = ['g', 'm', 'c', 'b', 'y']
+    title = 'Affinity vs Energy'
+    for key, value in kwargs.items():
+        if key == 'title':
+            title = value
+    adata = []
+    apis = []
+    data = []
+    lps = []
+    for iid, i in enumerate(infile):
+        print(infile)
+        afs, ls = read_likeli_new(i)
+        linreg = stats.linregress(afs, ls)
+        lps.append(linreg)
+        if iid == 0:
+            nafs, a_width = adjust_plot_affinites(afs)
+        else:
+            nafs, tmp = adjust_plot_affinites(afs, a_width/10)
+        print(iid, nafs)
+        adata.append(list(set(nafs)))
+        # oAff.update(affs)
+        # print(oAff)
+        api = list(zip(nafs, ls))
+        apis += api
+        data.append(api)
+    for aid, ai in enumerate(data):
+        avg = []
+        err = []
+        thaff = 0
+        for aff in adata[aid]:
+            if aff > thaff: thaff = aff
+            yvals = np.array([y for (x, y) in ai if x == aff])
+            yavg = yvals.mean()
+            yerr = np.std(yvals)
+            avg.append(yavg)
+            err.append(yerr)
+        print(len(avg))
+        print(len(err))
+        plt.errorbar(adata[aid], avg, err, linestyle='None', marker='^', label=labels[aid], c=colors[aid])
+        xl = np.linspace(0, thaff, 100)
+        plt.plot(xl, xl * lps[aid][0] + lps[aid][1], c=colors[aid], linestyle='-.')
+        plt.text(xl[round(len(xl)/2)], xl[round(len(xl)/2)]*lps[aid][0] + lps[aid][1], 'RSCORE: ' + str(round(lps[aid][2],3)), c=colors[aid])
+    plt.xlabel('Affinity')
+    plt.ylabel('Likelihood')
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', ncol=2, mode="expand", borderaxespad=0.)
+    plt.suptitle(title)
+    plt.savefig(outpath, dpi=600)
+    plt.close()
+
 
 plmA = 'plmAnalysis/'
 
 computer_path = upath
 
-plmp = computer_path + datap + plmA
+
+plmp = computer_path + datap
+v2p = plmp + 'v2_aligned/'
+v3p = plmp + 'v3_fullalign/rbm_d/'
+plma = computer_path + datap + plmA
 rbmp = computer_path + datarbm
 trainp = computer_path + datap + 'r15_train.txt'
 testp = computer_path + datap + 'r15_test.txt'
 
-rbmin_tmp = ['r15_g_' + str(x) + 'hidden_likelihood' for x in np.arange(10, 60, 10)]
-rbmin_sqtmp = ['r15_g_' + str(x) + 'hidden_Wsq_likelihood' for x in np.arange(10, 60, 10)]
+rbmin_tmp = ['v3_c1_' + str(x) + 'hidden_likelihood' for x in np.arange(10, 40, 10)]
+rbmin_sqtmp = ['v3_c1_' + str(x) + 'hidden_Wadj_likelihood' for x in np.arange(10, 40, 10)]
 nosq_all = [(x+'_train.txt', x+'_test.txt') for x in rbmin_tmp]
 sq_all = [(x+'_train.txt', x+'_test.txt') for x in rbmin_sqtmp]
 
 all_likelis = sq_all + nosq_all
 all_titles = rbmin_sqtmp + rbmin_tmp
-'''
+outs = [v3p + x + '.png' for x in all_titles]
+print(all_titles)
+
+
+
+
+
+
+# '''
 cid= 0
 for train, test in all_likelis:
-    tra, trl = read_likeli_new(rbmp+train)
-    tea, tel = read_likeli_new(rbmp+test)
-    likelihood_plot_rmb_wRscore(tra, trl, all_titles[cid], analysisrbm + train.split('.')[0] + '_plot.png', cutoff='no')
+    # tra, trl = read_likeli_new(v2p+train)
+    # tea, tel = read_likeli_new(v2p+test)
+    Diff_Avg_RBM(outs[cid], ['train', 'test'], v3p+train, v3p+test, title=all_titles[cid])
+    # likelihood_plot_rmb_wRscore(tra, trl, all_titles[cid], v2p + train.split('.')[0] + '_plot.png', cutoff='no')
     cid += 1
-    likelihood_plot_rmb_wRscore(tea, tel, all_titles[cid], analysisrbm + test.split('.')[0] + '_plot.png', cutoff='no')
-    cid += 1
-'''
+    # likelihood_plot_rmb_wRscore(tea, tel, all_titles[cid], v2p + test.split('.')[0] + '_plot.png', cutoff='no')
+    # cid += 1
+# '''
 
-r15hp = plmp + 'r15_train.h'
-r15jp = plmp + 'r15_train.j'
-
-cutoffs = ['c100', 'c300', 'c500', 'c1k']
-jps = [plmp + x + '_r15_train_s.j' for x in cutoffs]
-hps = [plmp + x + '_r15_train_s.h' for x in cutoffs]
-trainps = [plmp + 'r15_train_' + x +'.txt' for x in cutoffs]
-testps = [plmp + 'r15_test_' + x +'.txt' for x in cutoffs]
-trainws = [plmp + 'r15_weights2_' + x +'.txt' for x in cutoffs]
-outs = ['c100_s.png', 'c300_nw2.png', 'c500_nw2.png', 'c1k_nw2.png']
+# r15hp = plmp + 'r15_train.h'
+# r15jp = plmp + 'r15_train.j'
+#
+# cutoffs = ['c100', 'c300', 'c500', 'c1k']
+# jps = [plmp + x + '_r15_train_s.j' for x in cutoffs]
+# hps = [plmp + x + '_r15_train_s.h' for x in cutoffs]
+# trainps = [plmp + 'r15_train_' + x +'.txt' for x in cutoffs]
+# testps = [plmp + 'r15_test_' + x +'.txt' for x in cutoffs]
+# trainws = [plmp + 'r15_weights2_' + x +'.txt' for x in cutoffs]
+# outs = ['c100_s.png', 'c300_nw2.png', 'c500_nw2.png', 'c1k_nw2.png']
 
 '''
 affs, seqs = dca.Fasta_Read_Aff(trainps[0])
@@ -103,18 +195,18 @@ for w8 in sweights:
 w.close()
 '''
 
-N, q = 40, 5
-for i in range(1):
-    r15j = dca.sortjmat_plmDCA(jps[i], N, q)
-    r15h = dca.sorthmat_plmDCA(hps[i], N, q)
-    jdisp = dca.FullJ_disp(r15j, N, q)
-    fig, ax = plt.subplots(1, 2)
-    dca.Fig_FullJ(ax[0], 'c100', jdisp, N, q)
-    dca.Fig_FullH(ax[1], 'c100', r15h, N, q)
-    # dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainps[i])
-    # dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testps[i])
-    plt.savefig(plmp + 'c100_plmparameters.png', dpi=600)
-    plt.close()
+# N, q = 40, 5
+# for i in range(1):
+#     r15j = dca.sortjmat_plmDCA(jps[i], N, q)
+#     r15h = dca.sorthmat_plmDCA(hps[i], N, q)
+#     jdisp = dca.FullJ_disp(r15j, N, q)
+#     fig, ax = plt.subplots(1, 2)
+#     dca.Fig_FullJ(ax[0], 'c100', jdisp, N, q)
+#     dca.Fig_FullH(ax[1], 'c100', r15h, N, q)
+#     # dca.Raw_wRscore_subplot(ax[0], r15j, r15h, trainps[i])
+#     # dca.Raw_wRscore_subplot(ax[1], r15j, r15h, testps[i])
+#     plt.savefig(plmp + 'c100_plmparameters.png', dpi=600)
+#     plt.close()
 
 '''
 for i in range(4):

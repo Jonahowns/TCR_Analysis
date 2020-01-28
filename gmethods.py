@@ -3,18 +3,23 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from scipy import stats
+import math
 from sklearn.model_selection import train_test_split
+from sklearn.cluster import DBSCAN
+import sklearn
 
 
 upath = "/home/jonah/Dropbox (ASU)/"
 wpath = "C:/Users/Amber/Dropbox (ASU)/"
 datap = "Projects/DCA/GunterAptamers/Selex_Data/"
+v2p = upath + datap + 'v2_aligned/'
+v3p = upath + datap + 'v3_fullalign/'
 datat = "Projects/DCA/ThrombinAptamers/"
 datao = "Projects/DCA/ThrombinAptamers/v4/split/"
 datarbm = "Projects/DCA/rbm_rna_v1/"
 analysisrbm = upath + "LabFolders/Jonah_projects/RBM/"
 
-r15p = upath + datap + 'PAL_Anna_R15_counts.txt'
+r15p = upath + datap + 'Orig_data/' + 'PAL_Anna_R15_counts.txt'
 r14p = upath + datap + 'PAL_Anna_R14_counts.txt'
 r13p = upath + datap + 'PAL_Anna_R13_counts.txt'
 r7dnap = upath + datao + '7gb.txt'
@@ -80,11 +85,11 @@ def prep_data(affs, seqs, loi, afcut, cutofftype='higher'):
             continue
         if affs[sid] > afcut and cutofftype == 'lower':
             continue
-        if len(s) != loi:
-            continue
-        else:
-            faffs.append(affs[sid])
-            fseqs.append(s)
+        # if len(s) != loi:
+        #     continue
+        # else:
+        faffs.append(affs[sid])
+        fseqs.append(s)
     return faffs, fseqs
 
 
@@ -136,10 +141,208 @@ def likelihood_plot_rmb_wRscore(affs, likeli, title, outpath, cutoff='no'):
     plt.savefig(outpath, dpi=600)
     plt.close()
 
-a_s, s_s = read_gfile_alldata(r15p)
-a_pro, s_pro = prep_data(a_s, s_s, 40, 1000, cutofftype='higher')
-a_all, s_all = prep_data(a_s, s_s, 40, 0, cutofftype='higher')
-b100_a, b100_s = prep_data(a_all, s_all, 40, 10, cutofftype='lower')
+
+def bin_affs(binwidth, afs):
+    a_s = max(list(set(afs)))
+    rangeEnd = math.ceil(a_s / binwidth) * binwidth
+    poss = np.arange(0, rangeEnd + binwidth, binwidth)
+    affadj = []
+    for x in afs:
+        adj = False
+        for pid, p in enumerate(poss):
+            if adj:
+                break
+            if x < p and x > poss[pid - 1]:
+                affadj.append(pid)
+    exceptions = []
+    for x in set(affadj):
+        if affadj.count(x) == 1:
+            ex = affadj.index(x)
+            exceptions.append(ex)
+    return affadj, exceptions
+
+
+def stratify(z_sanda, outtrain, outtest, weights=False, outw='null'):
+    s, a = zip(*z_sanda)
+    sl, al = list(s), list(a)
+    binned, exes = bin_affs(1000, a)
+    exes.sort()
+    exes.reverse()
+    print(exes)
+    special, atmp, stmp = [], [], []
+    for x in exes:
+        atmp.append(al[x])
+        stmp.append(sl[x])
+        print(sl[x])
+        del sl[x]
+        del al[x]
+        del binned[x]
+    X_train, X_test, Y_train, Y_test = train_test_split(sl, al, test_size=0.1, stratify=binned, random_state=0)
+    X_train += stmp
+    Y_train += atmp
+    dca.write_fasta_aff(X_train, Y_train, outtrain)
+    dca.write_fasta_aff(X_test, Y_test, outtest)
+    if weights:
+        ws = [x/1000 for x in Y_train]
+        o = open(outw, 'w')
+        for x in ws:
+            print(x, file=o)
+        o.close()
+
+
+
+
+# a_s, s_s = read_gfile_alldata(r15p)
+# app, spp = prep_data(a_s, s_s, 2, 100)
+# dca.write_fasta_aff(spp, app, v2p + 'r15_g100_all_lengths.txt')
+
+affs, seqs = dca.Fasta_Read_Aff(v2p +'r15_g100_all_lengths.txt')
+w1 = dca.Motif_Aligner(v2p + 'meme_mat.txt', 4, 10, gaps=False)
+w1.load_seqs(seqs, affs)
+w1.align_seqs()
+
+start = w1.start_positions
+sp = [[x] for x in start]
+print(sp)
+
+
+db = DBSCAN(eps=2, metric='euclidean', min_samples=100).fit(sp)
+core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+core_samples_mask[db.core_sample_indices_] = True
+labels = db.labels_
+
+dis_mat = sklearn.metrics.pairwise_distances(sp, metric='euclidean')
+print(dis_mat)
+print(len(seqs), len(labels))
+
+# Number of clusters in labels, ignoring noise if present.
+n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+n_noise_ = list(labels).count(-1)
+for clust in set(labels):
+    print('Clust', clust, 'Length', list(labels).count(clust))
+
+print('Estimated number of clusters: %d' % n_clusters_)
+print('Estimated number of noise points: %d' % n_noise_)
+
+sqs = w1.aligned_seqs
+afs = w1.affinities
+c0, c1, c2 = [], [], []
+c0sl, c1sl, c2sl = [], [], []
+for xid, x in enumerate(db.labels_):
+    if x == 0:
+        c0sl.append(start[xid])
+        c0.append((sqs[xid], afs[xid]))
+    elif x == 1:
+        c1.append((sqs[xid], afs[xid]))
+        c1sl.append(start[xid])
+    elif x == 2:
+        c2sl.append(start[xid])
+        c2.append((sqs[xid], afs[xid]))
+    else:
+        continue
+#
+def adj_clust_len(sl, seqs, minl, maxl):
+    ci, fi = 0, 0
+    ci = min(sl)
+    furthest = max(sl) - 1
+    align_len = len(seqs[0])
+    print(ci, furthest)
+    for x in np.arange(minl, maxl+2, 1):
+        trialindx = furthest + x
+        print(trialindx)
+        for xid, x in enumerate(seqs):
+            try:
+                if trialindx == align_len - 1:
+                    fi = trialindx
+                    break
+                elif list(x)[trialindx] != '-' and xid + 1 != len(seqs) and trialindx != align_len - 1:
+                    continue
+                elif list(x)[trialindx] == '-' and xid+1 == len(seqs):
+                    print('does this ever happen')
+                    fi = trialindx
+                    break
+                elif list(x)[trialindx] != '-' and xid + 1 == len(seqs):
+                    fi = trialindx
+                    break
+                else:
+                    fi = align_len - 1
+            except IndexError:
+                fi = align_len - 1
+                break
+    trim_seqs = []
+    print(ci, fi)
+    for s in seqs:
+        trim_seqs.append(''.join(list(s)[ci:fi+1]))
+    return trim_seqs
+
+c1s, c1a = zip(*c1)
+c0s, c0a = zip(*c0)
+c2s, c2a = zip(*c2)
+
+# dca.write_fasta_aff(c1s, c1a, v3p + 'v3_c1_all.txt')
+# dca.write_fasta_aff(c0s, c0a, v3p + 'v3_c0_all.txt')
+# dca.write_fasta_aff(c2s, c2a, v3p + 'v3_c2_all.txt')
+
+nsc0 = adj_clust_len(c0sl, c0s, 39, 40)
+nsc1 = adj_clust_len(c1sl, c1s, 39, 40)
+nsc2 = adj_clust_len(c2sl, c2s, 39, 41)
+
+# dca.write_fasta_aff(nsc1, c1a, v3p + 'v3_c1_all.txt')
+# dca.write_fasta_aff(nsc0, c0a, v3p + 'v3_c0_all.txt')
+c0e = zip(nsc0, c0a)
+c1e = zip(nsc1, c1a)
+c2e = zip(nsc2, c2a)
+cs = [c0e, c1e, c2e]
+out_t = [v3p+'c' + str(x) + '_train.txt' for x in np.arange(0,3,1)]
+out_v = [v3p+'c' + str(x) + '_test.txt' for x in np.arange(0,3,1)]
+
+stratify(c0e, out_t[0], out_v[0], weights=True, outw=v3p+'c0_train_weights.txt')
+stratify(c1e, out_t[1], out_v[1], weights=True, outw=v3p+'c1_train_weights.txt')
+stratify(c2e, out_t[2], out_v[2], weights=True, outw=v3p+'c2_train_weights.txt')
+    # X_train, X_test, Y_train, Y_test = train_test_split(s, a, test_size=0.1, stratify=binned, random_state=0)
+    # dca.write_fasta_aff(X_train, Y_train, v3p + out_t[xid])
+    # dca.write_fasta_aff(X_test, Y_test, v3p + out_v[xid])
+
+# dca.write_fasta_aff(nsc2, c2a, v3p + 'v3_c2_all.txt')
+
+
+#
+#
+#
+#
+#
+
+#
+#
+#
+#
+#
+
+
+'''
+afs, seqs = dca.Fasta_Read_Aff(v3p + 'v3_c0_all.txt')
+a_s = max(list(set(afs)))
+rangeEnd = math.ceil(a_s / 1000) * 1000
+poss = np.arange(0, rangeEnd + 1000, 1000)
+affadj = []
+for x in afs:
+    adj = False
+    for pid, p in enumerate(poss):
+        if adj:
+            break
+        if x < p and x > poss[pid - 1]:
+            affadj.append(pid)
+print(affadj)
+
+X_train, X_test, Y_train, Y_test = train_test_split(seqs, afs, test_size=0.1, stratify=affadj, random_state=0)
+dca.write_fasta_aff(X_train, Y_train, v3p+'v3_c1_train.txt')
+'''
+
+
+
+# a_pro, s_pro = prep_data(a_s, s_s, 40, 1000, cutofftype='higher')
+# a_all, s_all = prep_data(a_s, s_s, 40, 0, cutofftype='higher')
+# b100_a, b100_s = prep_data(a_all, s_all, 40, 10, cutofftype='lower')
 # rbad_a, rbad_s = [], []
 # past = []
 # for i in range(3000):
@@ -161,7 +364,7 @@ b100_a, b100_s = prep_data(a_all, s_all, 40, 10, cutofftype='lower')
 # xcheck = set(X_test)
 # if len(xcheck) == len(X_test):
 #     dca.write_fasta_aff(X_test, Y_test, upath+datap+'r15_test_c1k.txt')
-dca.write_fasta_aff(b100_s, b100_a, upath+datap+'r15_control.txt')
+# dca.write_fasta_aff(b100_s, b100_a, upath+datap+'r15_control.txt')
 # dca.write_fasta_aff(X_ver, Y_ver, upath+datap+'r15_ver_c1k.txt')
 
 # a_s, s_s = dca.Fasta_Read_Aff(r15p)

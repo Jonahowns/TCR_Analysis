@@ -8,6 +8,7 @@ import random
 import multiprocessing as mp
 from statistics import mean
 from scipy.stats import gaussian_kde
+import itertools as it
 
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
@@ -3021,4 +3022,107 @@ def mut_loc(mseq, tseq):
     # la = ensemble_checker(seqfile, lowest)
     # ha = ensemble_checker(seqfile, highest)
     # return la, le, ha, he
+
+class Motif_Aligner():
+    def __init__(self, memefile, motif_states, motif_len, alphabet='dna', gaps=False):
+        dna = ['A', 'C', 'G', 'T']
+        dnag = ['-', 'A', 'C', 'G', 'T']
+        if alphabet == 'dna' and not gaps:
+            self.alpha = dna
+        elif alphabet == 'dna' and gaps:
+            self.alpha = dnag
+        self.mfile = memefile
+        self.m_states = motif_states
+        self.m_len = motif_len
+        self.m_mat = self.import_meme_mat()
+        self.results = self.alt_generator()
+        self.all_motifs = self.decode_motifs()
+        self.unaligned_seqs = []
+        self.unaligned_indxs = []
+        self.affinities = []
+        self.aligned_seqs = None
+        self.start_positions = []
+    def import_meme_mat(self):
+        o = open(self.mfile, 'r')
+        meme_mat = np.full((self.m_len, self.m_states), 0.0)
+        lid = 0
+        for line in o:
+            data = line.split()
+            for i in range(self.m_states):
+                meme_mat[lid, i] = float(data[i])
+            lid += 1
+        o.close()
+        return meme_mat
+    def alt_generator(self):
+        poss = list(it.product(np.arange(self.m_states), repeat=self.m_len))
+        results = []
+        for p in poss:
+            score = 0
+            nz = True
+            for xid, x in enumerate(p):
+                if self.m_mat[xid, int(x)] != 0:
+                    score += self.m_mat[xid, int(x)]
+                else:
+                    nz = False
+                    break
+            if nz == True:
+                results.append((p, score))
+        results.sort(key=lambda tup: tup[1])
+        results.reverse()
+        return results
+    def decode_motifs(self):
+        ams = []
+        for c, w in self.results:
+            l = []
+            for x in c:
+                l.append(self.alpha[int(x)])
+            ams.append(''.join(l))
+        return ams
+    def load_seqs(self, seqs, affs):
+        ds = []
+        for sid, s in enumerate(seqs):
+            found = False
+            print(self.all_motifs)
+            for x in self.all_motifs:
+                indx = s.find(x)
+                if indx != -1:
+                    found = True
+                    ds.append(indx)
+                    break
+            if not found:
+                ds.append(-1)
+        for iid, idx in enumerate(ds):
+            if idx > -1:
+                self.affinities.append(affs[iid])
+                self.unaligned_seqs.append(seqs[iid])
+                self.unaligned_indxs.append(idx)
+        print('No Motif Found in', len(seqs) - len(self.unaligned_seqs), 'of', len(seqs), 'sequences')
+    def align_seqs(self):
+        g_indx = max(self.unaligned_indxs)
+        self.aligned_seqs = ['x']*len(self.unaligned_seqs)
+        print(len(self.aligned_seqs))
+        ls = []
+        for uid, ua in enumerate(self.unaligned_indxs):
+            gaps_to_add = g_indx - ua
+            self.start_positions.append(gaps_to_add)
+            if gaps_to_add > 0:
+                ns = ''.join(['-' for x in range(gaps_to_add)]) + self.unaligned_seqs[uid]
+                ls.append(len(ns))
+                self.aligned_seqs[uid] = ns
+            else:
+                self.aligned_seqs[uid] = self.unaligned_seqs[uid]
+        print(self.aligned_seqs)
+        maxl = max(ls)
+        for aid, al in enumerate(self.aligned_seqs):
+            print(al)
+            end_gaps = maxl - len(al)
+            if end_gaps > 0:
+                ns = self.aligned_seqs[aid] + ''.join(['-' for x in range(end_gaps)])
+                self.aligned_seqs[aid] = ns
+    def write_msa(self, outfile):
+        o = open(outfile, 'w')
+        for iid, i in enumerate(self.aligned_seqs):
+            print('>Seq' + str(iid) + '-' + str(self.affinities[iid]), file=o)
+            print(i, file=o)
+        o.close()
 
