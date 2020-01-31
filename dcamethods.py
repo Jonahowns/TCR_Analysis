@@ -526,6 +526,26 @@ def Binder_Comp_JH(J, bJ, H, bH, N, q, **kwargs):
     elif not hdist and not jdist:
         return H, J
 
+def Fasta_Read_Mline(fastafile, titleindx=1, titledelimiter='-'):
+    o = open(fastafile)
+    labels, seqs = [], []
+    alines = o.read()
+    # print(alines)
+    o.close()
+    ll = alines.split('>')
+    del ll[0]
+    for x in ll:
+        ad = x.split('\n')
+        del ad[-1]
+        print(ad)
+        l = len(ad)
+        label = ad[0]
+        seq = ''.join(ad[1:l])
+        labels.append(label)
+        seqs.append(seq)
+    return labels, seqs
+
+
 
 # Reads Fasta files and specifically takes affinity from how its outputted in seqprep
 def Fasta_Read_Aff(fastafile):
@@ -1038,7 +1058,8 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
             print('No keyword argument ' + key + ' found')
     subplot.title.set_text(title)
     subplot.title.set_size(fontsize=6)
-    subplot.imshow(J, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+    jdisp = FullJ_disp(J, n, q)
+    subplot.imshow(jdisp, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
     subplot.set_xticks(np.arange(-.5, (n - 2) * q, q))
     subplot.set_yticks(np.arange(-.5, (n - 2) * q, q))
     subplot.set_xticklabels(np.arange(2, n+1, 1))

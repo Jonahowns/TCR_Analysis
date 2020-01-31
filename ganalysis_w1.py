@@ -9,6 +9,7 @@ import math
 upath = "/home/jonah/Dropbox (ASU)/"
 wpath = "C:/Users/Amber/Dropbox (ASU)/"
 datap = "Projects/DCA/GunterAptamers/Selex_Data/"
+datathc = 'Projects/THC/'
 datat = "Projects/DCA/ThrombinAptamers/"
 datao = "Projects/DCA/ThrombinAptamers/v4/split/"
 datarbm = "Projects/DCA/rbm_rna_v1/"
@@ -134,20 +135,23 @@ computer_path = upath
 
 plmp = computer_path + datap
 v2p = plmp + 'v2_aligned/'
-v3p = plmp + 'v3_fullalign/rbm_d/'
+v3p = plmp + 'v3_fullalign/rbm_d/c0/'
+v3dest = plmp + 'v3_fullalign/rbm_f/'
+thcp = computer_path + datathc + 'v1_r15/rbm_s/'
+thcd = computer_path + datathc + 'v1_r15/rbm_f/'
 plma = computer_path + datap + plmA
 rbmp = computer_path + datarbm
 trainp = computer_path + datap + 'r15_train.txt'
 testp = computer_path + datap + 'r15_test.txt'
 
-rbmin_tmp = ['v3_c1_' + str(x) + 'hidden_likelihood' for x in np.arange(10, 40, 10)]
-rbmin_sqtmp = ['v3_c1_' + str(x) + 'hidden_Wadj_likelihood' for x in np.arange(10, 40, 10)]
-nosq_all = [(x+'_train.txt', x+'_test.txt') for x in rbmin_tmp]
-sq_all = [(x+'_train.txt', x+'_test.txt') for x in rbmin_sqtmp]
+rbmin_tmp = [str(x) + '_h_li' for x in np.arange(10, 70, 10)]
+rbmin_sqtmp = [str(x) + '_h_w_li' for x in np.arange(10, 70, 10)]
+nosq_all = [(x+'_t.txt', x+'_v.txt') for x in rbmin_tmp]
+sq_all = [(x+'_t.txt', x+'_v.txt') for x in rbmin_sqtmp]
 
 all_likelis = sq_all + nosq_all
 all_titles = rbmin_sqtmp + rbmin_tmp
-outs = [v3p + x + '.png' for x in all_titles]
+outs = [thcd + x + '.png' for x in all_titles]
 print(all_titles)
 
 
@@ -156,11 +160,11 @@ print(all_titles)
 
 
 # '''
-cid= 0
+cid = 0
 for train, test in all_likelis:
     # tra, trl = read_likeli_new(v2p+train)
     # tea, tel = read_likeli_new(v2p+test)
-    Diff_Avg_RBM(outs[cid], ['train', 'test'], v3p+train, v3p+test, title=all_titles[cid])
+    Diff_Avg_RBM(outs[cid], ['train', 'test'], thcp+train, thcp+test, title=all_titles[cid])
     # likelihood_plot_rmb_wRscore(tra, trl, all_titles[cid], v2p + train.split('.')[0] + '_plot.png', cutoff='no')
     cid += 1
     # likelihood_plot_rmb_wRscore(tea, tel, all_titles[cid], v2p + test.split('.')[0] + '_plot.png', cutoff='no')

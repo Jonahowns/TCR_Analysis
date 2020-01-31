@@ -25,6 +25,11 @@ r13p = upath + datap + 'PAL_Anna_R13_counts.txt'
 r7dnap = upath + datao + '7gb.txt'
 tenp = upath + datarbm + '10hidden_likelihoods.txt'
 
+thcd = upath + 'Projects/THC/v1_r15/'
+thcp = thcd + 'THCA_R15_counts.txt'
+
+
+
 def read_gfile_alldata(filep):
     o = open(filep, 'r')
     affs, seqs = [], []
@@ -163,7 +168,7 @@ def bin_affs(binwidth, afs):
 
 
 def stratify(z_sanda, outtrain, outtest, weights=False, outw='null'):
-    s, a = zip(*z_sanda)
+    a, s = zip(*z_sanda)
     sl, al = list(s), list(a)
     binned, exes = bin_affs(1000, a)
     exes.sort()
@@ -196,34 +201,48 @@ def stratify(z_sanda, outtrain, outtest, weights=False, outw='null'):
 # app, spp = prep_data(a_s, s_s, 2, 100)
 # dca.write_fasta_aff(spp, app, v2p + 'r15_g100_all_lengths.txt')
 
-affs, seqs = dca.Fasta_Read_Aff(v2p +'r15_g100_all_lengths.txt')
-w1 = dca.Motif_Aligner(v2p + 'meme_mat.txt', 4, 10, gaps=False)
+# afs, seqs = read_gfile_alldata(thcp)
+# app, spp = prep_data(afs, seqs, 2, 10, cutofftype='lower')
+# api = list(zip(app, spp))
+# sel = random.sample(api, 6000)
+# af, sf = zip(*sel)
+# dca.write_fasta_aff(sf, af, thcd + 'bcontrol.txt')
+
+
+# dca.write_fasta_aff(spp, app, thcd + 'thc_gb.txt')
+
+affs, seqs = dca.Fasta_Read_Aff(thcd+'thc_gb.txt')
+
+
+
+# affs, seqs = dca.Fasta_Read_Aff(v2p +'r15_g100_all_lengths.txt')
+w1 = dca.Motif_Aligner(thcd + 'motif_finder/m1_mat.txt', 4, 11, gaps=False)
 w1.load_seqs(seqs, affs)
 w1.align_seqs()
-
+#
 start = w1.start_positions
 sp = [[x] for x in start]
-print(sp)
-
-
-db = DBSCAN(eps=2, metric='euclidean', min_samples=100).fit(sp)
+# print(sp)
+#
+#
+db = DBSCAN(eps=2, metric='euclidean', min_samples=1000).fit(sp)
 core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
 core_samples_mask[db.core_sample_indices_] = True
 labels = db.labels_
-
+#
 dis_mat = sklearn.metrics.pairwise_distances(sp, metric='euclidean')
 print(dis_mat)
 print(len(seqs), len(labels))
-
-# Number of clusters in labels, ignoring noise if present.
+#
+# # Number of clusters in labels, ignoring noise if present.
 n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
 n_noise_ = list(labels).count(-1)
 for clust in set(labels):
     print('Clust', clust, 'Length', list(labels).count(clust))
-
+#
 print('Estimated number of clusters: %d' % n_clusters_)
 print('Estimated number of noise points: %d' % n_noise_)
-
+#
 sqs = w1.aligned_seqs
 afs = w1.affinities
 c0, c1, c2 = [], [], []
@@ -232,15 +251,15 @@ for xid, x in enumerate(db.labels_):
     if x == 0:
         c0sl.append(start[xid])
         c0.append((sqs[xid], afs[xid]))
-    elif x == 1:
-        c1.append((sqs[xid], afs[xid]))
-        c1sl.append(start[xid])
-    elif x == 2:
-        c2sl.append(start[xid])
-        c2.append((sqs[xid], afs[xid]))
+#     elif x == 1:
+#         c1.append((sqs[xid], afs[xid]))
+#         c1sl.append(start[xid])
+#     elif x == 2:
+#         c2sl.append(start[xid])
+#         c2.append((sqs[xid], afs[xid]))
     else:
         continue
-#
+# #
 def adj_clust_len(sl, seqs, minl, maxl):
     ci, fi = 0, 0
     ci = min(sl)
@@ -274,31 +293,39 @@ def adj_clust_len(sl, seqs, minl, maxl):
     for s in seqs:
         trim_seqs.append(''.join(list(s)[ci:fi+1]))
     return trim_seqs
-
-c1s, c1a = zip(*c1)
+#
+# c1s, c1a = zip(*c1)
 c0s, c0a = zip(*c0)
-c2s, c2a = zip(*c2)
+print(c0s[0])
+# c2s, c2a = zip(*c2)
+#
+# # dca.write_fasta_aff(c1s, c1a, v3p + 'v3_c1_all.txt')
+# # dca.write_fasta_aff(c0s, c0a, v3p + 'v3_c0_all.txt')
+# # dca.write_fasta_aff(c2s, c2a, v3p + 'v3_c2_all.txt')
+#
+nsc0 = adj_clust_len(c0sl, c0s, 38, 43)
+print(nsc0[0])
+fin = zip(c0a, nsc0)
+stratify(fin, thcd + 'thc_c0_t.txt', thcd + 'thc_c0_v.txt', weights=True, outw=thcd + 'thc_c0_w.txt')
 
-# dca.write_fasta_aff(c1s, c1a, v3p + 'v3_c1_all.txt')
-# dca.write_fasta_aff(c0s, c0a, v3p + 'v3_c0_all.txt')
-# dca.write_fasta_aff(c2s, c2a, v3p + 'v3_c2_all.txt')
 
-nsc0 = adj_clust_len(c0sl, c0s, 39, 40)
-nsc1 = adj_clust_len(c1sl, c1s, 39, 40)
-nsc2 = adj_clust_len(c2sl, c2s, 39, 41)
 
-# dca.write_fasta_aff(nsc1, c1a, v3p + 'v3_c1_all.txt')
-# dca.write_fasta_aff(nsc0, c0a, v3p + 'v3_c0_all.txt')
-c0e = zip(nsc0, c0a)
-c1e = zip(nsc1, c1a)
-c2e = zip(nsc2, c2a)
-cs = [c0e, c1e, c2e]
-out_t = [v3p+'c' + str(x) + '_train.txt' for x in np.arange(0,3,1)]
-out_v = [v3p+'c' + str(x) + '_test.txt' for x in np.arange(0,3,1)]
 
-stratify(c0e, out_t[0], out_v[0], weights=True, outw=v3p+'c0_train_weights.txt')
-stratify(c1e, out_t[1], out_v[1], weights=True, outw=v3p+'c1_train_weights.txt')
-stratify(c2e, out_t[2], out_v[2], weights=True, outw=v3p+'c2_train_weights.txt')
+# nsc1 = adj_clust_len(c1sl, c1s, 39, 40)
+# nsc2 = adj_clust_len(c2sl, c2s, 39, 41)
+#
+# # dca.write_fasta_aff(nsc1, c1a, v3p + 'v3_c1_all.txt')
+# dca.write_fasta_aff(nsc0, c0a, thcd + 'c0_trial.txt')
+# c0e = zip(nsc0, c0a)
+# c1e = zip(nsc1, c1a)
+# c2e = zip(nsc2, c2a)
+# cs = [c0e, c1e, c2e]
+# out_t = [v3p+'c' + str(x) + '_train.txt' for x in np.arange(0,3,1)]
+# out_v = [v3p+'c' + str(x) + '_test.txt' for x in np.arange(0,3,1)]
+#
+# stratify(c0e, out_t[0], out_v[0], weights=True, outw=v3p+'c0_train_weights.txt')
+# stratify(c1e, out_t[1], out_v[1], weights=True, outw=v3p+'c1_train_weights.txt')
+# stratify(c2e, out_t[2], out_v[2], weights=True, outw=v3p+'c2_train_weights.txt')
     # X_train, X_test, Y_train, Y_test = train_test_split(s, a, test_size=0.1, stratify=binned, random_state=0)
     # dca.write_fasta_aff(X_train, Y_train, v3p + out_t[xid])
     # dca.write_fasta_aff(X_test, Y_test, v3p + out_v[xid])
