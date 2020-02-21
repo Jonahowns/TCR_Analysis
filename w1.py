@@ -10,6 +10,7 @@ vpath = upath + droppathv3
 cpath = "/home/jonah/Desktop/Current/"
 # tenpath = cpath + 'v4/10percent/'
 # spath = cpath + 'v4/byfam/'
+tenpath = upath +'Projects/DCA/thrombin_rbm/'
 
 # corrfile = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.out'
 # N = 20
@@ -28,26 +29,109 @@ def mix_2comp_H(H1, H2, N, q):
     return H
 
 
-N = 40
-q = 5
-fam = 8
-#Paths
+dpath = upath + 'Projects/DCA/ThrombinAptamers/Seqs/originaldata/'
+destpath = upath + 'Projects/DCA/ThrombinAptamers/v5/'
 
-# Goodbinders
-j901p = vpath + 's901.j'
-h901p = vpath + 's901.h'
-j902p = vpath + 's902.j'
-h902p = vpath + 's902.h'
-j900p = vpath + 's900.j'
-h900p = vpath + 's900.h'
-j901 = dca.sortjmat_plmDCA(j901p, N, q)
-j902 = dca.sortjmat_plmDCA(j902p, N, q)
-h901 = dca.sorthmat_plmDCA(h901p, N, q)
-h902 = dca.sorthmat_plmDCA(h902p, N, q)
-j900 = dca.sortjmat_plmDCA(j900p, N, q)
-h900 = dca.sorthmat_plmDCA(h900p, N, q)
-H = 2*h901
-J = dca.TopJNorms_Jmatrix(j901, N, q, 329)[0]
+#import seqs
+i8 = dpath + '8th_fasta.txt'
+i7 = dpath + '7th_fasta.txt'
+
+#combine and eliminate duplicates
+def combine_datasets(*infiles):
+    ass, sss = [], []
+    for i in infiles:
+        a, s = dca.Fasta_Read_Aff(i)
+        ass.append(a)
+        sss.append(s)
+    fss = [item for sublist in sss for item in sublist]
+    fas = [item for sublist in ass for item in sublist]
+    nods, noda = list(set(fss)), []
+    for x in nods:
+        noda.append(fas[fss.index(x)])
+    return noda, nods
+
+famids = [5, 6, 7, 8]
+for x in famids:
+    seqs, affs = [], []
+    csvfile = dpath + '2HX_' + str(x) + 'th_new.csv'
+    out = dpath + 'r' + str(x) + '_fasta.txt'
+    o = open(csvfile, 'r')
+    next(o)
+    for line in o:
+        seq, aff = line.split(';')
+        seqs.append(seq)
+        affs.append(affs)
+    dca.write_fasta_aff(seqs, affs, out)
+
+
+
+# aff, seq = combine_datasets(i7, i8)
+
+
+# print(len(seq))
+# print(len(list(set(seq))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# N = 40
+# q = 5
+# fam = 8
+# #Paths
+#
+# # Goodbinders
+# j901p = vpath + 's901.j'
+# h901p = vpath + 's901.h'
+# j902p = vpath + 's902.j'
+# h902p = vpath + 's902.h'
+# j900p = vpath + 's900.j'
+# h900p = vpath + 's900.h'
+# j901 = dca.sortjmat_plmDCA(j901p, N, q)
+# j902 = dca.sortjmat_plmDCA(j902p, N, q)
+# h901 = dca.sorthmat_plmDCA(h901p, N, q)
+# h902 = dca.sorthmat_plmDCA(h902p, N, q)
+# j900 = dca.sortjmat_plmDCA(j900p, N, q)
+# h900 = dca.sorthmat_plmDCA(h900p, N, q)
+# H = 2*h901
+# J = dca.TopJNorms_Jmatrix(j901, N, q, 329)[0]
+# s10p = tenpath + 's10.txt'
+# s90p = tenpath + 's90.txt'
+#
+# fig, ax = plt.subplots(1,1)
+# dca.Diff_Avg(J, H, tenpath+'plm_diff_wR.png', ['train', 'test'], s90p, s10p)
+
 
 
 # fig, ax = plt.subplots(1, 3)
@@ -58,6 +142,7 @@ J = dca.TopJNorms_Jmatrix(j901, N, q, 329)[0]
 # dca.Fig_FullJ(ax[1], 'A-D', addisp, N, q)
 # dca.Fig_FullJ(ax[2], 'B-D', bddisp, N, q)
 # plt.savefig(spath + 'crosstalkin.png', dpi=600)
+'''
 hb =  'AGGGATGATGTGTGGTAGGCCTAGGATGGGTAGGGTGGTG'
 hbm = 'AGGGATGATGTGTGGTGGGCCTAGGATGGGTAGGGTTGTG'
 #      1   5    10   15   20   25   30   35
@@ -258,11 +343,11 @@ cl ='AGGGTGGGAGTGGATGATGCCTAGGATGGGTAGGGTGGTG'
 #                     '/home/jonah/Desktop/Current/aptamerfinal/outrun4v3.txt', '/home/jonah/Desktop/Current/aptamerfinal/outrun5v3.txt')
 # H = 2*h901
 '''
-allseqpath = cpath + str(fam) + 'all.txt'
-s10p = tenpath + 's10.txt'
-s90p = tenpath + 's90.txt'
+#allseqpath = cpath + str(fam) + 'all.txt'
+#s10p = tenpath + 's10.txt'
+#s90p = tenpath + 's90.txt'
 
-jdisp = dca.FullJ_disp(J, N, q)
+#jdisp = dca.FullJ_disp(J, N, q)
 
 # fig, ax = plt.subplots(1)
 # dca.Plot_Seq_Aff_v_E(J, H, '/home/jonah/Desktop/aptfigs/avgHw.png', allseqpath)
@@ -270,15 +355,15 @@ jdisp = dca.FullJ_disp(J, N, q)
 # dca.Fig_FullJ(ax, 'Initial J', jdisp, N, q)
 # dca.Fig_FullH(ax, 'Iniitial H', h901, N, q)
 # plt.savefig('/home/jonah/Desktop/aptfigs/distJ.png', dpi=400)
-actualhighestscoring = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGTTGGTG'
+#actualhighestscoring = 'AGGGTAGGTGTGGATGATGCCTAGGATGGGTAGGTTGGTG'
 
-high, low = dca.TwoMutation_Bad_binder_checker(actualhighestscoring, J, H, allseqpath)
-print(high)
+#high, low = dca.TwoMutation_Bad_binder_checker(actualhighestscoring, J, H, allseqpath)
+#print(high)
 # print(low)
-s1 = 'CGGGATGATGTGTGGTAGGCCTATCATGGGTAGGGTGGTG'
-s2 = 'UGGGATGATGTGTGGTAGCCCTATGATGGGTAGGGTGGTG'
-s3 = 'UGGGATCATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
-s4 = 'UGGGATGATGTGTGGTAGGCCTATAATGGGTAGGGTGGTG'
+#s1 = 'CGGGATGATGTGTGGTAGGCCTATCATGGGTAGGGTGGTG'
+#s2 = 'UGGGATGATGTGTGGTAGCCCTATGATGGGTAGGGTGGTG'
+#s3 = 'UGGGATCATGTGTGGTAGGCCTATGATGGGTAGGGTGGTG'
+#s4 = 'UGGGATGATGTGTGGTAGGCCTATAATGGGTAGGGTGGTG'
 '''
 # results = dca.ensemble_checker(allseqpath, s1, s2, s3, s4)
 # print(results)
@@ -329,3 +414,4 @@ g11 = 'GCGGGTTGGGCAGGATCAGCTTGGGTGGTGCAGGTTCGCG'
 gs = [g1, g2, g3, g4, g5, g6, g7, g9, g10, g11]
 for x in gs:
     print('avg_dis_gb=', round(dca.avgdis_gb(x, allseqpath), 2), 'avg_dis_bb=', round(dca.avgdis_bb(x, allseqpath), 2))
+'''

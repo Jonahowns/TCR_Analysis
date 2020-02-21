@@ -2331,11 +2331,14 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
     adata = []
     apis = []
     data = []
+    lps = []
     for i in infile:
         titles, seqs = Fasta_Read_Aff(i)
         energies = []
         for x in seqs:
             energies.append(Calc_Energy(x, J, H))
+        linreg = stats.linregress(titles, energies)
+        lps.append(linreg)
         affs = list(set(titles))
         adata.append(affs)
         oAff.update(affs)
@@ -2356,7 +2359,11 @@ def Diff_Avg(J, H, outpath, labels, *infile, **kwargs):
             avg.append(yavg)
             err.append(yerr)
         xd = [x + .2*aid for x in adata[aid]]
-        plt.errorbar(xd, avg, err, linestyle='None', marker='^', label=labels[aid])
+        plt.errorbar(xd, avg, err, linestyle='None', marker='^', label=labels[aid], c=colors[aid])
+        xl = np.linspace(0, thaff, 100)
+        plt.plot(xl, xl * lps[aid][0] + lps[aid][1], c=colors[aid], linestyle='-.')
+        plt.text(xl[round(len(xl) / 2)], xl[round(len(xl) / 2)] * lps[aid][0] + lps[aid][1],
+                 'RSCORE: ' + str(round(lps[aid][2], 3)), c=colors[aid])
         # x = list(set([x for (x, y) in data[aid]]))
         # x.sort()
         # linreg = stats.linregress(x, avg)
@@ -3103,7 +3110,7 @@ class Motif_Aligner():
         ds = []
         for sid, s in enumerate(seqs):
             found = False
-            print(self.all_motifs)
+            # print(self.all_motifs)
             for x in self.all_motifs:
                 indx = s.find(x)
                 if indx != -1:
