@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 
 upath = "/home/jonah/Dropbox (ASU)/"
-droppathv3 = "Projects/DCA/v3/"
-v3path = upath + droppathv3
+aptp = "Projects/DCA/ThrombinAptamers/"
 cpath = "/home/jonah/Desktop/Current/"
 tenpath = cpath + 'v4/10percent/'
+v5p = upath + aptp + 'v5/'
+memepath = v5p + 'meme_r8/'
 
 # corrfile = '/home/jonah/plmDCA/plmDCA_asymmetric_v2/8gs2.out'
 # N = 20
@@ -25,21 +26,59 @@ def mix_2comp_H(H1, H2, N, q):
     H[20:40,:] = H2
     return H
 
+dpath = upath + 'Projects/DCA/ThrombinAptamers/Seqs/originaldata/'
 
-N = 40
-q = 5
-fam = 8
-j901p = tenpath + 's901.j'
-h901p = tenpath + 's901.h'
-j901 = dca.sortjmat_plmDCA(j901p, N, q)
-h901 = dca.sorthmat_plmDCA(h901p, N, q)
-#OG
-allseqpath = cpath + str(fam) + 'all.txt'
+affs, seqs = dca.Fasta_Read_Aff(dpath+'all_ha.txt')
+m1mat = memepath + 'm1.txt'
+m1a = dca.Motif_Aligner(m1mat, 4, 20)
+m1a.load_seqs(seqs, affs)
+m1a.align_seqs()
+# print(m1a.unaligned_seqs)
 
-J, vals, co = dca.TopJNorms_Jmatrix(j901, N, q, 329)
-H = 2*h901
-eH = np.full((N, q), 0.0)
-jdisp = dca.FullJ_disp(J, N, q)
+# afo = list(set(affs))
+# for a in afo:
+#     aseqs = []
+#     for xid, x in enumerate(affs):
+#         if x == a:
+#             aseqs.append(seqs[xid])
+#     atmp = [a for i in aseqs]
+#     dca.write_fasta_aff(aseqs, atmp, dpath + 'all_' + str(a) + '.txt')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# N = 40
+# q = 5
+# fam = 8
+# j901p = tenpath + 's901.j'
+# h901p = tenpath + 's901.h'
+# j901 = dca.sortjmat_plmDCA(j901p, N, q)
+# h901 = dca.sorthmat_plmDCA(h901p, N, q)
+# #OG
+# allseqpath = cpath + str(fam) + 'all.txt'
+#
+# J, vals, co = dca.TopJNorms_Jmatrix(j901, N, q, 329)
+# H = 2*h901
+# eH = np.full((N, q), 0.0)
+# jdisp = dca.FullJ_disp(J, N, q)
 # dca.Raw_wRscore(J, H, '/home/jonah/Desktop/Current/aptamerfinal/figs/v5allseqsepwr.png', allseqpath)
 # plt.close()
 # dca.Raw_Aff_v_E(J, H, 'Family 8 Sequences', '/home/jonah/Desktop/Current/aptamerfinal/figs/v5allseqsep.png', allseqpath)
@@ -48,10 +87,10 @@ jdisp = dca.FullJ_disp(J, N, q)
 # dca.Fig_FullJ(ax, 'Norm J', jdisp, N, q)
 # plt.savefig('/home/jonah/Desktop/Current/aptamerfinal/figs/v5JNorm.png', dpi=600)
 # plt.close()
-fig1, ax1 = plt.subplots(1)
-dca.Fig_Distribution_w_Cutoff(ax1, 'J Norm Distribution', vals, co)
-plt.savefig('/home/jonah/Desktop/Current/aptamerfinal/figs/v5JNormdist.png')
-plt.close()
+# fig1, ax1 = plt.subplots(1)
+# dca.Fig_Distribution_w_Cutoff(ax1, 'J Norm Distribution', vals, co)
+# plt.savefig('/home/jonah/Desktop/Current/aptamerfinal/figs/v5JNormdist.png')
+# plt.close()
 # dca.Top10norms_figure_DNA('Top 10 Norms Family 8', J, N, '/home/jonah/Desktop/Current/aptamerfinal/figs/v5top10.png')
 # plt.close()
 

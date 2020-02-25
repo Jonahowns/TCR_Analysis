@@ -3029,6 +3029,20 @@ def mut_loc(mseq, tseq):
             d.append((xid+1, str(j)))
     return d
 
+
+def aff_dist_plot(affs, title, out):
+    maxe = max(affs)+1
+    mine = min(affs)-1
+    plt.figure(figsize=(2,0.5))
+    plt.plot(affs, [0.01] * len(affs), '|', color='r')
+    plt.suptitle(title)
+    plt.savefig(out, dpi=400)
+    plt.close()
+
+
+
+
+
 #def mutation_checker(seq, J, H, mutnum, seqfile):
     # tseq = list(copy.deepcopy(seq))
     # tmp, results = [], []
@@ -3054,17 +3068,25 @@ def mut_loc(mseq, tseq):
 class Motif_Aligner():
     def __init__(self, memefile, motif_states, motif_len, alphabet='dna', gaps=False):
         dna = ['A', 'C', 'G', 'T']
+        dnar = {'A':0, 'C':1, 'G':2, 'T':3}
         dnag = ['-', 'A', 'C', 'G', 'T']
+        dnagr = {'-':0, 'A':1, 'C':2, 'G':3, 'T':4}
         if alphabet == 'dna' and not gaps:
             self.alpha = dna
+            self.ralpha = dnar
         elif alphabet == 'dna' and gaps:
             self.alpha = dnag
+            self.ralpha = dnagr
         self.mfile = memefile
         self.m_states = motif_states
         self.m_len = motif_len
+        self.job_n = 0
         self.m_mat = self.import_meme_mat()
+        print('here')
         self.results = self.alt_generator()
+        print('here')
         self.all_motifs = self.decode_motifs()
+        print('here')
         self.unaligned_seqs = []
         self.unaligned_indxs = []
         self.affinities = []
@@ -3081,44 +3103,64 @@ class Motif_Aligner():
             lid += 1
         o.close()
         return meme_mat
+    def mat_jobs(self):
+        if self.m_len < 100:
+            piecenum = math.floor(self.m_len/8)
+            rest = self.m_len % 8
+            jobs = [8] * piecenum
+            jobs.append(rest)
+            # print(jobs)
+            return jobs
+        else:
+            print('WAYYY TOO LONG')
     def alt_generator(self):
-        poss = list(it.product(np.arange(self.m_states), repeat=self.m_len))
-        results = []
-        for p in poss:
-            score = 0
-            nz = True
-            for xid, x in enumerate(p):
-                if self.m_mat[xid, int(x)] != 0:
-                    score += self.m_mat[xid, int(x)]
-                else:
-                    nz = False
-                    break
-            if nz == True:
-                results.append((p, score))
-        results.sort(key=lambda tup: tup[1])
-        results.reverse()
-        return results
+        jobs = self.mat_jobs()
+        self.job_n = len(jobs)
+        fresults = []
+        strt_indx = 0
+        for j in jobs:
+            sh = list(it.product(np.arange(self.m_states), repeat=j))
+            tresults = []
+            for p in sh:
+                score = 0
+                nz = True
+                for xid, x in enumerate(p):
+                    if self.m_mat[strt_indx+xid, int(x)] != 0:
+                        # score += self.m_mat[strt_indx+xid, self.alpha.in]
+                        print('hi')
+                    else:
+                        nz = False
+                        break
+                if nz == True:
+                    tresults.append((p, score))
+            strt_indx += j
+            tresults.sort(key=lambda tup: tup[1])
+            tresults.reverse()
+            fresults.append(tresults)
+        jseqs = []
+        for i in range(len(jobs)):
+            seq, score = zip(*fresults[i])
+            jseqs.append(seq)
+        print(jseqs[0][0], jseqs[0][-1], jseqs[1][0], jseqs[1][-1], jseqs[2][0], jseqs[2][-1])
+        print(fresults[2][0], fresults[2][-1])
+        return fresults
     def decode_motifs(self):
-        ams = []
-        for c, w in self.results:
-            l = []
-            for x in c:
-                l.append(self.alpha[int(x)])
-            ams.append(''.join(l))
-        return ams
+        amm, ams = [], []
+        for x in self.results:
+            for c, w in x:
+                l = []
+                for a in c:
+                    l.append(self.alpha[int(a)])
+                ams.append(''.join(l))
+            amm.append(ams)
+        return amm
+    def score_slice(self, slice):
+        score = 0
+        for x, xid in enumerate(slice):
+            score += self.m_mat[xid, self.ralpha[x]]
+        return score
     def load_seqs(self, seqs, affs):
-        ds = []
-        for sid, s in enumerate(seqs):
-            found = False
-            # print(self.all_motifs)
-            for x in self.all_motifs:
-                indx = s.find(x)
-                if indx != -1:
-                    found = True
-                    ds.append(indx)
-                    break
-            if not found:
-                ds.append(-1)
+        ds = [5]
         for iid, idx in enumerate(ds):
             if idx > -1:
                 self.affinities.append(affs[iid])

@@ -33,8 +33,10 @@ dpath = upath + 'Projects/DCA/ThrombinAptamers/Seqs/originaldata/'
 destpath = upath + 'Projects/DCA/ThrombinAptamers/v5/'
 
 #import seqs
-i8 = dpath + '8th_fasta.txt'
-i7 = dpath + '7th_fasta.txt'
+i8 = dpath + 'r8_fasta_la.txt'
+i7 = dpath + 'r7_fasta_la.txt'
+i6 = dpath + 'r6_fasta_la.txt'
+i5 = dpath + 'r5_fasta_la.txt'
 
 #combine and eliminate duplicates
 def combine_datasets(*infiles):
@@ -50,22 +52,44 @@ def combine_datasets(*infiles):
         noda.append(fas[fss.index(x)])
     return noda, nods
 
-famids = [5, 6, 7, 8]
-for x in famids:
-    seqs, affs = [], []
-    csvfile = dpath + '2HX_' + str(x) + 'th_new.csv'
-    out = dpath + 'r' + str(x) + '_fasta.txt'
-    o = open(csvfile, 'r')
-    next(o)
-    for line in o:
-        seq, aff = line.split(';')
-        seqs.append(seq)
-        affs.append(affs)
-    dca.write_fasta_aff(seqs, affs, out)
+# famids = [5, 6, 7, 8]
+# # famids = [5]
+# for x in famids:
+#     lseqs, laffs, hseqs, haffs = [], [], [], []
+#     csvfile = dpath + '2HX_' + str(x) + 'th_new.csv'
+#     outh = dpath + 'r' + str(x) + '_fasta_ha.txt'
+#     outl = dpath + 'r' + str(x) + '_fasta_la.txt'
+#     o = open(csvfile, 'r')
+#     next(o)
+#     for line in o:
+#         seq, tmp = line.split(';')
+#         aff = tmp.rstrip()
+#         if int(aff) == 1:
+#         # print(seq, aff)
+#             lseqs.append(seq)
+#             laffs.append(aff)
+#         else:
+#             hseqs.append(seq)
+#             haffs.append(aff)
+#     dca.write_fasta_aff(hseqs, haffs, outh)
+#     dca.write_fasta_aff(lseqs, laffs, outl)
+
+
+affs, seqs = dca.Fasta_Read_Aff(dpath+'all_ha.txt')
+afo = list(set(affs)).sort()
+for a in afo:
+    aseqs = []
+    for xid, x in enumerate(affs):
+        if x == a:
+            aseqs.append(seqs[xid])
+    atmp = [a for i in aseqs]
+    dca.write_fasta_aff(aseqs, atmp, dpath + 'all_' + str(a) + '.txt')
 
 
 
-# aff, seq = combine_datasets(i7, i8)
+
+affs, seqs = combine_datasets(i5, i6, i7, i8)
+dca.write_fasta_aff(seqs, affs, dpath+'all_la.txt')
 
 
 # print(len(seq))
