@@ -30,7 +30,7 @@ thcp = thcd + 'THCA_R15_counts.txt'
 
 
 
-def read_gfile_alldata(filep):
+def read_gfile(filep):
     o = open(filep, 'r')
     affs, seqs = [], []
     for line in o:

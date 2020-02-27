@@ -1,5 +1,6 @@
 import dcamethods as dca
 import numpy as np
+import gmethods as gm
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 
@@ -33,10 +34,10 @@ dpath = upath + 'Projects/DCA/ThrombinAptamers/Seqs/originaldata/'
 destpath = upath + 'Projects/DCA/ThrombinAptamers/v5/'
 
 #import seqs
-i8 = dpath + 'r8_fasta_la.txt'
-i7 = dpath + 'r7_fasta_la.txt'
-i6 = dpath + 'r6_fasta_la.txt'
-i5 = dpath + 'r5_fasta_la.txt'
+i8 = dpath + 'r8_fasta.txt'
+i7 = dpath + 'r7_fasta.txt'
+i6 = dpath + 'r6_fasta.txt'
+i5 = dpath + 'r5_fasta.txt'
 
 #combine and eliminate duplicates
 def combine_datasets(*infiles):
@@ -52,46 +53,42 @@ def combine_datasets(*infiles):
         noda.append(fas[fss.index(x)])
     return noda, nods
 
-# famids = [5, 6, 7, 8]
+famids = [5, 6, 7, 8]
 # # famids = [5]
-# for x in famids:
-#     lseqs, laffs, hseqs, haffs = [], [], [], []
-#     csvfile = dpath + '2HX_' + str(x) + 'th_new.csv'
-#     outh = dpath + 'r' + str(x) + '_fasta_ha.txt'
-#     outl = dpath + 'r' + str(x) + '_fasta_la.txt'
-#     o = open(csvfile, 'r')
-#     next(o)
-#     for line in o:
-#         seq, tmp = line.split(';')
-#         aff = tmp.rstrip()
-#         if int(aff) == 1:
-#         # print(seq, aff)
-#             lseqs.append(seq)
-#             laffs.append(aff)
-#         else:
-#             hseqs.append(seq)
-#             haffs.append(aff)
-#     dca.write_fasta_aff(hseqs, haffs, outh)
-#     dca.write_fasta_aff(lseqs, laffs, outl)
+for x in famids:
+    seqs, affs = [], []
+    csvfile = dpath + '2HX_' + str(x) + 'th_new.csv'
+    outh = dpath + 'r' + str(x) + '_fasta.txt'
+    outl = dpath + 'r' + str(x) + '_fasta_la.txt'
+    o = open(csvfile, 'r')
+    next(o)
+    for line in o:
+        seq, tmp = line.split(';')
+        aff = tmp.rstrip()
+        seqs.append(seq)
+        affs.append(aff)
+    dca.write_fasta_aff(seqs, affs, outh)
 
 
-affs, seqs = dca.Fasta_Read_Aff(dpath+'all_ha.txt')
-afo = list(set(affs)).sort()
-for a in afo:
-    aseqs = []
-    for xid, x in enumerate(affs):
-        if x == a:
-            aseqs.append(seqs[xid])
-    atmp = [a for i in aseqs]
-    dca.write_fasta_aff(aseqs, atmp, dpath + 'all_' + str(a) + '.txt')
+# affs, seqs = dca.Fasta_Read_Aff(dpath+'all_ha.txt')
+# afo = list(set(affs)).sort()
+# for a in afo:
+#     aseqs = []
+#     for xid, x in enumerate(affs):
+#         if x == a:
+#             aseqs.append(seqs[xid])
+#     atmp = [a for i in aseqs]
+#     dca.write_fasta_aff(aseqs, atmp, dpath + 'all_' + str(a) + '.txt')
+gdir = upath + 'Projects/DCA/GunterAptamers/Selex_Data/Orig_data/'
+gdir2 = upath + 'LabFolders/transfer_stefan_two/THCA_R/'
+rounds = [13, 14]
+gfiles = [gdir + 'PAL_Anna_R' + str(x) + '_counts.txt' for x in rounds]
 
 
-
-
-affs, seqs = combine_datasets(i5, i6, i7, i8)
-dca.write_fasta_aff(seqs, affs, dpath+'all_la.txt')
-
-
+# affs, seqs = combine_datasets(i5, i6, i7, i8)
+# dca.write_fasta_aff(seqs, affs, dpath+'all_la.txt')
+titttles = [13, 14]
+dca.diff_seqs_pd(rounds, '/home/jonah/Desktop/tmp/', gfiles, filetype='gunter')
 # print(len(seq))
 # print(len(list(set(seq))))
 

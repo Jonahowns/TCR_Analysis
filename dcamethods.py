@@ -8,6 +8,7 @@ import random
 import multiprocessing as mp
 from statistics import mean
 from scipy.stats import gaussian_kde
+import pandas as pd
 import itertools as it
 
 ################################################
@@ -3038,6 +3039,74 @@ def aff_dist_plot(affs, title, out):
     plt.suptitle(title)
     plt.savefig(out, dpi=400)
     plt.close()
+
+def diff_seqs(titles, *infiles):
+    afs, seqs, diffs = [], [], []
+    for x in infiles:
+        af, se = Fasta_Read_Aff(x)
+        df = pd.DataFrame(list(zip(se, af)), columns=['Seq', 'Aff'])
+        afs.append(af)
+        seqs.append(se)
+    aseqs = [item for li in seqs for item in li]
+    aaffs = [item for li in afs for item in li]
+    for x in seqs:
+        for i in range(len(infiles)):
+            if x == seqs[i]:
+                continue
+            ri = set(seqs[i])
+            try:
+                ri1 = set(seqs[i+1])
+            except IndexError:
+                continue
+            tmpfor = ri - ri1
+            tmpback = ri1 - ri
+            tmpfas = [aaffs[aseqs.index(y)] for y in list(tmpfor)]
+            tmpbas = [aaffs[aseqs.index(y)] for y in list(tmpback)]
+            ds = list(zip(list(tmpfor), tmpfas, list(tmpback), tmpbas))
+            diffs.append(ds)
+    dtitles = [(titles[i-1], titles[i]) for i in np.arange(1, len(titles))]
+    print(dtitles[0], diffs[0])
+
+
+def read_gfile(filep):
+    o = open(filep, 'r')
+    affs, seqs = [], []
+    for line in o:
+        d = line.split()
+        aff, seq = int(d[0]), str(d[1])
+        affs.append(aff)
+        seqs.append(seq)
+    o.close()
+    return affs, seqs
+
+def diff_seqs_pd(titles, outp, infiles, filetype='fasta'):
+    dfs = []
+    for x in infiles:
+        if filetype == 'fasta':
+            af, se = Fasta_Read_Aff(x)
+        elif filetype == 'gunter':
+            af, se = read_gfile(x)
+        df = pd.DataFrame(list(zip(se, af)), columns=['Seq', 'Aff'])
+        dfs.append(df)
+    dfps = it.combinations(np.arange(len(infiles)), 2)
+    for i, j in dfps:
+        idf, jdf = dfs[i], dfs[j]
+        # onlyI = pd.concat([idf, jdf]).drop_duplicates(keep=False)
+        # onlyJ = pd.concat([jdf, idf]).drop_duplicates(keep=False)
+        dups = pd.merge(left=idf, right=jdf, how='inner', left_on='Seq', right_on='Seq', sort=False)
+        onlyI = pd.concat([idf, dups]).drop_duplicates(keep=False, subset='Seq')
+        onlyI.drop(columns="Aff_x", inplace=True)
+        onlyI.drop(columns="Aff_y", inplace=True)
+        onlyJ = pd.concat([jdf, dups]).drop_duplicates(keep=False, subset='Seq')
+        onlyJ.drop(columns="Aff_x", inplace=True)
+        onlyJ.drop(columns="Aff_y", inplace=True)
+        ip, jp, csvext = 'r' + str(titles[i]), 'r' + str(titles[j]), '.csv'
+        fullt = ip + '_vs_' + jp
+        print(onlyI.shape)
+        print(onlyJ.shape)
+        onlyI.to_csv(outp + fullt + '_uniq_' + ip + csvext)
+        onlyJ.to_csv(outp + fullt + '_uniq_' + jp + csvext)
+        dups.to_csv(outp + fullt + '_dups' + csvext)
 
 
 

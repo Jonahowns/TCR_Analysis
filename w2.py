@@ -30,9 +30,27 @@ dpath = upath + 'Projects/DCA/ThrombinAptamers/Seqs/originaldata/'
 
 affs, seqs = dca.Fasta_Read_Aff(dpath+'all_ha.txt')
 m1mat = memepath + 'm1.txt'
+m2mat = memepath + 'm2.txt'
 m1a = dca.Motif_Aligner(m1mat, 4, 20)
 m1a.load_seqs(seqs, affs)
 m1a.align_seqs()
+l5 = []
+for iid, i in enumerate(m1a.unaligned_indxs):
+    if i > 17:
+        l5.append((m1a.aligned_seqs[iid], m1a.affinities[iid]))
+l5.sort(key=lambda tup: tup[1])
+l5.reverse()
+s, a = zip(*l5)
+clean = [st.replace("-", "") for st in s]
+fixed = [st[0:20] for st in clean]
+m2a = dca.Motif_Aligner(m2mat, 4, 15)
+m2a.load_seqs(fixed, a)
+m2a.align_seqs()
+a2 = []
+print(m2a.aligned_seqs)
+print(len(m2a.aligned_seqs))
+# print(l5)
+# print(len(l5))
 # print(m1a.unaligned_seqs)
 
 # afo = list(set(affs))
