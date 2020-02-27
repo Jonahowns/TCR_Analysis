@@ -3082,13 +3082,10 @@ class Motif_Aligner():
         self.m_len = motif_len
         self.job_n = 0
         self.m_mat = self.import_meme_mat()
-        print('here')
-        self.results = self.alt_generator()
-        print('here')
-        self.all_motifs = self.decode_motifs()
-        print('here')
         self.unaligned_seqs = []
         self.unaligned_indxs = []
+        self.nomotif_indxs = []
+        self.motif_indxs = []
         self.affinities = []
         self.aligned_seqs = None
         self.start_positions = []
@@ -3103,65 +3100,53 @@ class Motif_Aligner():
             lid += 1
         o.close()
         return meme_mat
-    def mat_jobs(self):
-        if self.m_len < 100:
-            piecenum = math.floor(self.m_len/8)
-            rest = self.m_len % 8
-            jobs = [8] * piecenum
-            jobs.append(rest)
-            # print(jobs)
-            return jobs
+    def slice_seq(self, s):
+        sqposs = []
+        for i in range(len(s)):
+            sl = s[i:i + self.m_len]
+            if len(sl) == self.m_len:
+                sqposs.append(sl)
+            else:
+                break
+        return sqposs
+    def find_motif(self, sqposs):
+        tscores = []
+        found = False
+        for xid, x in enumerate(sqposs):
+            scores = []
+            sc = 0
+            for yid, y in enumerate(x):
+                inds = self.m_mat[yid][self.ralpha[y]]
+                if inds != 0 and yid != len(x) - 1:
+                    sc += inds
+                    continue
+                elif inds != 0 and yid == len(x) - 1:
+                    sc += inds
+                    scores.append((x, xid, xid + self.m_len, sc))
+                else:
+                    break
+            if scores:
+                found = True
+                tscores.extend(scores)
+        if found:
+            tscores.sort(key=lambda tup: tup[3])
+            motif, si, ei, seqscore = tscores[-1]
+            return motif, si, ei
         else:
-            print('WAYYY TOO LONG')
-    def alt_generator(self):
-        jobs = self.mat_jobs()
-        self.job_n = len(jobs)
-        fresults = []
-        strt_indx = 0
-        for j in jobs:
-            sh = list(it.product(np.arange(self.m_states), repeat=j))
-            tresults = []
-            for p in sh:
-                score = 0
-                nz = True
-                for xid, x in enumerate(p):
-                    if self.m_mat[strt_indx+xid, int(x)] != 0:
-                        # score += self.m_mat[strt_indx+xid, self.alpha.in]
-                        print('hi')
-                    else:
-                        nz = False
-                        break
-                if nz == True:
-                    tresults.append((p, score))
-            strt_indx += j
-            tresults.sort(key=lambda tup: tup[1])
-            tresults.reverse()
-            fresults.append(tresults)
-        jseqs = []
-        for i in range(len(jobs)):
-            seq, score = zip(*fresults[i])
-            jseqs.append(seq)
-        print(jseqs[0][0], jseqs[0][-1], jseqs[1][0], jseqs[1][-1], jseqs[2][0], jseqs[2][-1])
-        print(fresults[2][0], fresults[2][-1])
-        return fresults
-    def decode_motifs(self):
-        amm, ams = [], []
-        for x in self.results:
-            for c, w in x:
-                l = []
-                for a in c:
-                    l.append(self.alpha[int(a)])
-                ams.append(''.join(l))
-            amm.append(ams)
-        return amm
-    def score_slice(self, slice):
-        score = 0
-        for x, xid in enumerate(slice):
-            score += self.m_mat[xid, self.ralpha[x]]
-        return score
+            return -1, -1, -1
     def load_seqs(self, seqs, affs):
-        ds = [5]
-        for iid, idx in enumerate(ds):
+        hits, misses, motifstrt_indx = [], [], []
+        for sid, s in enumerate(seqs):
+            sqposs = self.slice_seq(s)
+            m, si, ei = self.find_motif(sqposs)
+            motifstrt_indx.append(si)
+            if si > -1 and ei > -1:
+                hits.append(sid)
+            else:
+                misses.append(sid)
+        self.nomotif_indxs = misses
+        self.motif_indxs = hits
+        for iid, idx in enumerate(motifstrt_indx):
             if idx > -1:
                 self.affinities.append(affs[iid])
                 self.unaligned_seqs.append(seqs[iid])
