@@ -5,6 +5,9 @@ import numpy as np
 import statistics as stats
 import os
 from collections import OrderedDict
+import dcamethods as dca
+import matplotlib.pyplot as plt
+import math
 
 # DATA IMPORT
 macpath = "/Users/Amber/Dropbox (ASU)/"
@@ -29,34 +32,453 @@ family_files = {'AAA': fullpath + 'S_7_AAA_2_norm_plus.tsv.cluster',
                 'TGC': fullpath + 'S_7_TGC_2_norm_plus.tsv.cluster',
                 'TTG': fullpath + 'S_7_TTG_2_norm_plus.tsv.cluster',
 }
-clustids = {1: 'AAA', 2: 'ACC', 3: 'AGG', 4: 'ATT',
-            5: 'CAC', 6: 'CCG', 7: 'CTA',
-            8: 'GAG', 9: 'GCT', 10: 'GTC',
-            11: 'TAT', 12: 'TCA', 13: 'TGC', 14: 'TTG'}
+
+npath = ubuntpath + 'Projects/TCR/'
+nfam_files = {'c1': npath + 'Spleen_1Cluster.csv',
+              'c2': npath + 'Spleen_2Cluster.csv',
+              'c3': npath + 'Spleen_3Cluster.csv'}
+
+
+
+
+# clustids = {1: 'AAA', 2: 'ACC', 3: 'AGG', 4: 'ATT',
+#             5: 'CAC', 6: 'CCG', 7: 'CTA',
+#             8: 'GAG', 9: 'GCT', 10: 'GTC',
+#             11: 'TAT', 12: 'TCA', 13: 'TGC', 14: 'TTG'}
 # A Family
-AAA = pd.read_csv(family_files['AAA']).dropna()
-ACC = pd.read_csv(family_files['ACC']).dropna()
-AGG = pd.read_csv(family_files['AGG']).dropna()
-ATT = pd.read_csv(family_files['ATT']).dropna()
-# C Family
-CAC = pd.read_csv(family_files['CAC']).dropna()
-CCG = pd.read_csv(family_files['CCG']).dropna()
-CTA = pd.read_csv(family_files['CTA']).dropna()
-# G Family
-GAG = pd.read_csv(family_files['GAG']).dropna()
-GCT = pd.read_csv(family_files['GCT']).dropna()
-GTC = pd.read_csv(family_files['GTC']).dropna()
-# T Family
-TAT = pd.read_csv(family_files['TAT']).dropna()
-TCA = pd.read_csv(family_files['TCA']).dropna()
-TGC = pd.read_csv(family_files['TGC']).dropna()
-TTG = pd.read_csv(family_files['TTG']).dropna()
+# AAA = pd.read_csv(family_files['AAA']).dropna()
+# ACC = pd.read_csv(family_files['ACC']).dropna()
+# AGG = pd.read_csv(family_files['AGG']).dropna()
+# ATT = pd.read_csv(family_files['ATT']).dropna()
+# # C Family
+# CAC = pd.read_csv(family_files['CAC']).dropna()
+# CCG = pd.read_csv(family_files['CCG']).dropna()
+# CTA = pd.read_csv(family_files['CTA']).dropna()
+# # G Family
+# GAG = pd.read_csv(family_files['GAG']).dropna()
+# GCT = pd.read_csv(family_files['GCT']).dropna()
+# GTC = pd.read_csv(family_files['GTC']).dropna()
+# # T Family
+# TAT = pd.read_csv(family_files['TAT']).dropna()
+# TCA = pd.read_csv(family_files['TCA']).dropna()
+# TGC = pd.read_csv(family_files['TGC']).dropna()
+# TTG = pd.read_csv(family_files['TTG']).dropna()
+
+def writefasta(seqs, file, clustid):
+    y=open(file, 'w+')
+    sid = 0
+    for seq, aff in seqs:
+        sid += 1
+        print('>'+'clust' + str(clustid) + 'seq' + str(sid) + '-' + str(aff), file=y)
+        print(seq, file=y)
+    y.close()
+
+def nfam_fixer(jseqs):
+    nj = []
+    stars_replaced = 0
+    maxj = len(max(jseqs, key=len))
+    for x in jseqs:
+        if '*' in x:
+            tmp1 = x.replace('*', '-')
+            stars_replaced += 1
+        else:
+            tmp1 = x
+        # Gaps needed to add to end
+        toadd = maxj - len(tmp1)
+        if toadd > 0:
+            tmp2 = tmp1 + ''.join(['-' for x in range(toadd)])
+        else:
+            tmp2 = tmp1
+        nj.append(tmp2)
+    logmessages = []
+    logmessages.append('Stars_Replaced = ' + str(stars_replaced))
+    return nj, logmessages
+
+def length_checker(seqs, logfile, mode='check'):
+    # Checks that Lengths of all Sequences are uniform
+    seql = []
+    for seq in seqs:
+        seql.append(len(list(seq)))
+    nseql = np.array(seql)
+    mostcommonlen = int(stats.mode(nseql))
+    lencatcher = 0
+    print('Total Sequences = ' + str(len(seqs)), file=logfile)
+    for xid, x in enumerate(nseql):
+        if x != mostcommonlen:
+            if mode == 'fix':
+                del seqs[xid-lencatcher]
+            lencatcher += 1
+    print('Most Common Length: ' + str(mostcommonlen) + ' Residues, percentage not most common length = ' + str(lencatcher / len(nseql) * 100), file=logfile)
+    percentremoved = str(lencatcher / len(nseql) * 100)
+    if mode == 'fix':
+        print('Sequences Removed\n')
+    return seqs, percentremoved
+
+def import_dataset(file_dictionary):
+    for xid, x in enumerate(file_dictionary.items()):
+        if xid == 0:
+            main = pd.read_csv(x[1]).dropna()
+        else:
+            main.append(pd.read_csv(x[1]).dropna())
+    clusters = list(main["cluster_number"].unique())
+    return main, clusters
+
+def import_single_dataset(file):
+    main = pd.read_csv(file).dropna()
+    clusters = list(main["cluster_number"].unique())
+    return main, clusters
+
+
+def prep_data(dataset, clusters, logfile='', write_data=False, prefix=''):
+    if logfile:
+        l=open(logfile, 'w')
+    for x in clusters:
+        cdata = dataset[dataset["cluster_number"] == x]
+        #Preps data as list of list tuples
+        fasta_ready = cdata.values.tolist()
+        if logfile:
+            print('Cluster', x, 'Total Seqs:', len(fasta_ready), file=l)
+        #Separate sequences, cp number, and cluster into lists
+        jseqs, cpnum, clust = zip(*fasta_ready)
+        # Check the length of all sequences in cluster
+        length_checker(jseqs, l)
+        # Check that all sequences are unique
+        nonuniq = len(jseqs) - len(set(jseqs))
+        print('Cluster', x, 'Repeated Sequences:', nonuniq, file=l)
+        #Unique Fixes for dataset in this case for the nfam
+        njseqs, logmessages = nfam_fixer(jseqs)
+        for y in logmessages:
+            print(y, file=l)
+        # Writes the data into our favorite fasta form
+        if write_data:
+            outfile = npath + prefix + 'Cluster' + str(x) + '.fasta'
+            writable = list(zip(njseqs, cpnum))
+            writefasta(writable, outfile, x)
+
+
+
+def npath_gen(dlabel, clabel):
+    np = npath + dlabel + '/' + 'c' + clabel + '/'
+    return np
+
+
+def load_seqs_path(clustlist, datalabel, filelabel):
+    S = []
+    for i in clustlist:
+        np = npath_gen(datalabel, str(i))
+        fnp = np + filelabel + 'Cluster' + str(i) + '.fasta'
+        seqs = dca.Fasta_Read_SeqOnly(fnp)
+        S.append(seqs)
+    return S
+
+
+def load_seqs(clustlist, prefix='', postfix=''):
+    S = []
+    for i in clustlist:
+        seqp = prefix + nclust_targets[i] + postfix + 'Cluster' + str(i) + '.fasta'
+        seqs = dca.Fasta_Read_SeqOnly(seqp)
+        S.append(seqs)
+    return S
+
+def load_HJ_from_Clust(clustid, **kwargs):
+    params = False
+    prefix = ''
+    for key, value in kwargs.items():
+        if key == 'parameters':
+            params = value
+        if key == 'prefix':
+            prefix = value
+    x = clustid
+    np = npath_gen(prefix, str(clustid))
+    jp = np + prefix + 'Cluster' + str(x) + '.j'
+    hp = np + prefix + 'Cluster' + str(x) + '.h'
+    H, n, q = dca.sorthmat_plmDCA_autoNandq(hp, gaps='yes')
+    J = dca.sortjmat_plmDCA(jp, n, q, gaps='yes')
+    if params:
+        return H, J, n, q
+    else:
+        return H, J
+
+def Clust_ALLJs(clusterlist):
+    rn = len(clusterlist) % 2
+    if rn:
+        rownum = math.floor(len(clusterlist) / 2) + 1
+    else:
+        rownum = math.floor(len(clusterlist) / 2)
+    fig, ax = plt.subplots(rownum, 2)
+    fig.set_figheight(20)
+    fig.set_figwidth(8)
+    if rn:
+        fig.delaxes(ax[rownum - 1, 1])
+
+    for xid, i in enumerate(clusterlist):
+        H, J, n, q = load_HJ_from_Clust(i, parameters=True)
+        rp, cp = math.floor(xid / 2), xid % 2
+        # dca.Fig_FullJ(ax[rp, cp], i, J, n, q, title=('Cluster ' + str(i) + ' Pairwise Parameters'), cbar=True)
+        fp = nclust_paths[0] + 'clust' + str(i) + '_wl.png'
+        dca.Fig_SeqLogo(fp, ax[rp, cp], i, title="Cluster " + str(i) + "SeqLogo")
+        # plt.colorbar(cax=ax[rp, cp], fraction=0.046, pad=0.04)
+    plt.tight_layout()
+    plt.savefig(nclust_paths[0] + "ALL_SLs.png", dpi=800)
+
+
+def CalcE_AllCLuster_wCoord(clusterlist, dprefix, postfix='', returnn=False, noJ=False):
+    S = load_seqs_path(clusterlist, dprefix, dprefix)
+    MasterCoord = []
+    ns = []
+    hj = []
+    for xid, i in enumerate(clusterlist):
+        H, J, n, q = load_HJ_from_Clust(i, parameters=True, prefix=dprefix)
+        hj.append((H, J))
+        ns.append(n)
+        tmpclustlist = [x for x in clusterlist if x != i]
+        tmpS = [x for x in S if S.index(x) != xid]
+        print(tmpclustlist)
+        print(tmpS)
+        COI = [x for x in S if S.index(x) == xid]
+        fullcoord = []
+        for cid, clust in enumerate(tmpS):
+            for x in clust:
+                fullcoord.append((tmpclustlist[cid], dca.Calc_Energy_TCR(x, J, H, n, noJ=noJ)))
+        for clust in COI:
+            for x in clust:
+                fullcoord.append((i, dca.Calc_Energy_TCR(x, J, H, n, noJ=noJ)))
+        MasterCoord.append((i, fullcoord))
+    #Master Coord holds all x and y values for all comparitive figure
+    if returnn:
+        return MasterCoord, ns, hj
+    else:
+        return MasterCoord
+
+
+def CalcE_AllCLuster_SecondaryCoord(primaryclusterlist, nlist, myclusterlist, Hs, Js, dprefix, postfix='', noJ=False):
+    S = load_seqs_path(myclusterlist, dprefix, dprefix)
+    SecondaryCoord = []
+    for xid, i in enumerate(primaryclusterlist):
+        fullcoord = []
+        for cid, clust in enumerate(S):
+            for x in clust:
+                fullcoord.append((myclusterlist[cid], dca.Calc_Energy_TCR(x, Js[xid], Hs[xid], nlist[xid], noJ=noJ)))
+        SecondaryCoord.append((i, fullcoord))
+    #Master Coord holds all x and y values for all comparitive figures
+    return SecondaryCoord
+
+
+def extract_data(tmp):
+    means, stdevs = {}, {}
+    xdata = list(set([x for x, y in tmp]))
+    for i in xdata:
+        ydata = [y for x, y in tmp if x==i]
+        mean = stats.mean(ydata)
+        err = stats.stdev(ydata)
+        means[i] = mean
+        stdevs[i] = err
+    return means, stdevs
+
+
+def EnergyCoord_COI_ScorePlot_AllClusters_Comparison(clusterlist1, clusterlist2, p1, p2, d1, d2, noJ=False):
+    # This is the one who's cluster number and HJ will be dominant
+    DOI, ns, hj = CalcE_AllCLuster_wCoord(clusterlist1, d1, postfix=p1, returnn=True, noJ=noJ)
+    H, J = zip(*hj)
+    # This one will compare
+    MC2 = CalcE_AllCLuster_SecondaryCoord(clusterlist1, ns, clusterlist2, H, J, d2, postfix=p2, noJ=noJ)
+    mclustlist = list(set(clusterlist1 + clusterlist2))
+    mclustlist.sort()
+    print(mclustlist)
+    print('All Energies Calculated')
+    rn = len(clusterlist1) % 2
+    if rn:
+        rownum = math.floor(len(clusterlist1)/2) + 1
+    else:
+        rownum = math.floor(len(clusterlist1) / 2)
+    print(rownum)
+    fig, ax = plt.subplots(rownum, 2)
+    fig.set_figheight(20)
+    fig.set_figwidth(8)
+    if rn:
+        fig.delaxes(ax[rownum - 1, 1])
+    # Generate Figure for each Cluster
+    clusterlist1.sort()
+    for iid, i in enumerate(clusterlist1):
+        tmp1 = [y for x, y in DOI if x == i][0]
+        tmp2 = [y for x, y in MC2 if x == i][0]
+        m1, s1 = extract_data(tmp1)
+        m2, s2 = extract_data(tmp2)
+        rp, cp = math.floor(iid / 2), iid % 2
+        AvgPlot_sub_dict(ax[rp, cp], i, mclustlist, clusterlist1, clusterlist2, m1, m2, s1, s2, noJ=noJ)
+
+    plt.tight_layout()
+    if noJ:
+        plt.savefig(nclust_paths[1] + nclust_targets[0] + p1 + 'v' + p2 + "ALL_COI_noJ.png", dpi=800)
+    else:
+        plt.savefig(nclust_paths[1] + nclust_targets[0] + p1 + 'v' + p2 + "ALL_COI.png", dpi=800)
+
+
+
+# ScatPoints
+#     scatpoints = [x for sub in specificcoord for x in sub]
+#     ScatPlot(scatpoints, i)
+
+
+def ScatPlot(coord, i):
+    fig, ax = plt.subplots()
+    ax.scatter(*zip(*coord), c=list(zip(*coord))[0], s=2)
+    ax.title.set_text('Cluster ' + str(i) + ' HJ Comparison')
+    plt.savefig(nclust_paths[0] + 'Cluster' + str(i) + '.png', dpi=400)
+    plt.close()
+
+def AvgPlot(xrange, means, stdevs, i):
+    for xid, x in enumerate(xrange):
+        plt.errorbar(x, means[xid], yerr=stdevs[xid], marker="o")
+        plt.annotate("c" + str(x), (x+0.2, means[xid]-0.1))
+    plt.xlabel("Cluster")
+    plt.ylabel("Energy")
+    plt.suptitle('Cluster ' + str(i) + ' plmDCA Comparison')
+    plt.savefig(nclust_paths[0] + 'Cluster' + str(i) + '_Avg.png', dpi=400)
+    plt.close()
+
+def AvgPlot_sub(ax, xrange, means, stdevs, i):
+    for xid, x in enumerate(xrange):
+        ax.errorbar(x, means[xid], yerr=stdevs[xid], marker="o")
+        ax.annotate("c" + str(x), (x+0.2, means[xid]-0.1), fontsize=6)
+    xticks = xrange
+    xticks.append(max(xrange)+1)
+    ax.set_xticks(xticks)
+    ax.set_yticks(list(np.arange(0, 70, 10)))
+    ax.set_xlabel("Cluster")
+    ax.set_ylabel("Energy")
+    ax.title.set_text('Cluster ' + str(i) + ' plmDCA Comparison')
+
+def AvgPlot_sub_dict(ax, i, mcl, cl1, cl2, m1, m2, s1, s2, prefix='', noJ=False):
+
+    m1s, s1s = [], []
+    for x in cl1:
+        d1m, s1m = m1[x], s1[x]
+        m1s.append(d1m)
+        s1s.append(s1m)
+
+    m2s, s2s = [], []
+    for x in cl2:
+        d2m, s2m = m2[x], s2[x]
+        m2s.append(d2m)
+        s2s.append(s2m)
+
+    c1 = 'aquamarine'
+    c2 = 'firebrick'
+    c3 = 'darkviolet'
+    ax.errorbar(cl1, m1s, yerr=s1s, marker="^", color=c1, linestyle='None')
+    # ax.annotate("c" + str(x), (x + 0.2, d1m + 0.5), fontsize=4)
+
+    adjx = [x + 0.4 for x in cl2]
+    ax.errorbar(adjx, m2s, yerr=s2s, marker="s", color=c2, linestyle='None')
+
+    xticks = mcl
+    xticks.append(max(mcl))
+    xticks.append(0)
+    offset = [x-0.3 for x in xticks]
+    ax.set_xticks(xticks)
+    ax.set_xticks(offset, minor=True)
+    if noJ:
+        ax.set_yticks(list(np.arange(0, 10, 2)))
+    else:
+        ax.set_yticks(list(np.arange(0, 70, 10)))
+    ax.legend(['Dataset1', 'Dataset2'])
+    ax.grid(axis='x', ls='--', lw=1, which='minor')
+    ax.grid(axis='y', ls='--', lw=1)
+    ax.set_xlabel("Cluster")
+    ax.set_ylabel("Energy")
+    ax.title.set_text(prefix + 'Cluster ' + str(i) + ' plmDCA Comparison')
+
+
+
+d1, cd1 = import_single_dataset(nfam_files['c1'])
+prep_data(d1, cd1, logfile=npath+'d1.log', write_data=False, prefix='/d1/d1')
+print(cd1)
+d2, cd2 = import_single_dataset(nfam_files['c2'])
+prep_data(d2, cd2, logfile=npath+'d2.log', write_data=False, prefix='/d2/d2')
+print(cd2)
+d3, cd3 = import_single_dataset(nfam_files['c3'])
+prep_data(d3, cd3, logfile=npath+'d3.log', write_data=False, prefix='/d3/d3')
+print(cd3)
+
+
+
+
+nclust_paths = {1: npath+'d1/',
+                2: npath+'d2/',
+                3: npath+'d3/',
+                4: npath+'merged/'}
+
+
+nclust_targets = {0: 'analysis/',
+                1: 'c1/',
+                2: 'c2/',
+                3: 'c3/',
+                4: 'c4/',
+                5: 'c5/',
+                6: 'c6/',
+                7: 'c7/',
+                8: 'c8/',
+                9: 'c9/',
+                10: 'c10/',
+                11: 'c11/',
+                12: 'c12/',
+                13: 'c13/',
+                -1: 'c-1'}
+
+
+
+
+nclusts = list(np.arange(1, 14, 1))
+nclusts.append(-1)
+
+
+
+
+EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd1, cd2, 'd1', 'd2', 'd1', 'd2', noJ=True)
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd2, 'd3', 'd2', 'd3', 'd2', noJ=True)
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd1, 'd3', 'd1', 'd3', 'd1', noJ=True)
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd2, 'd3', 'd2', 'd3', 'd2', noJ=True)
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd, cd3, 'd2', 'd3', 'd2', 'd3', noJ=True)
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd2, cd1, 'd2', 'd1', 'd2', 'd1', noJ=True)
+
+
+
+# Clust_ALLJs(nclusts)
+
+
+#Visualize H and J's of each Family
+# for x in nclusts:
+#     jp = nclust_paths[x] + 'Cluster' + str(x) + '.j'
+#     hp = nclust_paths[x] + 'Cluster' + str(x) + '.h'
+#     H, n, q = dca.sorthmat_plmDCA_autoNandq(hp, gaps='yes')
+#     J = dca.sortjmat_plmDCA(jp, n, q, gaps='yes')
+#     fig, ax = plt.subplots(2)
+#     jvis = dca.FullJ_disp(J, n, q)
+#     dca.Fig_FullJ(ax[0], 'Cluster: ' + str(x), J, n, q)
+#     dca.Fig_FullH(ax[1], 'Cluster: ' + str(x), H, n, q)
+#     plt.savefig(nclust_paths[x] + 'Cluster'+str(x)+'plmparams.png', dpi=600)
+#     plt.close()
+
+
+
+# lfile =  + 'log.dat'
+# df, clustids = import_dataset(nfam_files)
+# print(clustids)
+# prep_data(df, clustids, logfile=lfile, write_data=True)
+
+
+
+
+
+
+
 
 # Cluster Selection and Seperation
-Totalcomm = di.seqpercluster(AAA, ACC, AGG, ATT, CAC, CCG, CTA, GAG, GCT, GTC, TAT, TCA, TGC, TTG)
-clustersofInterest = list(Totalcomm.keys())
+# Totalcomm = di.seqpercluster(AAA, ACC, AGG, ATT, CAC, CCG, CTA, GAG, GCT, GTC, TAT, TCA, TGC, TTG)
+# clustersofInterest = list(Totalcomm.keys())
 
-print(clustersofInterest)
+# print(clustersofInterest)
 
 
 def outfilegen(clustid, types, dataset=0):
@@ -70,8 +492,10 @@ def outfilegen(clustid, types, dataset=0):
 
 def writefasta(seqs, file, clustid):
     y=open(file, 'w+')
+    sid = 0
     for seq, aff in seqs:
-        print('>'+'clust' + str(clustid) + '-' + str(aff), file=y)
+        sid += 1
+        print('>'+'clust' + str(clustid) + 'seq' + str(sid) + '-' + str(aff), file=y)
         print(seq, file=y)
     y.close()
 
@@ -103,25 +527,7 @@ def extract_seq_full(cluster, *argv):
 '''
 
 
-def length_checker(seqs, mode='check'):
-    # Checks that Lengths of all Sequences are uniform
-    seql = []
-    for seq in seqs:
-        seql.append(len(list(seq)))
-    nseql = np.array(seql)
-    mostcommonlen = int(stats.mode(nseql))
-    lencatcher = 0
-    print('Total Sequences = ' + str(len(seqs)) + '\n')
-    for xid, x in enumerate(nseql):
-        if x != mostcommonlen:
-            if mode == 'fix':
-                del seqs[xid-lencatcher]
-            lencatcher += 1
-    print('Not exactly ' + str(mostcommonlen) + ' bases, percentage = ' + str(lencatcher / len(nseql) * 100) + '\n')
-    percentremoved = str(lencatcher / len(nseql) * 100)
-    if mode == 'fix':
-        print('Sequences Removed\n')
-    return seqs, percentremoved
+
 
 
 def common_seq_checker(*argv):
@@ -371,8 +777,8 @@ class SeqHandler:
          print('Logfile Written to ' + fullpath)
 
 
-handle = SeqHandler(AAA, ACC, AGG, ATT, CAC, CCG, CTA, GAG, GCT, GTC, TAT, TCA, TGC, TTG, clustersofInterest)
-print(clustersofInterest)
+# handle = SeqHandler(AAA, ACC, AGG, ATT, CAC, CCG, CTA, GAG, GCT, GTC, TAT, TCA, TGC, TTG, clustersofInterest)
+# print(clustersofInterest)
 # handle.length_checker_by_ind()
 # handle.write_seqs()
 

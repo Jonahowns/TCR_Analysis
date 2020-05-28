@@ -79,11 +79,12 @@ def EnergyCoord_COI_ScorePlot_AllClusters(clusterlist):
         ScatPlot(scatpoints, i, clusterlist)
 
 
-def ScatPlot(coord, i, clusterlist):
+def ScatPlot(coord, i):
     fig, ax = plt.subplots()
     ax.scatter(*zip(*coord), c=list(zip(*coord))[0], s=2)
     ax.title.set_text('Cluster ' + str(i) + ' HJ Comparison')
     plt.savefig(AnalysisPath + 'Cluster' + str(i) + '.png', dpi=400)
+    plt.close()
 
 
 # Returns Energy Coordinates of all seqs in each cluster based calculated off of one cluster of interests H and J Matrices

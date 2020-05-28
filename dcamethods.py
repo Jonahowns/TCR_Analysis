@@ -11,12 +11,16 @@ from scipy.stats import gaussian_kde
 import pandas as pd
 import itertools as it
 
+
 ################################################
 ## Universal Methods for Analysis of DCA Data ##
 ################################################
 aa = ['-', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 aad = {'-': 0, 'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12,
        'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20}
+
+dnanm = {'A':-1, 'R':-2, 'N':-3, 'D':-4, 'C':-5, 'E':-6, 'Q':-7, 'G':-8, 'H':-9, 'I':-10, 'L':-11, 'K':-12, 'M':-13, 'F':-14, 'P':-15, 'S':-16, 'T':-17, 'W':-18, 'Y':-19, 'V':-20, 'Z':-21, 'X':0}
+dnanmr = {-1:'A', -2:'R', -3:'N', -4:'D', -5:'C', -6:'E', -7:'Q', -8:'G', -9:'H', -10:'I', -11:'L', -12:'K', -13:'M', -14:'F', -15:'P', -16:'S', -17:'T', -18:'W', -19:'Y', -20:'V', -21:'Z', 0:'X'}
 rna = ['-', 'A', 'C', 'G', 'U']
 rnad = {'-': 0, 'A': 1, 'C': 2, 'G': 3, 'U': 4, 'T': 4}
 rnan = {0: '-', 1: 'A', 2: 'C', 3: 'G', 4: 'U'}
@@ -327,7 +331,7 @@ def sorthmat_blDCA(file, N, q):
     return normed
 
 
-def sorthmat_plmDCA_autoNandq(file):
+def sorthmat_plmDCA_autoNandq(file, gaps='no'):
     o = open(file, 'r')
     linelist = o.readlines()
     o.close()
@@ -338,6 +342,8 @@ def sorthmat_plmDCA_autoNandq(file):
     for line in linelist:
         data = line.split(',')
         fullmatrix[int(data[0]) - 1, int(data[1]) - 1] = float(data[2].rstrip())
+    if gaps == 'no':
+        fullmatrix[:, 0] = 0.0
     return fullmatrix, N, q
 
 
@@ -836,7 +842,7 @@ def Calc_Energy_Breakdown_Ind_Position(seq, J, H, pos):
     return energy, iE
 
 # N and q correspond to the matrix the
-def Calc_Energy_TCR(seq, J, H, N):
+def Calc_Energy_TCR(seq, J, H, N, noJ=False):
     full = list(seq)
     Jenergy = 0
     Henergy = 0
@@ -846,6 +852,8 @@ def Calc_Energy_TCR(seq, J, H, N):
         except IndexError:
             break
         Henergy += H[x, ibase]
+        if noJ:
+            continue
         for y in range(x + 1, N):
             try:
                 jbase = aad[full[y]]
@@ -1039,6 +1047,7 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
     xlabel = 'j'
     ylabel = 'i'
     fontsize = 6
+    cbar = False
     title = 'JMat ID: ' + str(id)
     for key, value in kwargs.items():
         if key == 'cmap':
@@ -1055,12 +1064,16 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
             vml = value
         elif key == 'vmax':
             vmg = value
+        elif key == 'title':
+            title = value
+        elif key == 'cbar':
+            cbar = value
         else:
             print('No keyword argument ' + key + ' found')
     subplot.title.set_text(title)
     subplot.title.set_size(fontsize=6)
     jdisp = FullJ_disp(J, n, q)
-    subplot.imshow(jdisp, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
+    im = subplot.imshow(jdisp, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
     subplot.set_xticks(np.arange(-.5, (n - 2) * q, q))
     subplot.set_yticks(np.arange(-.5, (n - 2) * q, q))
     subplot.set_xticklabels(np.arange(2, n+1, 1))
@@ -1068,6 +1081,9 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
     subplot.grid(True, color='g', lw=lw)
     subplot.set_ylabel(ylabel)
     subplot.set_xlabel(xlabel)
+    if cbar:
+        cb = plt.colorbar(im, ax=subplot, fraction=0.046, pad=0.04)
+        cb.ax.tick_params(labelsize=6)
     plt.setp(subplot.get_xticklabels(), rotation='vertical', fontsize=fontsize)
     plt.setp(subplot.get_yticklabels(), rotation='horizontal', fontsize=fontsize)
 
@@ -1198,8 +1214,8 @@ def Fig_Distribution_w_Cutoff(subplot, id, Values, Cutoff, **kwargs):
 
 # Shows Premade SeqLogo on a given Subplot
 # Keyword Arguments are title and fontsize
-def Fig_SeqLogo(Filepath, Subplot, id):
-    title = 'SeqLogo ID: ' + str(id)
+def Fig_SeqLogo(Filepath, Subplot, id, **kwargs):
+    title = 'SeqLogo Cluster: ' + str(id)
     fontsize = 6
     for key, value in kwargs.items():
         if key == 'title':
@@ -1208,7 +1224,7 @@ def Fig_SeqLogo(Filepath, Subplot, id):
             fontsize = value
         else:
             print('No keyword argument ' + key + ' found')
-    fsl1 = mpimg.imread(Filepath)
+    fsl1 = plt.imread(Filepath)
     Subplot.imshow(fsl1)
     Subplot.axis('off')
     Subplot.title.set_text(title)

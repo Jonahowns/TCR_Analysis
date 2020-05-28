@@ -2,6 +2,7 @@ import dcamethods as dca
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing as mp
+import gmethods as gm
 
 upath = "/home/jonah/Dropbox (ASU)/"
 aptp = "Projects/DCA/ThrombinAptamers/"
@@ -46,9 +47,14 @@ fixed = [st[0:20] for st in clean]
 m2a = dca.Motif_Aligner(m2mat, 4, 15)
 m2a.load_seqs(fixed, a)
 m2a.align_seqs()
-a2 = []
-print(m2a.aligned_seqs)
-print(len(m2a.aligned_seqs))
+a2s = m2a.aligned_seqs
+a2a = m2a.affinities
+z = zip(a2s, a2a)
+gm.stratify(z, v5p+'/c1/c1_train.txt', v5p+'/c1/c1_test.txt', binwidth=10)
+
+# dca.write_fasta_aff(a2s, a2a, v5p + 'c1/start.fasta')
+# print(m2a.aligned_seqs)
+# print(len(m2a.aligned_seqs))
 # print(l5)
 # print(len(l5))
 # print(m1a.unaligned_seqs)

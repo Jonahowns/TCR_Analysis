@@ -172,7 +172,7 @@ def bin_affs(binwidth, afs):
 
 
 def stratify(z_sanda, outtrain, outtest, returnsets=False, binwidth=1000, weights=False, outw='null'):
-    a, s = zip(*z_sanda)
+    s, a = zip(*z_sanda)
     sl, al = list(s), list(a)
     binned, exes = bin_affs(binwidth, al)
     exes.sort()
