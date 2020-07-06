@@ -9,6 +9,9 @@ import dcamethods as dca
 import matplotlib.pyplot as plt
 import math
 
+#FOR PDFs
+from matplotlib.backends.backend_pdf import PdfPages
+
 # DATA IMPORT
 macpath = "/Users/Amber/Dropbox (ASU)/"
 ubuntpath = "/home/jonah/Dropbox (ASU)/"
@@ -33,12 +36,18 @@ family_files = {'AAA': fullpath + 'S_7_AAA_2_norm_plus.tsv.cluster',
                 'TTG': fullpath + 'S_7_TTG_2_norm_plus.tsv.cluster',
 }
 
-npath = ubuntpath + 'Projects/TCR/'
-nfam_files = {'c1': npath + 'Spleen_1Cluster.csv',
-              'c2': npath + 'Spleen_2Cluster.csv',
-              'c3': npath + 'Spleen_3Cluster.csv'}
+
+branchfolder = 'v2Analysis'
+npath = ubuntpath + 'Projects/TCR/' + branchfolder +'/'
+files = ['Spleen_1_clusters', 'Spleen_2_clusters', 'Spleen_3_clusters']
 
 
+nfam_files = {}
+for i in range(len(files)):
+    key = 'c' + str(i + 1)
+    nfam_files[key] = npath + files[i]
+
+print(nfam_files)
 
 
 # clustids = {1: 'AAA', 2: 'ACC', 3: 'AGG', 4: 'ATT',
@@ -120,12 +129,12 @@ def import_dataset(file_dictionary):
             main = pd.read_csv(x[1]).dropna()
         else:
             main.append(pd.read_csv(x[1]).dropna())
-    clusters = list(main["cluster_number"].unique())
+    clusters = list(main["cluster_id"].unique())
     return main, clusters
 
 def import_single_dataset(file):
     main = pd.read_csv(file).dropna()
-    clusters = list(main["cluster_number"].unique())
+    clusters = sorted(list(main["cluster_id"].unique()))
     return main, clusters
 
 
@@ -133,7 +142,7 @@ def prep_data(dataset, clusters, logfile='', write_data=False, prefix=''):
     if logfile:
         l=open(logfile, 'w')
     for x in clusters:
-        cdata = dataset[dataset["cluster_number"] == x]
+        cdata = dataset[dataset["cluster_id"] == x]
         #Preps data as list of list tuples
         fasta_ready = cdata.values.tolist()
         if logfile:
@@ -166,7 +175,7 @@ def load_seqs_path(clustlist, datalabel, filelabel):
     S = []
     for i in clustlist:
         np = npath_gen(datalabel, str(i))
-        fnp = np + filelabel + 'Cluster' + str(i) + '.fasta'
+        fnp = np + 'Cluster' + str(i) + '.fasta' #filelabel + 'Cluster' + str(i) + '.fasta'
         seqs = dca.Fasta_Read_SeqOnly(fnp)
         S.append(seqs)
     return S
@@ -293,8 +302,8 @@ def EnergyCoord_COI_ScorePlot_AllClusters_Comparison(clusterlist1, clusterlist2,
         rownum = math.floor(len(clusterlist1) / 2)
     print(rownum)
     fig, ax = plt.subplots(rownum, 2)
-    fig.set_figheight(20)
-    fig.set_figwidth(8)
+    fig.set_figheight(rownum*3.5)
+    fig.set_figwidth(10)
     if rn:
         fig.delaxes(ax[rownum - 1, 1])
     # Generate Figure for each Cluster
@@ -313,6 +322,109 @@ def EnergyCoord_COI_ScorePlot_AllClusters_Comparison(clusterlist1, clusterlist2,
     else:
         plt.savefig(nclust_paths[1] + nclust_targets[0] + p1 + 'v' + p2 + "ALL_COI.png", dpi=800)
 
+
+def EnergyCoord_COI_ScorePlot_AllClusters_Comparison_pdf(main_clusterlist1, clusterlist2, clusterlist3, p1, p2, p3, d1, d2, d3, destination, noJ=False):
+    # This is the one who's cluster number and HJ will be dominant
+    DOI, ns, hj = CalcE_AllCLuster_wCoord(main_clusterlist1, d1, postfix=p1, returnn=True, noJ=noJ)
+    H, J = zip(*hj)
+    # This one will compare
+    MC2 = CalcE_AllCLuster_SecondaryCoord(main_clusterlist1, ns, clusterlist2, H, J, d2, postfix=p2, noJ=noJ)
+    MC3 = CalcE_AllCLuster_SecondaryCoord(main_clusterlist1, ns, clusterlist3, H, J, d3, postfix=p3, noJ=noJ)
+    mclustlist = list(set(main_clusterlist1 + clusterlist2 + clusterlist3))
+    mclustlist.sort()
+
+    c1list = sorted(main_clusterlist1)
+    pgnum = math.ceil(len(c1list)/3)
+    add = pgnum*3 - len(c1list)
+    for i in range(add):
+        c1list.append(0)
+
+    it = iter(c1list)
+    clust_sets = list(zip(it, it, it))
+
+
+    with PdfPages(destination) as pdf:
+
+
+        # Generate Figure for each Cluster
+        main_clusterlist1.sort()
+        for i in clust_sets:
+            # Save 3 images per page
+            fig, ax = plt.subplots(3, 1)
+            fig.set_figheight(8.5)
+            fig.set_figwidth(11)
+            plt.tight_layout()
+            for cid, clust in enumerate(i):
+                if clust != 0:
+                    tmp1 = [y for x, y in DOI if x == clust][0]
+                    tmp2 = [y for x, y in MC2 if x == clust][0]
+                    tmp3 = [y for x, y in MC3 if x == clust][0]
+                    m1, s1 = extract_data(tmp1)
+                    m2, s2 = extract_data(tmp2)
+                    m3, s3 = extract_data(tmp3)
+                    AvgPlot_sub_dict_3(ax[cid], clust, mclustlist, main_clusterlist1, clusterlist2, clusterlist3, m1, m2, m3, s1,
+                                       s2, s3, noJ=noJ, title='Dataset 3 Cluster'+str(clust))
+                    plt.setp(ax[cid].get_xticklabels(), rotation=90, horizontalalignment='right')
+            pdf.savefig(dpi=600)
+            plt.close()
+
+def EnergyCoord_COI_Results(main_clusterlist1, clusterlist2, clusterlist3, p1, p2, p3, d1, d2, d3, out2, out3, cutoff, noJ=False):
+    # This is the one who's cluster number and HJ will be dominant
+    DOI, ns, hj = CalcE_AllCLuster_wCoord(main_clusterlist1, d1, postfix=p1, returnn=True, noJ=noJ)
+    H, J = zip(*hj)
+    # This one will compare
+    MC2 = CalcE_AllCLuster_SecondaryCoord(main_clusterlist1, ns, clusterlist2, H, J, d2, postfix=p2, noJ=noJ)
+    MC3 = CalcE_AllCLuster_SecondaryCoord(main_clusterlist1, ns, clusterlist3, H, J, d3, postfix=p3, noJ=noJ)
+    mclustlist = list(set(main_clusterlist1 + clusterlist2 + clusterlist3))
+    mclustlist.sort()
+
+    c1list = sorted(main_clusterlist1)
+    Results2 = {}
+    Results3 = {}
+    for i in c1list:
+        tmp1 = [y for x, y in DOI if x == i][0]
+        tmp2 = [y for x, y in MC2 if x == i][0]
+        tmp3 = [y for x, y in MC3 if x == i][0]
+        m1, s1 = extract_data(tmp1)
+        m2, s2 = extract_data(tmp2)
+        m3, s3 = extract_data(tmp3)
+
+        m1s, s1s = [], []
+        for x in main_clusterlist1:
+            d1m, s1m = m1[x], s1[x]
+            m1s.append(d1m)
+            s1s.append(s1m)
+
+        m2s, s2s = [], []
+        for x in clusterlist2:
+            d2m, s2m = m2[x], s2[x]
+            m2s.append(d2m)
+            s2s.append(s2m)
+
+        m3s, s3s = [], []
+        for x in clusterlist3:
+            d3m, s3m = m3[x], s3[x]
+            m3s.append(d3m)
+            s3s.append(s3m)
+
+        closest_1 = max(m1s)
+
+        closest_2 = [x for x in m2s if abs(closest_1 - x) < float(cutoff)]
+        if closest_2:
+            closest_2 = [m2s.index(x) for x in closest_2]
+        closest_3 = [x for x in m3s if abs(closest_1 - x) < float(cutoff)]
+        if closest_3:
+            closest_3 = [m3s.index(x) for x in closest_3]
+
+        Results2[i] = closest_2
+        Results3[i] = closest_3
+
+    o2 = open(out2, 'w')
+    o3 = open(out3, 'w')
+    print(Results2, file=o2)
+    print(Results3, file=o3)
+    o2.close()
+    o3.close()
 
 
 # ScatPoints
@@ -390,16 +502,78 @@ def AvgPlot_sub_dict(ax, i, mcl, cl1, cl2, m1, m2, s1, s2, prefix='', noJ=False)
     ax.title.set_text(prefix + 'Cluster ' + str(i) + ' plmDCA Comparison')
 
 
+def AvgPlot_sub_dict_3(ax, i, mcl, cl1, cl2, cl3, m1, m2, m3,  s1, s2, s3, prefix='', noJ=False, title=''):
 
-d1, cd1 = import_single_dataset(nfam_files['c1'])
-prep_data(d1, cd1, logfile=npath+'d1.log', write_data=False, prefix='/d1/d1')
-print(cd1)
-d2, cd2 = import_single_dataset(nfam_files['c2'])
-prep_data(d2, cd2, logfile=npath+'d2.log', write_data=False, prefix='/d2/d2')
-print(cd2)
-d3, cd3 = import_single_dataset(nfam_files['c3'])
-prep_data(d3, cd3, logfile=npath+'d3.log', write_data=False, prefix='/d3/d3')
-print(cd3)
+    m1s, s1s = [], []
+    for x in cl1:
+        d1m, s1m = m1[x], s1[x]
+        m1s.append(d1m)
+        s1s.append(s1m)
+
+    m2s, s2s = [], []
+    for x in cl2:
+        d2m, s2m = m2[x], s2[x]
+        m2s.append(d2m)
+        s2s.append(s2m)
+
+    m3s, s3s = [], []
+    for x in cl3:
+        d3m, s3m = m3[x], s3[x]
+        m3s.append(d3m)
+        s3s.append(s3m)
+
+    c2 = 'aquamarine'
+    c3 = 'firebrick'
+    c1 = 'darkviolet'
+    ax.errorbar(cl1, m1s, yerr=s1s, marker="v", color=c1, linestyle='None')
+    # ax.annotate("c" + str(x), (x + 0.2, d1m + 0.5), fontsize=4)
+
+    adj1x = [x + 0.3 for x in cl2]
+    adj2x = [x + 0.6 for x in cl3]
+    ax.errorbar(adj1x, m2s, yerr=s2s, marker="d", color=c2, linestyle='None')
+    ax.errorbar(adj2x, m3s, yerr=s3s, marker="X", color=c3, linestyle="None")
+
+    xticks = mcl
+    # xticks.append(max(mcl))
+    xticks.append(0)
+    offset = [x-0.3 for x in xticks]
+    ax.set_xticks(xticks)
+    ax.set_xticks(offset, minor=True)
+    if noJ:
+        ax.set_yticks(list(np.arange(0, 10, 2)))
+    else:
+        ax.set_yticks(list(np.arange(0, 70, 10)))
+    ax.legend(['Spleen_3', 'Spleen_1', 'Spleen_2'])
+    ax.grid(axis='x', ls='--', lw=1, which='minor')
+    ax.grid(axis='y', ls='--', lw=1)
+    # ax.set_xlabel("Cluster", fontsize=8)
+    ax.set_ylabel("Energy", fontsize=8)
+    ax.text(.5,.9, 'Cluster' + str(i), horizontalalignment='center', transform=ax.transAxes)
+    # if title:
+    #     ax.title.set_text(title)
+    # else:
+    #     ax.title.set_text(prefix + 'Cluster ' + str(i) + ' plmDCA Comparison')
+
+#THIS IS IT LET's DO IT
+clustlists = []
+datasets=[]
+for i in range(len(files)):
+    key = 'c' + str(i+1)
+    d1, cd1 = import_single_dataset(nfam_files[key])
+    logid = 'd' + str(i+1) + '.log'
+    prefix_id = 'd' + str(i+1) + '/'    #d' + str(i+1) +'/'
+    prep_data(d1, cd1, logfile=npath+logid, write_data=False, prefix=prefix_id)
+    datasets.append(d1)
+    clustlists.append(cd1)
+    print(cd1)
+
+
+# d2, cd2 = import_single_dataset(nfam_files['c2'])
+# prep_data(d2, cd2, logfile=npath+'d2.log', write_data=False, prefix='/d2/d2')
+# print(cd2)
+# d3, cd3 = import_single_dataset(nfam_files['c3'])
+# prep_data(d3, cd3, logfile=npath+'d3.log', write_data=False, prefix='/d3/d3')
+# print(cd3)
 
 
 
@@ -410,32 +584,44 @@ nclust_paths = {1: npath+'d1/',
                 4: npath+'merged/'}
 
 
-nclust_targets = {0: 'analysis/',
-                1: 'c1/',
-                2: 'c2/',
-                3: 'c3/',
-                4: 'c4/',
-                5: 'c5/',
-                6: 'c6/',
-                7: 'c7/',
-                8: 'c8/',
-                9: 'c9/',
-                10: 'c10/',
-                11: 'c11/',
-                12: 'c12/',
-                13: 'c13/',
-                -1: 'c-1'}
 
 
 
+nclust_targets = {0: 'analysis/', -1: 'c-1/'}
+masterclust = set([item for sublist in clustlists for item in sublist])
+for i in masterclust:
+    nclust_targets[int(i)] = 'c' + str(i) + '/'
 
-nclusts = list(np.arange(1, 14, 1))
-nclusts.append(-1)
+
+# nclust_targets = {0: 'analysis/', -1: 'c-1'}
+#                 1: 'c1/',
+#                 2: 'c2/',
+#                 3: 'c3/',
+#                 4: 'c4/',
+#                 5: 'c5/',
+#                 6: 'c6/',
+#                 7: 'c7/',
+#                 8: 'c8/',
+#                 9: 'c9/',
+#                 10: 'c10/',
+#                 11: 'c11/',
+#                 12: 'c12/',
+#                 13: 'c13/',
+#                 -1: 'c-1'}
+
+# nclusts = list(np.arange(1, 14, 1))
+# nclusts.append(-1)
+#
+#
+#
+#
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison(clustlists[0], clustlists[1], 'd1', 'd2', 'd1', 'd2', noJ=True)
+
+# EnergyCoord_COI_ScorePlot_AllClusters_Comparison_pdf(clustlists[2], clustlists[0], clustlists[1], 'd3', 'd1', 'd2', 'd3', 'd1', 'd2', nclust_paths[3]+nclust_targets[0]+'D3_compartison_J', noJ=False)
+comm = nclust_paths[1]+nclust_targets[0]
+EnergyCoord_COI_Results(clustlists[0], clustlists[1], clustlists[2], 'd1', 'd2', 'd3', 'd1', 'd2', 'd3', comm+'D1_v_D2_Results_wJ.txt', comm+'D1_v_D3_Results_wJ.txt', 5.0, noJ=False)
 
 
-
-
-EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd1, cd2, 'd1', 'd2', 'd1', 'd2', noJ=True)
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd2, 'd3', 'd2', 'd3', 'd2', noJ=True)
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd1, 'd3', 'd1', 'd3', 'd1', noJ=True)
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd2, 'd3', 'd2', 'd3', 'd2', noJ=True)
