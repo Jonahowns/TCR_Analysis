@@ -1071,7 +1071,7 @@ def Fig_FullJ(subplot, id, J, n, q, **kwargs):
         else:
             print('No keyword argument ' + key + ' found')
     subplot.title.set_text(title)
-    subplot.title.set_size(fontsize=6)
+    subplot.title.set_size(fontsize=12)
     jdisp = FullJ_disp(J, n, q)
     im = subplot.imshow(jdisp, cmap=cmap, aspect='equal', vmin=vml, vmax=vmg)
     subplot.set_xticks(np.arange(-.5, (n - 2) * q, q))

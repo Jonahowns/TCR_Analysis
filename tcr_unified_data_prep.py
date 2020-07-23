@@ -593,6 +593,62 @@ for i in masterclust:
     nclust_targets[int(i)] = 'c' + str(i) + '/'
 
 
+def Jij_and_seqlogo_pdf(mcl, nclust_num, destination):
+    nc = str(nclust_num)
+    c1list = sorted(mcl)
+    pgnum = math.ceil(len(c1list) / 3)
+    add = pgnum * 3 - len(c1list)
+    for i in range(add):
+        c1list.append(0)
+
+    it = iter(c1list)
+    clust_sets = list(zip(it, it, it))
+    print(clust_sets)
+
+    with PdfPages(destination) as pdf:
+
+        # Generate Figure for each Cluster
+        for i in clust_sets:
+            # Save 3 images per page
+            fig, ax = plt.subplots(3, 2)
+            fig.set_figheight(11)
+            fig.set_figwidth(8.5)
+            plt.tight_layout()
+            for cid, clust in enumerate(i):
+                if clust != 0:
+                    num = str(clust)
+                    hfile = nclust_paths[nclust_num] + 'c' + num + '/d' + nc + 'Cluster' + num + '.h'
+                    jfile = nclust_paths[nclust_num] + 'c' + num + '/d' + nc + 'Cluster' + num + '.j'
+                    hmat, n, q = dca.sorthmat_plmDCA_autoNandq(hfile, gaps='no')
+                    jmat = dca.sortjmat_plmDCA(jfile, n, q, gaps='yes')
+                    if cid == 0:
+                        dca.Fig_FullJ(ax[cid, 0], '', jmat, n, q, cbar=True, title='Cluster ' + str(clust) + ' plmDCA Pairwise Parameters')
+                    else:
+                        dca.Fig_FullJ(ax[cid, cid%2], '', jmat, n, q, title='Cluster ' + str(clust) + ' plmDCA Pairwise Parameters')
+                    try:
+                        seqfile = nclust_paths[nclust_num] + 'c' + num + '/' + 'Cluster' + num + 'seqlogo.png'
+                        dca.Fig_SeqLogo(seqfile, ax[cid, (cid+1)%2], '', title='')
+                    except IOError:
+                        try:
+                            seqfile = nclust_paths[nclust_num] + 'c' + num + '/' + 'Clust' + num + 'seqlogo.png'
+                            dca.Fig_SeqLogo(seqfile, ax[cid, (cid+1)%2], '', title='')
+                        except IOError:
+                            seqfile = nclust_paths[nclust_num] + 'c' + num + '/' + 'Clust.png'
+                            dca.Fig_SeqLogo(seqfile, ax[cid, (cid+1)%2], '', title='')
+
+                    # AvgPlot_sub_dict_3(ax[cid], clust, mclustlist, main_clusterlist1, clusterlist2, clusterlist3, m1,
+                    #                    m2, m3, s1,
+                    #                    s2, s3, noJ=noJ, title='Dataset 3 Cluster' + str(clust))
+                    # plt.setp(ax[cid].get_xticklabels(), rotation=90, horizontalalignment='right')
+            pdf.savefig(dpi=600)
+            plt.close()
+
+
+
+
+
+
+
 # nclust_targets = {0: 'analysis/', -1: 'c-1'}
 #                 1: 'c1/',
 #                 2: 'c2/',
@@ -618,8 +674,11 @@ for i in masterclust:
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison(clustlists[0], clustlists[1], 'd1', 'd2', 'd1', 'd2', noJ=True)
 
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison_pdf(clustlists[2], clustlists[0], clustlists[1], 'd3', 'd1', 'd2', 'd3', 'd1', 'd2', nclust_paths[3]+nclust_targets[0]+'D3_compartison_J', noJ=False)
-comm = nclust_paths[1]+nclust_targets[0]
-EnergyCoord_COI_Results(clustlists[0], clustlists[1], clustlists[2], 'd1', 'd2', 'd3', 'd1', 'd2', 'd3', comm+'D1_v_D2_Results_wJ.txt', comm+'D1_v_D3_Results_wJ.txt', 5.0, noJ=False)
+comm = nclust_paths[2]+nclust_targets[0]
+EnergyCoord_COI_Results(clustlists[1], clustlists[0], clustlists[2], 'd2', 'd1', 'd3', 'd2', 'd1', 'd3', comm+'D2_v_D1_Results_noJ.txt', comm+'D2_v_D3_Results_noJ.txt', 0.2, noJ=True)
+
+
+# Jij_and_seqlogo_pdf(clustlists[2], 3, comm+'D3_Jij_and_SeqLogos.pdf')
 
 
 # EnergyCoord_COI_ScorePlot_AllClusters_Comparison(cd3, cd2, 'd3', 'd2', 'd3', 'd2', noJ=True)
